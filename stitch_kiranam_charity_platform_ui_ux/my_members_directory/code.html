@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kiranam | My Members</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #e2dfde;
+      border-radius: 10px;
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "on-error-container": "#93000a",
+                  "secondary-fixed": "#e5e2e1",
+                  "on-primary-fixed": "#410003",
+                  "tertiary-fixed-dim": "#c5c7c8",
+                  "surface-variant": "#dbe4ed",
+                  "on-surface": "#141d23",
+                  "on-secondary-container": "#636262",
+                  "on-tertiary": "#ffffff",
+                  "error-container": "#ffdad6",
+                  "secondary-fixed-dim": "#c8c6c5",
+                  "surface-container": "#e6eff8",
+                  "primary": "#bb0016",
+                  "inverse-primary": "#ffb4ac",
+                  "tertiary": "#5a5c5d",
+                  "outline-variant": "#e7bcb8",
+                  "on-background": "#141d23",
+                  "on-tertiary-container": "#fcfdfe",
+                  "surface-container-lowest": "#ffffff",
+                  "surface-container-low": "#ecf5fe",
+                  "tertiary-container": "#737576",
+                  "on-primary-container": "#fffbff",
+                  "on-primary": "#ffffff",
+                  "on-secondary-fixed-variant": "#474746",
+                  "on-secondary-fixed": "#1c1b1b",
+                  "on-surface-variant": "#5e3f3c",
+                  "on-primary-fixed-variant": "#93000e",
+                  "on-error": "#ffffff",
+                  "inverse-surface": "#293138",
+                  "primary-fixed": "#ffdad6",
+                  "surface-container-high": "#e0e9f2",
+                  "surface": "#f6faff",
+                  "primary-fixed-dim": "#ffb4ac",
+                  "surface-container-highest": "#dbe4ed",
+                  "on-tertiary-fixed-variant": "#454748",
+                  "on-tertiary-fixed": "#191c1d",
+                  "surface-bright": "#f6faff",
+                  "surface-tint": "#c00016",
+                  "on-secondary": "#ffffff",
+                  "error": "#ba1a1a",
+                  "primary-container": "#e61924",
+                  "tertiary-fixed": "#e1e3e4",
+                  "surface-dim": "#d2dbe4",
+                  "secondary": "#5f5e5e",
+                  "inverse-on-surface": "#e9f2fb",
+                  "background": "#f6faff",
+                  "secondary-container": "#e2dfde",
+                  "outline": "#926e6b"
+          },
+          "borderRadius": {
+                  "DEFAULT": "1rem",
+                  "lg": "2rem",
+                  "xl": "3rem",
+                  "full": "9999px"
+          },
+          "spacing": {
+                  "margin-desktop": "64px",
+                  "xs": "4px",
+                  "sm": "12px",
+                  "lg": "48px",
+                  "margin-mobile": "16px",
+                  "base": "8px",
+                  "xl": "80px",
+                  "gutter": "24px",
+                  "md": "24px"
+          },
+          "fontFamily": {
+                  "display-lg": ["Plus Jakarta Sans"],
+                  "body-md": ["Inter"],
+                  "body-lg": ["Inter"],
+                  "label-md": ["Inter"],
+                  "headline-lg-mobile": ["Plus Jakarta Sans"],
+                  "headline-lg": ["Plus Jakarta Sans"],
+                  "label-sm": ["Inter"],
+                  "headline-md": ["Plus Jakarta Sans"]
+          },
+          "fontSize": {
+                  "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                  "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                  "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                  "label-md": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                  "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                  "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                  "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                  "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md custom-scrollbar selection:bg-primary/20">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 bg-surface dark:bg-surface-dim shadow-sm flex justify-between items-center px-margin-mobile md:px-margin-desktop py-sm">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional close-up portrait of a volunteer in a bright, modern studio. The lighting is soft and high-key, emphasizing a friendly and trustworthy expression. The aesthetic is clean and minimalist, following a premium retail brand style with subtle red accents in the background textures." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkBRTz8Q-TCeINxfkpDsxNgjRrg0Rg2B1JrzUj28oTYcmaSMvP2jytA6oBRY8vLe73MDluUssTUh7o1P_McSd48Bi49QZGZG4ThjwJnxypDAiUdPuQ7ScaX9xGtwp1DGDWwNmKqsNj-8MYceTTk1E12J46MIxTsJLvkvjyLvwdyCiLdeb8UvIxpa10WddSJfcO4vTbSIX2ow2bP5DtbpYNhN004zFgBJU11vgNho9w9DZCZM0uP6IEdkrV1Do_RcGevt-F0cQbI3WA"/>
+</div>
+<h1 class="font-display-lg text-headline-md text-primary dark:text-primary-fixed">Kiranam</h1>
+</div>
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed hover:bg-surface-container-low transition-colors p-base rounded-full active:scale-95 duration-150">
+      notifications
+    </button>
+</header>
+<main class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-md md:py-lg min-h-screen pb-32">
+<!-- Hero & Search Header -->
+<div class="mb-lg">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-xs">My Members</h2>
+<p class="text-secondary font-body-md mb-md">Manage your referred contributors and track their participation.</p>
+<div class="relative max-w-2xl">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-secondary">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-xl pl-12 pr-4 py-4 text-body-md focus:ring-1 focus:ring-primary focus:bg-white transition-all shadow-sm" placeholder="Search by name or mobile..." type="text"/>
+</div>
+</div>
+<!-- Stats Section -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-md mb-lg">
+<div class="bg-white p-md rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.04)] border-b-2 border-primary">
+<p class="text-label-sm text-secondary uppercase tracking-wider mb-xs">Total</p>
+<p class="text-headline-md font-headline-md text-on-surface">124</p>
+</div>
+<div class="bg-white p-md rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.04)] border-b-2 border-emerald-500">
+<p class="text-label-sm text-secondary uppercase tracking-wider mb-xs">Active</p>
+<p class="text-headline-md font-headline-md text-emerald-600">98</p>
+</div>
+<div class="bg-white p-md rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.04)] border-b-2 border-amber-500">
+<p class="text-label-sm text-secondary uppercase tracking-wider mb-xs">Due</p>
+<p class="text-headline-md font-headline-md text-amber-600">18</p>
+</div>
+<div class="bg-white p-md rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.04)] border-b-2 border-secondary-container">
+<p class="text-label-sm text-secondary uppercase tracking-wider mb-xs">Inactive</p>
+<p class="text-headline-md font-headline-md text-secondary">8</p>
+</div>
+</div>
+<!-- Member List -->
+<div class="bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden">
+<div class="hidden md:grid grid-cols-12 gap-md px-md py-sm border-b border-faint bg-surface-container-low">
+<div class="col-span-5 text-label-md text-secondary">Member Details</div>
+<div class="col-span-3 text-label-md text-secondary">Contact</div>
+<div class="col-span-2 text-label-md text-secondary text-center">Status</div>
+<div class="col-span-2 text-label-md text-secondary text-right">Actions</div>
+</div>
+<!-- Member Rows -->
+<div class="divide-y divide-[#F1F1F1]">
+<!-- Member 1: Due Contribution -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-low/30 transition-colors">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md">
+<img alt="Aditi Sharma" class="w-12 h-12 rounded-full object-cover shadow-sm" data-alt="A vibrant professional headshot of a young woman with a warm, energetic smile. She is set against a clean, minimal white background with soft, natural lighting. The image captures a sense of community and premium service, consistent with a high-end volunteer management application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlwg9Wi_R59EgEO-0zs6taDNfe7rR5A-vRRDUw9fUxRm2NXMCtlZ3apvqFEe2VgcPxOMfPQsqQi18QqyRClZiyVvqgWtKB9tO1f8wlPqT2V5AYUFqNaWD0L2GQq7ZoabVgn8HpQnYVrI7u1dN6mcnsjWJ7fJc8UeRqsi9-cE9Qms_FU8hjvCNM9kU4igvXLFkHN7hgfzBRz1uv8kL1T7mbNILzl6jcf4r6wyn-r2gUF7zXjupMn6IJY5oNSEeuKsgDv2hrc7yg01bF"/>
+<div>
+<p class="font-label-md text-on-surface">Aditi Sharma</p>
+<p class="text-label-sm text-secondary">Joined Oct 2023</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3">
+<p class="text-body-md text-on-surface">+91 98765 43210</p>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-start md:justify-center">
+<span class="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-label-sm font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Due
+            </span>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-end">
+<button class="w-full md:w-auto bg-primary text-white font-label-md px-4 py-2 rounded-full shadow-sm hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-base">
+<span class="material-symbols-outlined text-[18px]">send</span>
+              Remind
+            </button>
+</div>
+</div>
+<!-- Member 2: Active -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-low/30 transition-colors">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md">
+<img alt="Rahul Varma" class="w-12 h-12 rounded-full object-cover shadow-sm" data-alt="A clear, high-resolution portrait of a middle-aged man with an approachable and confident demeanor. He is photographed in a well-lit, contemporary environment with a shallow depth of field. The color scheme is balanced with cool whites and warm skin tones, reflecting a professional and high-quality aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsuM5_dtl-athMhoGYAu19q8FjQyvASHy13UW4OF6Yr96qu-ykA3YGXeMo5V4yPi9nLyueNQCC_Qqa8wIBF-bhB85PoZeBw5gUWKqz6XDMcu2SbnZsuyKBECo8RcR1OY5ozS1taAnx69wBp-XKU7BcRomaHyZ_quRKplxDwnM0Xo29DWs_DH0Rch7JbUFqV6DWEig8-7qzOuSHj5KOdzP_xFWIzBa6ugSHFuWUPf8S8A-CuDxrbLQ-o1_uG3D2DV9cTRxkQv4k1LLR"/>
+<div>
+<p class="font-label-md text-on-surface">Rahul Varma</p>
+<p class="text-label-sm text-secondary">Joined Jan 2024</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3">
+<p class="text-body-md text-on-surface">+91 87654 32109</p>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-start md:justify-center">
+<span class="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-label-sm font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Active
+            </span>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-end">
+<button class="w-full md:w-auto text-secondary font-label-md px-4 py-2 rounded-full hover:bg-surface-container transition-all flex items-center justify-center gap-base">
+              Details
+            </button>
+</div>
+</div>
+<!-- Member 3: Inactive -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-low/30 transition-colors">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md opacity-60">
+<img alt="Sneha Kapoor" class="w-12 h-12 rounded-full object-cover shadow-sm" data-alt="A portrait of a woman looking thoughtfully away from the camera in a modern, light-filled office space. The image features soft focus in the background and a clean, high-end commercial photography style. The lighting is bright and even, reinforcing the elevated minimalism of the brand's identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL65z2Wvj0rfUa0umola92mwLnSoshdmfXQ22LlsDQwBgW3qZeDS8GKut4DU9GdFGy5XHHn6aj1TjfCHfFlAiWXDpdRLf-82LemZrNb_nRee-2ZJRM2JFjkY_GdktkKKMNdAnUvkdai3wk2Jl_uAwmq_hdn9UGYIBEpjmQBejI7RqABeEDfd44txQuOoj3Ru-ZZPC_noOyoqKRligrYpAydEf8_Z5tsXO3tgIuxBW2ng-fkkg1QeEoEvBoVG9eSWDZINkMDbYgpePy"/>
+<div>
+<p class="font-label-md text-on-surface">Sneha Kapoor</p>
+<p class="text-label-sm text-secondary">Joined June 2023</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3 opacity-60">
+<p class="text-body-md text-on-surface">+91 76543 21098</p>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-start md:justify-center">
+<span class="bg-surface-container-highest text-secondary px-3 py-1 rounded-full text-label-sm font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              Inactive
+            </span>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-end">
+<button class="w-full md:w-auto text-secondary font-label-md px-4 py-2 rounded-full hover:bg-surface-container transition-all flex items-center justify-center gap-base">
+              Details
+            </button>
+</div>
+</div>
+<!-- Member 4: Due Contribution -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md p-md items-center hover:bg-surface-container-low/30 transition-colors">
+<div class="col-span-1 md:col-span-5 flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-headline-md shadow-sm">
+              MK
+            </div>
+<div>
+<p class="font-label-md text-on-surface">Manish Kumar</p>
+<p class="text-label-sm text-secondary">Joined Feb 2024</p>
+</div>
+</div>
+<div class="col-span-1 md:col-span-3">
+<p class="text-body-md text-on-surface">+91 99887 76655</p>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-start md:justify-center">
+<span class="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-label-sm font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Due
+            </span>
+</div>
+<div class="col-span-1 md:col-span-2 flex justify-end">
+<button class="w-full md:w-auto bg-primary text-white font-label-md px-4 py-2 rounded-full shadow-sm hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-base">
+<span class="material-symbols-outlined text-[18px]">send</span>
+              Remind
+            </button>
+</div>
+</div>
+</div>
+<div class="p-md bg-surface-container-low/50 flex flex-col md:flex-row justify-between items-center gap-md border-t border-[#F1F1F1]">
+<p class="text-label-sm text-secondary italic">Showing 1-4 of 124 members</p>
+<div class="flex gap-base">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-secondary-container text-secondary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-primary text-white font-label-md">1</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-secondary-container text-secondary hover:bg-primary hover:text-white transition-all">2</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-secondary-container text-secondary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-lg bg-surface dark:bg-surface-dim shadow-[0_-4px_20px_rgba(0,0,0,0.04)] flex justify-around items-center h-16 px-base pb-safe">
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">volunteer_activism</span>
+<span class="font-label-sm text-label-sm">Campaigns</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm">Receipts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-label-sm text-label-sm">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<!-- Floating Action Button (Only relevant to core volunteer actions) -->
+<button class="fixed right-6 bottom-24 md:bottom-8 bg-primary text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-all hover:bg-primary/90">
+<span class="material-symbols-outlined text-[32px]">person_add</span>
+</button>
+<script>
+    // Simple interactions for search focus
+    const searchInput = document.querySelector('input[type="text"]');
+    searchInput.addEventListener('focus', () => {
+      searchInput.parentElement.classList.add('scale-[1.02]');
+    });
+    searchInput.addEventListener('blur', () => {
+      searchInput.parentElement.classList.remove('scale-[1.02]');
+    });
+  </script>
+</body></html>

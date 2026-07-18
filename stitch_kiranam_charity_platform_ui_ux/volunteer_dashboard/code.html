@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kiranam Volunteer Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-error-container": "#93000a",
+                "secondary-fixed": "#e5e2e1",
+                "on-primary-fixed": "#410003",
+                "tertiary-fixed-dim": "#c5c7c8",
+                "surface-variant": "#dbe4ed",
+                "on-surface": "#141d23",
+                "on-secondary-container": "#636262",
+                "on-tertiary": "#ffffff",
+                "error-container": "#ffdad6",
+                "secondary-fixed-dim": "#c8c6c5",
+                "surface-container": "#e6eff8",
+                "primary": "#bb0016",
+                "inverse-primary": "#ffb4ac",
+                "tertiary": "#5a5c5d",
+                "outline-variant": "#e7bcb8",
+                "on-background": "#141d23",
+                "on-tertiary-container": "#fcfdfe",
+                "surface-container-lowest": "#ffffff",
+                "surface-container-low": "#ecf5fe",
+                "tertiary-container": "#737576",
+                "on-primary-container": "#fffbff",
+                "on-primary": "#ffffff",
+                "on-secondary-fixed-variant": "#474746",
+                "on-secondary-fixed": "#1c1b1b",
+                "on-surface-variant": "#5e3f3c",
+                "on-primary-fixed-variant": "#93000e",
+                "on-error": "#ffffff",
+                "inverse-surface": "#293138",
+                "primary-fixed": "#ffdad6",
+                "surface-container-high": "#e0e9f2",
+                "surface": "#f6faff",
+                "primary-fixed-dim": "#ffb4ac",
+                "surface-container-highest": "#dbe4ed",
+                "on-tertiary-fixed-variant": "#454748",
+                "on-tertiary-fixed": "#191c1d",
+                "surface-bright": "#f6faff",
+                "surface-tint": "#c00016",
+                "on-secondary": "#ffffff",
+                "error": "#ba1a1a",
+                "primary-container": "#e61924",
+                "tertiary-fixed": "#e1e3e4",
+                "surface-dim": "#d2dbe4",
+                "secondary": "#5f5e5e",
+                "inverse-on-surface": "#e9f2fb",
+                "background": "#f6faff",
+                "secondary-container": "#e2dfde",
+                "outline": "#926e6b"
+            },
+            "borderRadius": {
+                "DEFAULT": "1rem",
+                "lg": "2rem",
+                "xl": "3rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "margin-desktop": "64px",
+                "xs": "4px",
+                "sm": "12px",
+                "lg": "48px",
+                "margin-mobile": "16px",
+                "base": "8px",
+                "xl": "80px",
+                "gutter": "24px",
+                "md": "24px"
+            },
+            "fontFamily": {
+                "display-lg": ["Plus Jakarta Sans"],
+                "body-md": ["Inter"],
+                "body-lg": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-lg-mobile": ["Plus Jakarta Sans"],
+                "headline-lg": ["Plus Jakarta Sans"],
+                "label-sm": ["Inter"],
+                "headline-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "label-md": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f6faff;
+            color: #141d23;
+        }
+        .custom-shadow {
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 bg-surface dark:bg-surface-dim shadow-sm flex justify-between items-center px-margin-mobile md:px-margin-desktop py-sm">
+<div class="flex items-center gap-sm">
+<h1 class="font-display-lg text-headline-md md:text-display-lg text-primary">Kiranam</h1>
+</div>
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-low transition-colors p-2 rounded-full active:scale-95 duration-150" data-icon="notifications">notifications</button>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border-2 border-white shadow-sm cursor-pointer active:scale-95 duration-150">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSCOO0gQHomJpazoEJAwBLDg8H_ueGVdHgRyLCxj5rzZwsjgrtScrLQziMNTbMzJvB40hF3N_-3-sKknYB-g3YGG9adnGFKBie5-3ZkNcvMBhYqNNspF_pdxn4jZuDDJxnqn-U1iy4jE59J__w2AgBc-E_gm601cMWtBxRyWNSfJw38rMCMchcCxzCCaDQiBjZAXfW52oKZNGft0m3o3i51G-kWtomzLeGjFtqZbyxSnQZFNZzPZLR4aweAvrORFOI7ED5QWES_0Ha"/>
+</div>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-margin-mobile md:px-margin-desktop py-lg">
+<!-- Welcome Section -->
+<section class="mb-lg">
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-xs">Welcome back, Arvind!</h2>
+<p class="text-secondary font-body-lg">Here's your volunteer impact overview for this month.</p>
+</section>
+<!-- KPI Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-lg">
+<!-- Members Referred -->
+<div class="bg-white p-md rounded-lg custom-shadow flex flex-col justify-between hover:scale-[1.02] transition-transform cursor-pointer">
+<div class="flex justify-between items-start mb-md">
+<span class="p-3 rounded-full bg-surface-container-low text-primary">
+<span class="material-symbols-outlined" data-icon="group_add">group_add</span>
+</span>
+<span class="bg-surface-container text-secondary text-label-sm px-3 py-1 rounded-full">Overall</span>
+</div>
+<div>
+<p class="text-secondary font-label-md mb-xs">Members Referred</p>
+<div class="flex items-baseline gap-xs">
+<h3 class="font-display-lg text-headline-lg text-on-surface">128</h3>
+<span class="text-primary font-label-sm">+12%</span>
+</div>
+</div>
+</div>
+<!-- Active Members -->
+<div class="bg-white p-md rounded-lg custom-shadow flex flex-col justify-between hover:scale-[1.02] transition-transform cursor-pointer">
+<div class="flex justify-between items-start mb-md">
+<span class="p-3 rounded-full bg-surface-container-low text-primary">
+<span class="material-symbols-outlined" data-icon="verified_user">verified_user</span>
+</span>
+<span class="bg-surface-container text-secondary text-label-sm px-3 py-1 rounded-full">Currently Active</span>
+</div>
+<div>
+<p class="text-secondary font-label-md mb-xs">Active Members</p>
+<div class="flex items-baseline gap-xs">
+<h3 class="font-display-lg text-headline-lg text-on-surface">94</h3>
+<span class="text-primary font-label-sm">82% Rate</span>
+</div>
+</div>
+</div>
+<!-- Contributions -->
+<div class="bg-white p-md rounded-lg custom-shadow flex flex-col justify-between hover:scale-[1.02] transition-transform cursor-pointer">
+<div class="flex justify-between items-start mb-md">
+<span class="p-3 rounded-full bg-surface-container-low text-primary">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+</span>
+<span class="bg-surface-container text-secondary text-label-sm px-3 py-1 rounded-full">Monthly</span>
+</div>
+<div>
+<p class="text-secondary font-label-md mb-xs">Monthly Contributions</p>
+<div class="flex items-baseline gap-xs">
+<h3 class="font-display-lg text-headline-lg text-on-surface">₹45,200</h3>
+<span class="text-primary font-label-sm">Peak</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Referral & Actions Container -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Referral Code Card -->
+<div class="lg:col-span-5 bg-primary rounded-lg p-md text-white overflow-hidden relative custom-shadow min-h-[280px] flex flex-col justify-center">
+<div class="relative z-10">
+<h4 class="font-headline-md mb-md">Invite New Members</h4>
+<p class="opacity-80 font-body-md mb-lg max-w-[300px]">Use your unique code to track members and earn rewards on every referral.</p>
+<div class="bg-white/10 backdrop-blur-md rounded-lg p-sm flex items-center justify-between border border-white/20 mb-md">
+<div>
+<p class="text-xs uppercase tracking-widest opacity-60 font-bold mb-xs">Referral Code</p>
+<span class="text-headline-md font-bold tracking-tight">VOL1001</span>
+</div>
+<div class="flex gap-sm">
+<button class="p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors active:scale-90 duration-150" onclick="copyToClipboard('VOL1001')">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+<button class="p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors active:scale-90 duration-150">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Background decoration -->
+<div class="absolute -right-16 -bottom-16 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+<div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 24px 24px;"></div>
+</div>
+<!-- Quick Action Grid -->
+<div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-gutter">
+<div class="bg-white p-md rounded-lg custom-shadow flex items-center gap-md hover:bg-surface-container-low transition-all cursor-pointer group">
+<div class="w-14 h-14 rounded-full bg-surface-container-low text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</div>
+<div>
+<h5 class="font-headline-md text-on-surface text-body-lg">View Members</h5>
+<p class="text-secondary text-label-sm">Track registration status</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-lg custom-shadow flex items-center gap-md hover:bg-surface-container-low transition-all cursor-pointer group">
+<div class="w-14 h-14 rounded-full bg-surface-container-low text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="send_time_extension">send_time_extension</span>
+</div>
+<div>
+<h5 class="font-headline-md text-on-surface text-body-lg">Send Reminders</h5>
+<p class="text-secondary text-label-sm">Follow up on pending tasks</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-lg custom-shadow flex items-center gap-md hover:bg-surface-container-low transition-all cursor-pointer group">
+<div class="w-14 h-14 rounded-full bg-surface-container-low text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="library_books">library_books</span>
+</div>
+<div>
+<h5 class="font-headline-md text-on-surface text-body-lg">Resource Center</h5>
+<p class="text-secondary text-label-sm">Training &amp; Marketing kits</p>
+</div>
+</div>
+<div class="bg-white p-md rounded-lg custom-shadow flex items-center gap-md hover:bg-surface-container-low transition-all cursor-pointer group">
+<div class="w-14 h-14 rounded-full bg-surface-container-low text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
+<span class="material-symbols-outlined" data-icon="military_tech">military_tech</span>
+</div>
+<div>
+<h5 class="font-headline-md text-on-surface text-body-lg">Leaderboard</h5>
+<p class="text-secondary text-label-sm">See top volunteers</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Activity Section -->
+<section class="mt-xl">
+<div class="flex justify-between items-end mb-md">
+<div>
+<h4 class="font-headline-md text-on-surface">Recent Campaigns</h4>
+<p class="text-secondary">Track the performance of your shared initiatives</p>
+</div>
+<button class="text-primary font-label-md flex items-center gap-xs hover:underline">
+                    View All <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Activity Card 1 -->
+<div class="bg-white rounded-lg overflow-hidden custom-shadow group">
+<div class="h-48 overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A heart-warming image of community volunteers distributing food packages in a brightly lit urban setting. The scene is filled with optimistic sunlight and shows diverse people collaborating efficiently. The aesthetic is clean and high-end, featuring subtle accents of primary red in the volunteer uniforms, matching the Kiranam brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUFGhaffg3Md_cHRuKTEOw12edDhm7lCRuJJ81NMi73A2vN3zfTsjKn3AHYXoXGNMj8lIEJ-N3r6NErscpBoNU8KYh5HK89JxwcM0OA7TAu75yQrQzG9QS-wfCyPbTnDUb4YdaaCLZBDpaaxw4EVKIRARUFuoVLKhcCAULBiFfO27niG9nLCmPlBvEsBszOjtkjefHCWtOojCLRt3HWb88_3iQL3xNmdTZZ0dK8WmpIL6dn1DqSXSDkJBm-lB4arbjLqmeDIhgwa-I"/>
+<div class="absolute top-sm left-sm">
+<span class="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-label-sm font-bold text-primary">Active</span>
+</div>
+</div>
+<div class="p-md">
+<h5 class="font-headline-md text-on-surface mb-xs">Education for All 2024</h5>
+<p class="text-secondary font-body-md mb-md">Help us sponsor the primary education of 500 children from underserved communities.</p>
+<div class="w-full bg-surface-container rounded-full h-2 mb-sm">
+<div class="bg-primary h-2 rounded-full" style="width: 65%"></div>
+</div>
+<div class="flex justify-between text-label-sm text-secondary">
+<span>₹3,25,000 raised</span>
+<span class="font-bold text-on-surface">65%</span>
+</div>
+</div>
+</div>
+<!-- Activity Card 2 -->
+<div class="bg-white rounded-lg overflow-hidden custom-shadow group">
+<div class="h-48 overflow-hidden relative">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Modern healthcare facility interior with a professional medical team engaged in a community checkup drive. The environment is sterile yet welcoming, dominated by bright whites and soft grey tones. Strategically placed medical equipment is visible, and the overall mood is one of premium health services and care, with clean lighting reflecting a modern high-end retail experience." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFedHNvK7PSTxIuw_SYIn0-OC7ZTTiuH_gwYz2rdJRQ739AySqp7lXo6XXDF5UVQgnwXMsRRoHV2EfEgucri39-zn1gDhzZ3_c0MhN4FKTs93E24U7ZoDpvnghgxonCqwvyRiqbsJik409_ORxdDymnXx0mGaGjCcpM1zg8bVJGZzNabjFKQMrRe6w63SZ7ZLThqhiGM3-VsKOglddA0SUMOyifcm4_ZvhogqCS4V2fsj8dn1zB3iqARcO4tyfrglIHVcWbWYQ-bw4"/>
+<div class="absolute top-sm left-sm">
+<span class="bg-white/90 backdrop-blur px-3 py-1 rounded-full text-label-sm font-bold text-primary">Limited Time</span>
+</div>
+</div>
+<div class="p-md">
+<h5 class="font-headline-md text-on-surface mb-xs">Health Checkup Drive</h5>
+<p class="text-secondary font-body-md mb-md">Providing free medical screenings and consultations to senior citizens in suburban areas.</p>
+<div class="w-full bg-surface-container rounded-full h-2 mb-sm">
+<div class="bg-primary h-2 rounded-full" style="width: 42%"></div>
+</div>
+<div class="flex justify-between text-label-sm text-secondary">
+<span>₹1,10,000 raised</span>
+<span class="font-bold text-on-surface">42%</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-lg bg-surface dark:bg-surface-dim shadow-[0_-4px_20px_rgba(0,0,0,0.04)] flex justify-around items-center h-16 px-base pb-safe">
+<a class="flex flex-col items-center justify-center text-primary font-bold bg-primary-container text-on-primary-container rounded-full px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="volunteer_activism">volunteer_activism</span>
+<span class="font-label-sm text-label-sm">Campaigns</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-sm text-label-sm">Receipts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="font-label-sm text-label-sm">Alerts</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 bg-on-surface text-surface px-6 py-3 rounded-full shadow-lg z-50 text-label-md animate-bounce';
+                toast.innerText = 'Referral Code Copied!';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            });
+        }
+
+        // Simple parallax or float effect for background
+        document.addEventListener('mousemove', (e) => {
+            const blobs = document.querySelectorAll('.blur-3xl');
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            blobs.forEach(blob => {
+                blob.style.transform = `translate(${x * 20}px, ${y * 20}px)`;
+            });
+        });
+    </script>
+</body></html>

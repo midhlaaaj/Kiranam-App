@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Notifications - Kiranam Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#360f00",
+                      "primary-container": "#0f52ba",
+                      "surface-container-high": "#e6e8ea",
+                      "on-secondary-fixed-variant": "#38485d",
+                      "error": "#ba1a1a",
+                      "surface-dim": "#d8dadc",
+                      "surface-bright": "#f7f9fb",
+                      "secondary-fixed": "#d3e4fe",
+                      "outline": "#737784",
+                      "inverse-on-surface": "#eff1f3",
+                      "primary-fixed-dim": "#b0c6ff",
+                      "tertiary-fixed": "#ffdbcd",
+                      "tertiary": "#732900",
+                      "error-container": "#ffdad6",
+                      "secondary-container": "#d0e1fb",
+                      "outline-variant": "#c3c6d5",
+                      "on-surface-variant": "#434653",
+                      "on-background": "#191c1e",
+                      "surface-container-low": "#f2f4f6",
+                      "on-primary-fixed": "#001945",
+                      "surface": "#f7f9fb",
+                      "on-tertiary-container": "#ffc0a7",
+                      "on-surface": "#191c1e",
+                      "on-primary-fixed-variant": "#00419c",
+                      "on-primary": "#ffffff",
+                      "tertiary-container": "#993900",
+                      "on-error-container": "#93000a",
+                      "inverse-surface": "#2d3133",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-fixed": "#d9e2ff",
+                      "primary": "#003c90",
+                      "on-tertiary-fixed-variant": "#7d2d00",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-container": "#bcceff",
+                      "surface-container": "#eceef0",
+                      "on-secondary-container": "#54647a",
+                      "surface-tint": "#1d59c1",
+                      "surface-variant": "#e0e3e5",
+                      "secondary": "#505f76",
+                      "on-secondary-fixed": "#0b1c30",
+                      "on-error": "#ffffff",
+                      "inverse-primary": "#b0c6ff",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "surface-container-highest": "#e0e3e5",
+                      "background": "#f7f9fb",
+                      "tertiary-fixed-dim": "#ffb596"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "sm": "8px",
+                      "md": "16px",
+                      "gutter": "20px",
+                      "xl": "32px",
+                      "lg": "24px",
+                      "container-max": "1440px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "data-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "data-mono": [
+                              "13px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #F8FAFC;
+            color: #191c1e;
+        }
+        
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .card-lift {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+
+        .table-row-hover:hover {
+            background-color: #F1F5F9;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-body-md text-on-surface antialiased min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-screen w-[240px] bg-surface border-r border-outline-variant fixed left-0 top-0 py-lg z-50 shadow-sm">
+<div class="px-lg mb-xl flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" style="font-size: 20px;">volunteer_activism</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary tracking-tight">Kiranam Admin</h1>
+<p class="font-label-md text-label-md text-secondary">Charity Dashboard</p>
+</div>
+</div>
+<div class="px-lg mb-md">
+<button class="w-full bg-primary text-on-primary py-sm px-md rounded-lg font-label-md text-label-md flex items-center justify-center gap-sm hover:bg-primary-container hover:text-primary transition-colors shadow-sm card-lift">
+<span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+                New Campaign
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto px-sm">
+<ul class="space-y-xs">
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Overview</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-md text-label-md">Contributors</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">volunteer_activism</span>
+<span class="font-label-md text-label-md">Volunteers</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">campaign</span>
+<span class="font-label-md text-label-md">Campaigns</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">event</span>
+<span class="font-label-md text-label-md">Events</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md text-label-md">Contributions</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-primary font-bold border-r-4 border-primary bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="font-label-md text-label-md">Notifications</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</li>
+</ul>
+</div>
+<div class="mt-auto px-sm pt-md border-t border-outline-variant">
+<ul class="space-y-xs">
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:bg-surface-container-lowest hover:text-error transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-[240px] flex flex-col min-h-screen bg-[#F8FAFC]">
+<!-- TopNavBar -->
+<header class="h-16 px-gutter flex justify-between items-center bg-surface sticky top-0 z-40 border-b border-outline-variant shadow-sm backdrop-blur-sm bg-opacity-90">
+<div class="flex items-center gap-md md:hidden">
+<button class="text-on-surface-variant hover:bg-surface-container-high rounded-full p-2 transition-all duration-200">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-headline-sm text-headline-sm font-bold text-primary">Kiranam Admin</span>
+</div>
+<div class="hidden md:flex items-center bg-surface-container-low rounded-full px-md py-sm border border-outline-variant focus-within:border-primary focus-within:ring-1 focus-within:ring-primary w-96 transition-all duration-200">
+<span class="material-symbols-outlined text-on-surface-variant mr-sm" style="font-size: 20px;">search</span>
+<input class="bg-transparent border-none outline-none text-body-sm font-body-sm w-full placeholder-on-surface-variant focus:ring-0 p-0 text-on-surface" placeholder="Search notifications, audiences..." type="text"/>
+</div>
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant hover:bg-surface-container-high rounded-full p-2 transition-all duration-200 w-10 h-10 flex items-center justify-center">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="text-primary hover:bg-surface-container-high rounded-full p-2 transition-all duration-200 w-10 h-10 flex items-center justify-center relative">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">notifications_active</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant overflow-hidden ml-sm cursor-pointer card-lift">
+<img alt="Admin Avatar" class="w-full h-full object-cover" data-alt="A small, professional headshot of an administrative user, facing forward with a slight smile, well-lit, clean background, suitable for a dashboard avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbXY3XPpskzEBgpmeprGGFEMOqwKlYAo58cR3VnDjAj41632Ay8Ka4dhnzcvP6RtuhmRCoaUKxE-Yxzjv38jQaIURKengXAtddReYxL4ake0XukFNna5E6XYpOL0sMOsqvvLXPp-g_w5xRVKMuMM51-JFJKt1I15OTNW5U6RfHIeoj6-QmEiMFCKOgxc0v_0-EAhwFV3iMBE8pH88xX4zQYjGVDsjUVDS3SrHhwOCLAIIOQW4cDqrY"/>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-md md:p-lg lg:p-xl max-w-container-max mx-auto w-full grid grid-cols-12 gap-gutter">
+<!-- Page Header -->
+<div class="col-span-12 flex justify-between items-end mb-md">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface">Communication Center</h2>
+<p class="font-body-lg text-body-lg text-secondary mt-1">Manage broadcasts and view notification history.</p>
+</div>
+<div class="flex gap-sm">
+<span class="px-sm py-xs bg-primary-fixed-dim text-primary rounded-full font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined" style="font-size: 14px;">check_circle</span>
+                       Systems Operational
+                   </span>
+</div>
+</div>
+<!-- Left Column: Compose & Stats -->
+<div class="col-span-12 lg:col-span-5 space-y-gutter">
+<!-- Compose Card (Collapsible) -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden" id="compose-card">
+<!-- Card Header (Toggle) -->
+<button class="w-full px-lg py-md flex justify-between items-center bg-surface-container-low hover:bg-surface-container transition-colors border-b border-outline-variant" onclick="document.getElementById('compose-form-body').classList.toggle('hidden'); document.getElementById('compose-icon').innerText = document.getElementById('compose-icon').innerText === 'expand_more' ? 'expand_less' : 'expand_more';">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 18px;">send</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">New Broadcast</h3>
+</div>
+<span class="material-symbols-outlined text-secondary" id="compose-icon">expand_less</span>
+</button>
+<!-- Card Body -->
+<div class="p-lg space-y-md" id="compose-form-body">
+<!-- Audience Selection -->
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-xs">Audience</label>
+<div class="relative">
+<select class="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm text-body-md font-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary appearance-none">
+<option>All Active Volunteers</option>
+<option>Recent Contributors (30 days)</option>
+<option>Campaign Managers</option>
+<option>Custom Segment...</option>
+</select>
+<span class="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 text-secondary pointer-events-none">arrow_drop_down</span>
+</div>
+</div>
+<!-- Title -->
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-xs">Notification Title</label>
+<input class="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm text-body-md font-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary placeholder-outline" placeholder="e.g., Urgent: Weekend Food Drive Update" type="text"/>
+</div>
+<!-- Body -->
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-xs">Message Body</label>
+<textarea class="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm text-body-md font-body-md text-on-surface focus:ring-2 focus:ring-primary focus:border-primary placeholder-outline resize-none" placeholder="Enter message details here..." rows="4"></textarea>
+<div class="flex justify-between items-center mt-xs">
+<span class="font-label-md text-label-md text-secondary">Markdown supported</span>
+<span class="font-data-mono text-data-mono text-secondary">0/500</span>
+</div>
+</div>
+<!-- Delivery Options -->
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-xs">Delivery Channels</label>
+<div class="flex gap-md">
+<label class="flex items-center gap-xs cursor-pointer">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">In-App</span>
+</label>
+<label class="flex items-center gap-xs cursor-pointer">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">Email</span>
+</label>
+<label class="flex items-center gap-xs cursor-pointer">
+<input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/>
+<span class="font-body-sm text-body-sm text-on-surface">SMS (Urgent)</span>
+</label>
+</div>
+</div>
+<!-- Actions -->
+<div class="pt-sm flex justify-end gap-sm border-t border-outline-variant">
+<button class="px-md py-sm rounded-lg font-label-md text-label-md text-secondary hover:bg-surface-container-high transition-colors">Save Draft</button>
+<button class="px-lg py-sm rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center gap-xs hover:bg-on-primary-fixed-variant transition-colors shadow-sm card-lift">
+<span class="material-symbols-outlined" style="font-size: 16px;">send</span>
+                                Send Now
+                            </button>
+</div>
+</div>
+</div>
+<!-- Quick Stats Bento -->
+<div class="grid grid-cols-2 gap-sm">
+<div class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm card-lift">
+<div class="flex items-center gap-xs text-secondary mb-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">mark_email_read</span>
+<h4 class="font-label-md text-label-md uppercase tracking-wider">Avg Open Rate</h4>
+</div>
+<div class="flex items-end gap-sm">
+<span class="font-display-lg text-display-lg text-on-surface">68%</span>
+<span class="font-label-md text-label-md text-primary bg-primary-fixed-dim px-xs py-1 rounded flex items-center mb-1">
+<span class="material-symbols-outlined" style="font-size: 12px;">arrow_upward</span> 2.4%
+                            </span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm card-lift">
+<div class="flex items-center gap-xs text-secondary mb-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">groups</span>
+<h4 class="font-label-md text-label-md uppercase tracking-wider">Reach (30d)</h4>
+</div>
+<div class="flex items-end gap-sm">
+<span class="font-display-lg text-display-lg text-on-surface">4.2k</span>
+<span class="font-body-sm text-body-sm text-secondary mb-1">users</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Sent History -->
+<div class="col-span-12 lg:col-span-7">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm h-full flex flex-col">
+<!-- History Header -->
+<div class="px-lg py-md border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-sm">
+<span class="material-symbols-outlined text-secondary">history</span>
+                            Broadcast History
+                        </h3>
+<div class="flex gap-sm">
+<button class="p-1 rounded text-secondary hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">filter_list</span>
+</button>
+<button class="p-1 rounded text-secondary hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">more_vert</span>
+</button>
+</div>
+</div>
+<!-- History List -->
+<div class="flex-1 overflow-y-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface-container-lowest border-b border-outline-variant z-10 shadow-[0_1px_0_0_#e2e8f0]">
+<tr>
+<th class="px-lg py-sm font-label-md text-label-md text-secondary font-semibold">Message</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary font-semibold">Audience</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary font-semibold text-right">Delivered</th>
+<th class="px-md py-sm font-label-md text-label-md text-secondary font-semibold text-right">Read</th>
+<th class="px-lg py-sm font-label-md text-label-md text-secondary font-semibold text-right">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Item 1 -->
+<tr class="table-row-hover group cursor-pointer">
+<td class="px-lg py-md">
+<p class="font-body-md text-body-md text-on-surface font-semibold truncate max-w-[200px]">Q3 Campaign Launch Prep</p>
+<p class="font-body-sm text-body-sm text-secondary">Today, 10:45 AM</p>
+</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-xs px-xs py-1 bg-surface-container-high rounded text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined" style="font-size: 12px;">group</span>
+                                            Campaign Mgrs
+                                        </span>
+</td>
+<td class="px-md py-md text-right font-data-mono text-data-mono text-on-surface">
+                                        42
+                                    </td>
+<td class="px-md py-md text-right">
+<div class="flex flex-col items-end">
+<span class="font-data-mono text-data-mono text-on-surface">38</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full overflow-hidden mt-1">
+<div class="h-full bg-primary" style="width: 90%;"></div>
+</div>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="inline-flex items-center justify-center px-sm py-1 rounded-full bg-[#dcfce7] text-[#166534] font-label-md text-label-md gap-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-[#166534]"></span>
+                                            Sent
+                                        </span>
+</td>
+</tr>
+<!-- Item 2 -->
+<tr class="table-row-hover group cursor-pointer">
+<td class="px-lg py-md">
+<p class="font-body-md text-body-md text-on-surface font-semibold truncate max-w-[200px]">System Maintenance Alert</p>
+<p class="font-body-sm text-body-sm text-secondary">Yesterday, 14:00</p>
+</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-xs px-xs py-1 bg-surface-container-high rounded text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined" style="font-size: 12px;">public</span>
+                                            All Active
+                                        </span>
+</td>
+<td class="px-md py-md text-right font-data-mono text-data-mono text-on-surface">
+                                        1,204
+                                    </td>
+<td class="px-md py-md text-right">
+<div class="flex flex-col items-end">
+<span class="font-data-mono text-data-mono text-on-surface">850</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full overflow-hidden mt-1">
+<div class="h-full bg-primary" style="width: 70%;"></div>
+</div>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="inline-flex items-center justify-center px-sm py-1 rounded-full bg-[#dcfce7] text-[#166534] font-label-md text-label-md gap-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-[#166534]"></span>
+                                            Sent
+                                        </span>
+</td>
+</tr>
+<!-- Item 3 -->
+<tr class="table-row-hover group cursor-pointer">
+<td class="px-lg py-md">
+<p class="font-body-md text-body-md text-on-surface font-semibold truncate max-w-[200px]">Donation Receipt Issue</p>
+<p class="font-body-sm text-body-sm text-secondary">Oct 12, 09:15 AM</p>
+</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-xs px-xs py-1 bg-surface-container-high rounded text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined" style="font-size: 12px;">payments</span>
+                                            Recent Donors
+                                        </span>
+</td>
+<td class="px-md py-md text-right font-data-mono text-data-mono text-on-surface">
+                                        156
+                                    </td>
+<td class="px-md py-md text-right">
+<div class="flex flex-col items-end">
+<span class="font-data-mono text-data-mono text-on-surface">142</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full overflow-hidden mt-1">
+<div class="h-full bg-[#f59e0b]" style="width: 91%;"></div>
+</div>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="inline-flex items-center justify-center px-sm py-1 rounded-full bg-[#fef3c7] text-[#92400e] font-label-md text-label-md gap-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-[#92400e]"></span>
+                                            Partial
+                                        </span>
+</td>
+</tr>
+<!-- Item 4 -->
+<tr class="table-row-hover group cursor-pointer">
+<td class="px-lg py-md">
+<p class="font-body-md text-body-md text-on-surface font-semibold truncate max-w-[200px]">Draft: Annual Gala Invites</p>
+<p class="font-body-sm text-body-sm text-secondary">Last saved: Oct 10</p>
+</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-xs px-xs py-1 bg-surface-container-high rounded text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined" style="font-size: 12px;">star</span>
+                                            Major Donors
+                                        </span>
+</td>
+<td class="px-md py-md text-right font-data-mono text-data-mono text-on-surface-variant">
+                                        -
+                                    </td>
+<td class="px-md py-md text-right text-on-surface-variant">
+                                        -
+                                    </td>
+<td class="px-lg py-md text-right">
+<span class="inline-flex items-center justify-center px-sm py-1 rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md gap-xs border border-outline-variant">
+<span class="material-symbols-outlined" style="font-size: 14px;">edit_document</span>
+                                            Draft
+                                        </span>
+</td>
+</tr>
+<!-- Item 5 -->
+<tr class="table-row-hover group cursor-pointer">
+<td class="px-lg py-md">
+<p class="font-body-md text-body-md text-on-surface font-semibold truncate max-w-[200px]">Volunteer Onboarding Link</p>
+<p class="font-body-sm text-body-sm text-secondary">Oct 05, 11:30 AM</p>
+</td>
+<td class="px-md py-md">
+<span class="inline-flex items-center gap-xs px-xs py-1 bg-surface-container-high rounded text-on-surface-variant font-label-md text-label-md">
+<span class="material-symbols-outlined" style="font-size: 12px;">person_add</span>
+                                            New Signups
+                                        </span>
+</td>
+<td class="px-md py-md text-right font-data-mono text-data-mono text-on-surface">
+                                        28
+                                    </td>
+<td class="px-md py-md text-right">
+<div class="flex flex-col items-end">
+<span class="font-data-mono text-data-mono text-on-surface">15</span>
+<div class="w-16 h-1 bg-surface-container-high rounded-full overflow-hidden mt-1">
+<div class="h-full bg-primary" style="width: 53%;"></div>
+</div>
+</div>
+</td>
+<td class="px-lg py-md text-right">
+<span class="inline-flex items-center justify-center px-sm py-1 rounded-full bg-[#dcfce7] text-[#166534] font-label-md text-label-md gap-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-[#166534]"></span>
+                                            Sent
+                                        </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="px-lg py-sm border-t border-outline-variant bg-surface flex justify-between items-center rounded-b-xl">
+<span class="font-body-sm text-body-sm text-secondary">Showing 1-5 of 124 broadcasts</span>
+<div class="flex gap-xs">
+<button class="p-1 rounded text-secondary hover:bg-surface-container-high transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-1 rounded text-secondary hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

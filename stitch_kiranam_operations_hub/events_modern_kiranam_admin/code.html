@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Events - Kiranam Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#360f00",
+                      "primary-container": "#0f52ba",
+                      "surface-container-high": "#e6e8ea",
+                      "on-secondary-fixed-variant": "#38485d",
+                      "error": "#ba1a1a",
+                      "surface-dim": "#d8dadc",
+                      "surface-bright": "#f7f9fb",
+                      "secondary-fixed": "#d3e4fe",
+                      "outline": "#737784",
+                      "inverse-on-surface": "#eff1f3",
+                      "primary-fixed-dim": "#b0c6ff",
+                      "tertiary-fixed": "#ffdbcd",
+                      "tertiary": "#732900",
+                      "error-container": "#ffdad6",
+                      "secondary-container": "#d0e1fb",
+                      "outline-variant": "#c3c6d5",
+                      "on-surface-variant": "#434653",
+                      "on-background": "#191c1e",
+                      "surface-container-low": "#f2f4f6",
+                      "on-primary-fixed": "#001945",
+                      "surface": "#f7f9fb",
+                      "on-tertiary-container": "#ffc0a7",
+                      "on-surface": "#191c1e",
+                      "on-primary-fixed-variant": "#00419c",
+                      "on-primary": "#ffffff",
+                      "tertiary-container": "#993900",
+                      "on-error-container": "#93000a",
+                      "inverse-surface": "#2d3133",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-fixed": "#d9e2ff",
+                      "primary": "#003c90",
+                      "on-tertiary-fixed-variant": "#7d2d00",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-container": "#bcceff",
+                      "surface-container": "#eceef0",
+                      "on-secondary-container": "#54647a",
+                      "surface-tint": "#1d59c1",
+                      "surface-variant": "#e0e3e5",
+                      "secondary": "#505f76",
+                      "on-secondary-fixed": "#0b1c30",
+                      "on-error": "#ffffff",
+                      "inverse-primary": "#b0c6ff",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "surface-container-highest": "#e0e3e5",
+                      "background": "#f7f9fb",
+                      "tertiary-fixed-dim": "#ffb596"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "sm": "8px",
+                      "md": "16px",
+                      "gutter": "20px",
+                      "xl": "32px",
+                      "lg": "24px",
+                      "container-max": "1440px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "data-mono": [
+                              "jetbrainsMono"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "data-mono": [
+                              "13px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24
+        }
+        .material-symbols-outlined.fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f7f9fb; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c3c6d5; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #737784; 
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar (Shared Component) -->
+<aside class="hidden md:flex flex-col bg-surface fixed left-0 top-0 h-screen w-[240px] border-r border-outline-variant py-lg z-50">
+<div class="px-gutter mb-xl flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold">K</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm font-bold text-primary">Kiranam Admin</span>
+<span class="font-label-md text-label-md text-secondary">Charity Dashboard</span>
+</div>
+</div>
+<nav class="flex-1 px-sm space-y-xs overflow-y-auto">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Overview</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-body-md text-body-md">Contributors</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">volunteer_activism</span>
+<span class="font-body-md text-body-md">Volunteers</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">campaign</span>
+<span class="font-body-md text-body-md">Campaigns</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-primary font-bold border-r-4 border-primary bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined fill-icon">event</span>
+<span class="font-body-md text-body-md">Events</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md text-body-md">Contributions</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-body-md text-body-md">Notifications</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="px-md mt-auto space-y-sm">
+<button class="w-full flex items-center justify-center gap-sm bg-primary text-on-primary py-sm rounded-lg hover:opacity-90 transition-opacity font-label-md text-label-md scale-98 active:opacity-80">
+<span class="material-symbols-outlined">add</span>
+                New Campaign
+            </button>
+<div class="pt-sm border-t border-outline-variant">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-body-md text-body-md">Profile</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md text-body-md">Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="flex-1 md:ml-[240px] flex flex-col min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="bg-surface border-b border-outline-variant h-16 px-gutter flex justify-between items-center sticky top-0 z-40">
+<div class="flex items-center gap-md">
+<button class="md:hidden p-sm rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-headline-sm text-headline-sm font-bold text-primary md:hidden">Kiranam Admin</span>
+</div>
+<div class="flex items-center gap-sm flex-1 justify-end">
+<div class="relative hidden sm:block max-w-md w-full mr-md">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-xl pr-sm py-sm rounded-full bg-surface-container-low border-none focus:ring-2 focus:ring-primary text-body-sm font-body-sm" placeholder="Search..." type="text"/>
+</div>
+<button class="p-sm rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+<button class="p-sm rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors relative">
+<span class="material-symbols-outlined">notifications_active</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<img alt="Admin Avatar" class="w-8 h-8 rounded-full ml-sm border border-outline-variant object-cover" data-alt="A small circular avatar portrait of an administrative professional in a bright, modern office setting. High quality, professional photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2IjnZp0ie5IePv7bnLiyKV2mJ81vkEjgHjoz_MqvtGwsrZX_VBCeXtyCAjKM8YNsX6AA_9LIae5GBvCwbCZa0m-XMTlsEI8wO7DAo6rYRyjw7b3HwIwIBsMXRBVoQ7e0j7VIpDgY7LKvgmRWU170nsqiD1GTDiJMPoPytTRDRnvm-s8JAJOvOH3w5wbz2nt_FM9RlA_6wI3yNnTdmLI3RrHBjPExJI8ecCyjvFvNa_2cHUoc0nZRb"/>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-md md:p-lg lg:p-xl max-w-container-max mx-auto w-full">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-xl gap-md">
+<div>
+<h1 class="font-display-lg text-display-lg text-on-background mb-xs">Events</h1>
+<p class="font-body-md text-body-md text-secondary">Manage and organize charity events and fundraisers.</p>
+</div>
+<button class="flex items-center gap-sm bg-primary text-on-primary px-lg py-sm rounded-lg hover:bg-on-primary-fixed-variant transition-colors font-label-md text-label-md shadow-sm hover:-translate-y-[2px]" id="toggleFormBtn">
+<span class="material-symbols-outlined">add</span>
+                    Add New Event
+                </button>
+</div>
+<!-- Collapsible Form -->
+<div class="hidden bg-surface-container-lowest border border-outline-variant rounded-xl p-lg mb-xl shadow-sm transition-all duration-300 origin-top" id="addEventForm">
+<div class="flex justify-between items-center mb-md">
+<h2 class="font-headline-md text-headline-md text-on-background">Create New Event</h2>
+<button class="p-sm rounded-full hover:bg-surface-container-low text-secondary transition-colors" id="closeFormBtn">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-md">
+<div class="col-span-1 md:col-span-2 lg:col-span-3">
+<label class="block font-label-md text-label-md text-secondary mb-xs">Event Title</label>
+<input class="w-full p-sm rounded-md border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary font-body-md text-body-md" placeholder="e.g., Annual Charity Gala" type="text"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-xs">Date</label>
+<input class="w-full p-sm rounded-md border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary font-body-md text-body-md" type="date"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-xs">Time</label>
+<input class="w-full p-sm rounded-md border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary font-body-md text-body-md" type="time"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-xs">Location</label>
+<input class="w-full p-sm rounded-md border border-outline-variant bg-surface focus:ring-2 focus:ring-primary focus:border-primary font-body-md text-body-md" placeholder="e.g., Downtown Community Center" type="text"/>
+</div>
+<div class="col-span-1 md:col-span-2 lg:col-span-3 flex justify-end gap-sm mt-sm">
+<button class="px-md py-sm rounded-md border border-outline-variant text-secondary hover:bg-surface-container-low transition-colors font-label-md text-label-md" id="cancelFormBtn" type="button">Cancel</button>
+<button class="px-md py-sm rounded-md bg-primary text-on-primary hover:bg-on-primary-fixed-variant transition-colors font-label-md text-label-md" type="submit">Save Event</button>
+</div>
+</form>
+</div>
+<!-- Filters & Controls -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-t-xl p-md flex flex-col sm:flex-row justify-between items-center gap-md">
+<div class="flex items-center gap-sm bg-surface-container-low p-xs rounded-lg w-full sm:w-auto">
+<button class="px-md py-sm rounded-md bg-surface text-primary font-label-md text-label-md shadow-sm flex-1 sm:flex-none">All</button>
+<button class="px-md py-sm rounded-md text-secondary hover:bg-surface-variant font-label-md text-label-md transition-colors flex-1 sm:flex-none">Upcoming</button>
+<button class="px-md py-sm rounded-md text-secondary hover:bg-surface-variant font-label-md text-label-md transition-colors flex-1 sm:flex-none">Past</button>
+</div>
+<div class="relative w-full sm:w-64">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-xl pr-sm py-sm rounded-md border border-outline-variant bg-surface focus:ring-2 focus:ring-primary text-body-sm font-body-sm" placeholder="Search events..." type="text"/>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-surface-container-lowest border border-t-0 border-outline-variant rounded-b-xl overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-bright">
+<th class="p-md font-label-md text-label-md text-secondary whitespace-nowrap">Event</th>
+<th class="p-md font-label-md text-label-md text-secondary whitespace-nowrap">Date &amp; Time</th>
+<th class="p-md font-label-md text-label-md text-secondary whitespace-nowrap">Location</th>
+<th class="p-md font-label-md text-label-md text-secondary whitespace-nowrap">Status</th>
+<th class="p-md font-label-md text-label-md text-secondary whitespace-nowrap text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-[#F1F5F9] transition-colors group">
+<td class="p-md">
+<div class="flex items-center gap-md">
+<img alt="Event Thumbnail" class="w-12 h-12 rounded-md object-cover border border-outline-variant" data-alt="A bright, high-contrast thumbnail showing a large group of diverse volunteers planting trees in a sunny park. Clean corporate charity style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdAOULyxFD5t9fGUH-u8GveVXP7-1A2N6H80RmAXfxhD8Kb4DWYcK1bej7Tw3aQG6wunULAYREkWoEtTxnWd60eO53kLlUsNQaVFS7MPgaYXme1sBUXon4cudeS-f2UXqgCLJRcjHZSSveQM1FWDB5gBFlRT8LI0SC8l8a2BjzIwmVWevE2VQ5n10fzZKeZmL0qJTuDiU3QjJKDaUVd-o6vRyGlYxB5_5tVYog0yod1QKzuE6QebEh"/>
+<div>
+<div class="font-body-md text-body-md font-bold text-on-background">Spring Tree Planting</div>
+<div class="font-body-sm text-body-sm text-secondary mt-xs">Community Green Initiative</div>
+</div>
+</div>
+</td>
+<td class="p-md">
+<div class="font-data-mono text-data-mono text-on-background">Apr 15, 2024</div>
+<div class="font-body-sm text-body-sm text-secondary">09:00 AM</div>
+</td>
+<td class="p-md">
+<div class="font-body-md text-body-md text-on-background">Centennial Park</div>
+<div class="font-body-sm text-body-sm text-secondary">North District</div>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary font-label-md text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mr-sm"></span>
+                                    Upcoming
+                                </span>
+</td>
+<td class="p-md text-right">
+<button class="p-sm rounded-full text-secondary hover:bg-surface-container-high transition-colors inline-flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-[#F1F5F9] transition-colors group">
+<td class="p-md">
+<div class="flex items-center gap-md">
+<img alt="Event Thumbnail" class="w-12 h-12 rounded-md object-cover border border-outline-variant" data-alt="A vibrant, professional thumbnail image of a formal charity gala dinner with elegant table settings and warm lighting. High contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC11XmL6JxQKt6MZhrM2RL7F_Bynl3DCYTxQBseT3Zlzo950I8q-nBIpkYNuldgEbMv3UVQPyCswByYvjsGdkFriNkOkQYsIQm6Y1STsxTEUYy9ES7prSt7BUoTmO5CjN9IE7hX_Iw7_zB3QcK1RCoBXaDcBrC6v0TtjjwXErRAriqaMfR26vvap_5qFdF-IQRdn_0_SOREKEbKRSxsGWkSkikoNDkZ6bzU3KlpHdaICNUhBBRT1kzo"/>
+<div>
+<div class="font-body-md text-body-md font-bold text-on-background">Annual Charity Gala</div>
+<div class="font-body-sm text-body-sm text-secondary mt-xs">Fundraising Dinner</div>
+</div>
+</div>
+</td>
+<td class="p-md">
+<div class="font-data-mono text-data-mono text-on-background">May 20, 2024</div>
+<div class="font-body-sm text-body-sm text-secondary">07:00 PM</div>
+</td>
+<td class="p-md">
+<div class="font-body-md text-body-md text-on-background">Grand Hotel Ballroom</div>
+<div class="font-body-sm text-body-sm text-secondary">City Center</div>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-primary/10 text-primary font-label-md text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mr-sm"></span>
+                                    Upcoming
+                                </span>
+</td>
+<td class="p-md text-right">
+<button class="p-sm rounded-full text-secondary hover:bg-surface-container-high transition-colors inline-flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-[#F1F5F9] transition-colors group">
+<td class="p-md">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-md bg-surface-container-high border border-outline-variant flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">image</span>
+</div>
+<div>
+<div class="font-body-md text-body-md font-bold text-on-background">Food Drive Collection</div>
+<div class="font-body-sm text-body-sm text-secondary mt-xs">Local Food Bank</div>
+</div>
+</div>
+</td>
+<td class="p-md">
+<div class="font-data-mono text-data-mono text-on-background">Mar 10, 2024</div>
+<div class="font-body-sm text-body-sm text-secondary">10:00 AM</div>
+</td>
+<td class="p-md">
+<div class="font-body-md text-body-md text-on-background">Community Hall</div>
+<div class="font-body-sm text-body-sm text-secondary">East Side</div>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-container-high text-secondary font-label-md text-label-md">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-sm"></span>
+                                    Past
+                                </span>
+</td>
+<td class="p-md text-right">
+<button class="p-sm rounded-full text-secondary hover:bg-surface-container-high transition-colors inline-flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined">more_horiz</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="p-md border-t border-outline-variant flex items-center justify-between bg-surface-bright">
+<span class="font-body-sm text-body-sm text-secondary">Showing 1 to 3 of 12 events</span>
+<div class="flex items-center gap-sm">
+<button class="p-xs rounded-md text-secondary hover:bg-surface-container-high transition-colors disabled:opacity-50">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<span class="font-body-sm text-body-sm text-on-background font-bold">1</span>
+<button class="p-xs rounded-md text-secondary hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleFormBtn = document.getElementById('toggleFormBtn');
+            const closeFormBtn = document.getElementById('closeFormBtn');
+            const cancelFormBtn = document.getElementById('cancelFormBtn');
+            const addEventForm = document.getElementById('addEventForm');
+
+            function toggleForm() {
+                if (addEventForm.classList.contains('hidden')) {
+                    addEventForm.classList.remove('hidden');
+                    // Small delay to allow display block to apply before animating opacity/transform if we added them
+                    setTimeout(() => {
+                        addEventForm.style.opacity = '1';
+                    }, 10);
+                } else {
+                    addEventForm.classList.add('hidden');
+                }
+            }
+
+            toggleFormBtn.addEventListener('click', toggleForm);
+            closeFormBtn.addEventListener('click', toggleForm);
+            cancelFormBtn.addEventListener('click', toggleForm);
+        });
+    </script>
+</body></html>

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Volunteer Detail - Kiranam Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-fixed": "#360f00",
+                      "primary-container": "#0f52ba",
+                      "surface-container-high": "#e6e8ea",
+                      "on-secondary-fixed-variant": "#38485d",
+                      "error": "#ba1a1a",
+                      "surface-dim": "#d8dadc",
+                      "surface-bright": "#f7f9fb",
+                      "secondary-fixed": "#d3e4fe",
+                      "outline": "#737784",
+                      "inverse-on-surface": "#eff1f3",
+                      "primary-fixed-dim": "#b0c6ff",
+                      "tertiary-fixed": "#ffdbcd",
+                      "tertiary": "#732900",
+                      "error-container": "#ffdad6",
+                      "secondary-container": "#d0e1fb",
+                      "outline-variant": "#c3c6d5",
+                      "on-surface-variant": "#434653",
+                      "on-background": "#191c1e",
+                      "surface-container-low": "#f2f4f6",
+                      "on-primary-fixed": "#001945",
+                      "surface": "#f7f9fb",
+                      "on-tertiary-container": "#ffc0a7",
+                      "on-surface": "#191c1e",
+                      "on-primary-fixed-variant": "#00419c",
+                      "on-primary": "#ffffff",
+                      "tertiary-container": "#993900",
+                      "on-error-container": "#93000a",
+                      "inverse-surface": "#2d3133",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-fixed": "#d9e2ff",
+                      "primary": "#003c90",
+                      "on-tertiary-fixed-variant": "#7d2d00",
+                      "on-secondary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "on-primary-container": "#bcceff",
+                      "surface-container": "#eceef0",
+                      "on-secondary-container": "#54647a",
+                      "surface-tint": "#1d59c1",
+                      "surface-variant": "#e0e3e5",
+                      "secondary": "#505f76",
+                      "on-secondary-fixed": "#0b1c30",
+                      "on-error": "#ffffff",
+                      "inverse-primary": "#b0c6ff",
+                      "secondary-fixed-dim": "#b7c8e1",
+                      "surface-container-highest": "#e0e3e5",
+                      "background": "#f7f9fb",
+                      "tertiary-fixed-dim": "#ffb596"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "sm": "8px",
+                      "md": "16px",
+                      "gutter": "20px",
+                      "xl": "32px",
+                      "lg": "24px",
+                      "container-max": "1440px",
+                      "base": "4px"
+              },
+              "fontFamily": {
+                      "data-mono": [
+                              "jetbrainsMono"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "data-mono": [
+                              "13px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Subtle lift for interactive cards */
+        .hover-lift {
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Hide scrollbar for clean UI in certain containers */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-screen w-[240px] bg-surface border-r border-outline-variant flex flex-col py-lg z-50 hidden md:flex">
+<!-- Header -->
+<div class="px-md mb-xl flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" data-icon="volunteer_activism">volunteer_activism</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">Kiranam Admin</h1>
+<p class="font-label-md text-label-md text-secondary">Charity Dashboard</p>
+</div>
+</div>
+<!-- CTA -->
+<div class="px-md mb-md">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-sm px-md rounded-full flex items-center justify-center gap-xs hover:bg-on-primary-fixed-variant transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                New Campaign
+            </button>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex-1 overflow-y-auto no-scrollbar px-sm">
+<ul class="flex flex-col gap-xs">
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                        Overview
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="groups">groups</span>
+                        Contributors
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-primary font-bold border-l-4 border-primary bg-surface-container-low transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined fill" data-icon="volunteer_activism">volunteer_activism</span>
+                        Volunteers
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="campaign">campaign</span>
+                        Campaigns
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="event">event</span>
+                        Events
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                        Contributions
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+                        Notifications
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                        Settings
+                    </a>
+</li>
+</ul>
+</div>
+<!-- Footer Tabs -->
+<div class="px-sm mt-auto pt-md border-t border-outline-variant">
+<ul class="flex flex-col gap-xs">
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+                        Profile
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-sm px-md py-sm rounded-full text-secondary hover:text-primary hover:bg-surface-container-lowest transition-colors duration-200 font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                        Logout
+                    </a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col md:ml-[240px] min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface docked full-width top-0 sticky z-40 border-b border-outline-variant flex justify-between items-center h-16 px-gutter">
+<div class="flex items-center gap-md">
+<button class="md:hidden text-secondary hover:text-primary transition-colors duration-200">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<div class="hidden md:flex items-center gap-xs text-secondary font-label-md text-label-md">
+<a class="hover:text-primary transition-colors" href="#">Volunteers</a>
+<span class="material-symbols-outlined text-[16px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface">Volunteer Detail</span>
+</div>
+</div>
+<!-- Search Bar (on_left in JSON, but typical placement is central or left-aligned within remaining space) -->
+<div class="flex-1 max-w-md ml-md hidden sm:block">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-secondary group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-full py-[6px] pl-xl pr-md font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 placeholder:text-secondary-fixed-dim" placeholder="Search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-sm ml-auto">
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all duration-200 relative">
+<span class="material-symbols-outlined" data-icon="notifications_active">notifications_active</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant ml-sm cursor-pointer">
+<img alt="Admin Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of a female admin user in a bright, modern office setting. High key lighting, clean corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-SNJ3Oei5hhTcM2KfU75KXMCcoq0bODcorbnQ8E-V_G0t7bMzfbCnhgNnaT8Ae_lXUYwGxp9PtoyooBjVD51aw827LA0aq7cqZ27MvhYV38Rus49zm0TfNpQP2r0M1VfULuy9Ysf7VY59vaRLkNGmBWUfnZaOn6b1XnjrD1bo_BBVBPVP7qhcMdX-kh1RgQnWoqZiXenmCFBxREi977hmMVRZJxPL-ZrdO182G9yb15AycFAQC6JA"/>
+</div>
+</div>
+</header>
+<!-- View Switcher (For demonstration purposes) -->
+<div class="bg-surface-container-low border-b border-outline-variant px-gutter py-sm flex justify-center gap-md text-sm font-label-md">
+<span class="text-secondary">Demo Mode:</span>
+<button class="text-primary hover:underline" onclick="document.getElementById('view-pending').classList.remove('hidden'); document.getElementById('view-approved').classList.add('hidden');">View A (Pending)</button>
+<button class="text-primary hover:underline" onclick="document.getElementById('view-pending').classList.add('hidden'); document.getElementById('view-approved').classList.remove('hidden');">View B (Approved)</button>
+</div>
+<!-- Content Canvas -->
+<main class="flex-1 p-gutter overflow-y-auto">
+<div class="max-w-[1024px] mx-auto">
+<!-- Shared Header Profile Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg mb-lg flex flex-col md:flex-row gap-lg items-start relative">
+<div class="w-24 h-24 rounded-full overflow-hidden border-2 border-surface flex-shrink-0">
+<img alt="Volunteer Photo" class="w-full h-full object-cover" data-alt="Portrait of a young male volunteer smiling gently. Natural lighting, warm optimistic mood, simple background indicating a professional yet approachable demeanor." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdBCjOYW9xkDKUAmdqxT_fRdZ8-t_6kG0X3qkmZpLHoW7CUdL_AzAEzrp26KtyVH5O6-cU8XkeQoQGn-vl04nHh7C4yUKKs_MLU6f7Evv8rwn9rtqRdoa31Bq6iwdD-HNf4YmSvnKT5EqN1YgEqAhOMckWMs7cSmRhou_N5Ij9C-kyw7bbBTElt-3t54zOrcNas-FOQOfF6dGCFoGnbe1AXxutdqK1N0o47msRRjlaUS30ac2p_3Nh"/>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-sm mb-xs">
+<h2 class="font-display-lg text-display-lg text-on-surface">Rahul Sharma</h2>
+<!-- Status badge will change based on view -->
+<span class="px-sm py-[2px] rounded-full font-label-md text-label-md bg-secondary-container text-on-secondary-container border border-outline-variant/20" id="status-badge">Pending</span>
+</div>
+<div class="flex flex-wrap gap-md text-secondary font-body-sm text-body-sm mt-sm">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="mail">mail</span>
+                                rahul.sharma@example.com
+                            </div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="phone">phone</span>
+                                +91 98765 43210
+                            </div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="location_on">location_on</span>
+                                Mumbai, Maharashtra
+                            </div>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="calendar_today">calendar_today</span>
+                                Applied: Oct 12, 2023
+                            </div>
+</div>
+</div>
+</div>
+<!-- VIEW A: PENDING APPLICATION -->
+<div class="space-y-lg" id="view-pending">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<!-- Main Application Details -->
+<div class="md:col-span-2 space-y-lg">
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="description">description</span>
+                                    Motivation Statement
+                                </h3>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                                    I have been following Kiranam's work in rural education for the past two years. Coming from a similar background, I understand the profound impact early educational interventions can have. I am eager to contribute my time on weekends to help organize community awareness drives and assist in logistical planning for the upcoming literacy campaigns. My background in event management will allow me to hit the ground running.
+                                </p>
+</section>
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="badge">badge</span>
+                                    Identity Verification
+                                </h3>
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg border border-outline-variant">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="id_card">id_card</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Aadhaar Card (Front &amp; Back)</p>
+<p class="font-body-sm text-body-sm text-secondary">Uploaded Oct 12, 2023 • 2.4 MB</p>
+</div>
+</div>
+<button class="text-primary hover:text-on-primary-fixed-variant font-label-md text-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+                                        View Document
+                                    </button>
+</div>
+</section>
+</div>
+<!-- Action Panel -->
+<div class="md:col-span-1">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg sticky top-[88px]">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-sm">Application Decision</h3>
+<p class="font-body-sm text-body-sm text-secondary mb-lg">Review the motivation and verification documents carefully before making a decision.</p>
+<div class="flex flex-col gap-md">
+<button class="w-full py-sm px-md rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors flex justify-center items-center gap-sm">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+                                        Approve Volunteer
+                                    </button>
+<button class="w-full py-sm px-md rounded-lg border border-error text-error font-label-md text-label-md hover:bg-error-container hover:text-on-error-container transition-colors flex justify-center items-center gap-sm">
+<span class="material-symbols-outlined" data-icon="cancel">cancel</span>
+                                        Reject Application
+                                    </button>
+</div>
+<div class="mt-lg pt-md border-t border-outline-variant">
+<label class="block font-label-md text-label-md text-on-surface mb-xs">Internal Notes (Optional)</label>
+<textarea class="w-full bg-surface-container-low border border-outline-variant rounded-lg p-sm font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Add notes for the admin team..." rows="3"></textarea>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- VIEW B: APPROVED VOLUNTEER -->
+<div class="space-y-lg hidden" id="view-approved">
+<!-- Script to change the status badge for demo purposes -->
+<script>
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.attributeName === 'class') {
+                                    const badge = document.getElementById('status-badge');
+                                    if (document.getElementById('view-approved').classList.contains('hidden')) {
+                                        badge.textContent = 'Pending';
+                                        badge.className = 'px-sm py-[2px] rounded-full font-label-md text-label-md bg-secondary-container text-on-secondary-container border border-outline-variant/20';
+                                    } else {
+                                        badge.textContent = 'Active';
+                                        badge.className = 'px-sm py-[2px] rounded-full font-label-md text-label-md bg-[#e6f4ea] text-[#137333] border border-[#ceead6]';
+                                    }
+                                }
+                            });
+                        });
+                        observer.observe(document.getElementById('view-approved'), { attributes: true });
+                    </script>
+<!-- Stats Row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-md">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg hover-lift">
+<div class="flex items-center gap-sm mb-sm text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="timer">timer</span>
+<h3 class="font-label-md text-label-md">Hours Logged</h3>
+</div>
+<div class="font-display-lg text-display-lg text-on-surface">142</div>
+<div class="text-[#137333] font-body-sm text-body-sm mt-xs flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="trending_up">trending_up</span>
+                                +12 this month
+                            </div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg hover-lift">
+<div class="flex items-center gap-sm mb-sm text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="campaign">campaign</span>
+<h3 class="font-label-md text-label-md">Campaigns</h3>
+</div>
+<div class="font-display-lg text-display-lg text-on-surface">8</div>
+<div class="text-secondary font-body-sm text-body-sm mt-xs">Active in 2 currently</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg hover-lift">
+<div class="flex items-center gap-sm mb-sm text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="groups">groups</span>
+<h3 class="font-label-md text-label-md">Contributors Managed</h3>
+</div>
+<div class="font-display-lg text-display-lg text-on-surface">15</div>
+<div class="text-secondary font-body-sm text-body-sm mt-xs">Across 3 regions</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg hover-lift">
+<div class="flex items-center gap-sm mb-sm text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="star">star</span>
+<h3 class="font-label-md text-label-md">Rating</h3>
+</div>
+<div class="font-display-lg text-display-lg text-on-surface">4.8</div>
+<div class="text-secondary font-body-sm text-body-sm mt-xs">Based on 24 feedbacks</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<!-- Assigned Contributors List -->
+<div class="md:col-span-2">
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col h-full">
+<div class="p-lg border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary" data-icon="group_add">group_add</span>
+                                        Assigned Contributors
+                                    </h3>
+<span class="bg-surface-container-high px-sm py-[2px] rounded-full font-data-mono text-data-mono text-secondary">Total: 4</span>
+</div>
+<div class="flex-1 overflow-y-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant sticky top-0">
+<tr>
+<th class="py-sm px-md font-label-md text-label-md text-secondary">Name</th>
+<th class="py-sm px-md font-label-md text-label-md text-secondary">Status</th>
+<th class="py-sm px-md font-label-md text-label-md text-secondary">Assigned Date</th>
+<th class="py-sm px-md font-label-md text-label-md text-secondary text-right">Action</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm">
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-md">AK</div>
+<span class="text-on-surface font-semibold">Amit Kumar</span>
+</div>
+</td>
+<td class="py-md px-md"><span class="px-xs py-[2px] rounded-sm bg-[#e6f4ea] text-[#137333] border border-[#ceead6] text-[11px] font-semibold uppercase tracking-wider">Active</span></td>
+<td class="py-md px-md text-secondary">Nov 01, 2023</td>
+<td class="py-md px-md text-right">
+<button class="text-secondary hover:text-error transition-colors flex items-center gap-xs ml-auto font-label-md">
+<span class="material-symbols-outlined text-[18px]" data-icon="person_remove">person_remove</span>
+                                                        Unassign
+                                                    </button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-label-md">PJ</div>
+<span class="text-on-surface font-semibold">Priya Jain</span>
+</div>
+</td>
+<td class="py-md px-md"><span class="px-xs py-[2px] rounded-sm bg-[#e6f4ea] text-[#137333] border border-[#ceead6] text-[11px] font-semibold uppercase tracking-wider">Active</span></td>
+<td class="py-md px-md text-secondary">Oct 28, 2023</td>
+<td class="py-md px-md text-right">
+<button class="text-secondary hover:text-error transition-colors flex items-center gap-xs ml-auto font-label-md">
+<span class="material-symbols-outlined text-[18px]" data-icon="person_remove">person_remove</span>
+                                                        Unassign
+                                                    </button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-md">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-secondary flex items-center justify-center font-label-md">SR</div>
+<span class="text-on-surface font-semibold">Suresh Rao</span>
+</div>
+</td>
+<td class="py-md px-md"><span class="px-xs py-[2px] rounded-sm bg-surface-variant text-secondary border border-outline-variant/30 text-[11px] font-semibold uppercase tracking-wider">Inactive</span></td>
+<td class="py-md px-md text-secondary">Oct 15, 2023</td>
+<td class="py-md px-md text-right">
+<button class="text-secondary hover:text-error transition-colors flex items-center gap-xs ml-auto font-label-md">
+<span class="material-symbols-outlined text-[18px]" data-icon="person_remove">person_remove</span>
+                                                        Unassign
+                                                    </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<!-- Assign Contributor Form -->
+<div class="md:col-span-1">
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg sticky top-[88px]">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-md">Assign New Contributor</h3>
+<p class="font-body-sm text-body-sm text-secondary mb-lg">Link a new or existing contributor to this volunteer for relationship management.</p>
+<form class="space-y-md">
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-xs">Search Contributor</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-secondary text-[18px]" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg py-sm pl-xl pr-sm font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Name or Email..." type="text"/>
+</div>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-xs">Assignment Role</label>
+<select class="w-full bg-surface-container-low border border-outline-variant rounded-lg py-sm px-sm font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none">
+<option>Primary Contact</option>
+<option>Secondary Support</option>
+<option>Campaign Specific</option>
+</select>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-xs">Initial Note (Optional)</label>
+<textarea class="w-full bg-surface-container-low border border-outline-variant rounded-lg p-sm font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Reason for assignment..." rows="2"></textarea>
+</div>
+<button class="w-full py-sm px-md rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-on-primary-fixed-variant transition-colors flex justify-center items-center gap-sm mt-md" type="button">
+<span class="material-symbols-outlined" data-icon="add_link">add_link</span>
+                                        Assign Contributor
+                                    </button>
+</form>
+</section>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
