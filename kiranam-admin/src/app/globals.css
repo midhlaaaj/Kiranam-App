@@ -1,0 +1,393 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --shadow-color: 35 8% 20%;
+
+  /* shadcn base tokens, mapped onto the real Kiranam brand palette
+     (same hex values kiranam-app hardcodes throughout) so shadcn-sourced
+     components (chart, alert-dialog, sonner) match the rest of the app. */
+  --background: #eef0f1;
+  --foreground: #0c0c0d;
+
+  --card: #ffffff;
+  --card-foreground: #0c0c0d;
+
+  --popover: #ffffff;
+  --popover-foreground: #0c0c0d;
+
+  --primary: #ec2028;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f9f8f6;
+  --secondary-foreground: #0c0c0d;
+
+  --muted: #f9f8f6;
+  --muted-foreground: #7a756e;
+
+  --accent: #fbeaea;
+  --accent-foreground: #ec2028;
+
+  --destructive: #ba1a1a;
+
+  --border: #f1eeea;
+  --input: #e4e1dc;
+  --ring: #ec2028;
+
+  --chart-1: #ec2028;
+  --chart-2: #22a559;
+  --chart-3: #b8860b;
+  --chart-4: #0c0c0d;
+  --chart-5: #b0ada8;
+
+  --radius: 0.75rem;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0c0c0d;
+  --sidebar-primary: #ec2028;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fbeaea;
+  --sidebar-accent-foreground: #ec2028;
+  --sidebar-border: #f1eeea;
+  --sidebar-ring: #ec2028;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-urbanist);
+
+  /* wacrm's own extra token names (Settings redesign) — only ever used by
+     moved wacrm components, which always render inside [data-wacrm-scope],
+     so these resolve to the scoped values defined at the bottom of this
+     file (or nothing, outside that scope — nothing else references them). */
+  --color-card-2: var(--card-2);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-2: var(--primary-soft-2);
+
+  /* Kiranam Admin design tokens — see DESIGN.md. Same palette kiranam-app uses. */
+  --color-kiranam-bg: #eef0f1;
+  --color-kiranam-surface: #ffffff;
+  --color-kiranam-surface-alt: #f9f8f6;
+  --color-kiranam-border: #f1eeea;
+  --color-kiranam-border-strong: #e4e1dc;
+
+  --color-kiranam-ink: #0c0c0d;
+  --color-kiranam-muted: #7a756e;
+  --color-kiranam-muted-2: #b0ada8;
+
+  --color-kiranam-primary: #ec2028;
+  --color-kiranam-primary-soft: #fbeaea;
+  --color-kiranam-primary-strong: #c81920;
+
+  --color-kiranam-danger: #ba1a1a;
+  --color-kiranam-danger-soft: #f9e5e5;
+
+  --color-kiranam-success: #22a559;
+  --color-kiranam-success-soft: #eaf7ef;
+
+  --color-kiranam-warning: #b8860b;
+  --color-kiranam-warning-soft: #fef3e0;
+
+  --animate-shimmer: shimmer 1.8s ease-in-out infinite;
+  --animate-count-in: count-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-stagger-in: stagger-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+
+  --font-heading: var(--font-urbanist);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+body {
+  background: var(--color-kiranam-bg);
+  color: var(--color-kiranam-ink);
+}
+
+/* Elevation scale — used consistently for cards, dropdowns, modals, drawers */
+.shadow-elevation-sm {
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+}
+.shadow-elevation-md {
+  box-shadow:
+    0 1px 2px hsl(var(--shadow-color) / 0.04),
+    0 4px 12px hsl(var(--shadow-color) / 0.06);
+}
+.shadow-elevation-lg {
+  box-shadow:
+    0 4px 8px hsl(var(--shadow-color) / 0.06),
+    0 16px 32px hsl(var(--shadow-color) / 0.12);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus ring — visible keyboard focus everywhere, using the brand color.
+   Inputs/textareas/selects already show focus via their own border color
+   (see inputClass), so skip the outline there to avoid a doubled-up ring.
+   No border-radius override here — modern browsers curve the outline to
+   match the focused element's own radius, so forcing one just makes
+   rounded pills/buttons look like they have a mismatched square ring. */
+:focus-visible {
+  outline: 1.5px solid var(--color-kiranam-primary);
+  outline-offset: 1px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes count-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ============================================================
+ * WhatsApp comm center (/whatsapp) theming — merged in from wacrm.
+ *
+ * wacrm's original theme system targeted `<html>` directly
+ * (`html[data-theme]`/`html[data-mode]`), which isn't safe to keep
+ * once merged into one app — it would fight kiranam-admin's own
+ * `:root` tokens above for the same variable names (--background,
+ * --primary, --border, etc). Every selector below is scoped to
+ * `[data-wacrm-scope]` instead: the wrapper element
+ * `(admin)/whatsapp/layout.tsx` renders around every /whatsapp page.
+ * CSS custom properties cascade normally, so kiranam-admin's :root
+ * values keep governing everything outside that wrapper, while these
+ * scoped values override them for everything inside it — no JS
+ * required for the override itself, only for persisting the user's
+ * saved theme/mode choice (see the wrapper's client-side effect).
+ *
+ * Two orthogonal dimensions, same as wacrm's original design:
+ *   MODE   (light/dark)   — neutral surfaces.
+ *   ACCENT (kiranam/...)  — the primary color only.
+ * ============================================================ */
+
+[data-wacrm-scope] {
+  /* MODE defaults (dark) */
+  --background: oklch(0.13 0.01 260);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.18 0.01 260);
+  --card-2: oklch(0.205 0.01 260);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.18 0.01 260);
+  --popover-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.01 260);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.22 0.01 260);
+  --muted-foreground: oklch(0.65 0.01 260);
+  --accent: oklch(0.22 0.01 260);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.28 0.01 260);
+  --input: oklch(0.28 0.01 260);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.16 0.01 260);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.22 0.01 260);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.28 0.01 260);
+
+  /* ACCENT default (kiranam blue) */
+  --primary: oklch(0.63 0.18 252);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.7 0.16 252);
+  --primary-soft: oklch(0.63 0.18 252 / 0.12);
+  --primary-soft-2: oklch(0.63 0.18 252 / 0.22);
+  --ring: oklch(0.63 0.18 252);
+  --chart-1: oklch(0.63 0.18 252);
+  --sidebar-primary: oklch(0.63 0.18 252);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.63 0.18 252);
+}
+
+[data-wacrm-scope][data-mode="light"] {
+  --background: oklch(0.99 0.002 260);
+  --foreground: oklch(0.21 0.01 260);
+  --card: oklch(1 0 0);
+  --card-2: oklch(0.985 0.002 260);
+  --card-foreground: oklch(0.21 0.01 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.01 260);
+  --secondary: oklch(0.967 0.003 260);
+  --secondary-foreground: oklch(0.25 0.01 260);
+  --muted: oklch(0.967 0.003 260);
+  --muted-foreground: oklch(0.52 0.015 260);
+  --accent: oklch(0.96 0.004 260);
+  --accent-foreground: oklch(0.25 0.01 260);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0.004 260);
+  --input: oklch(0.922 0.004 260);
+  --chart-2: oklch(0.6 0.1 260);
+  --chart-3: oklch(0.7 0.06 260);
+  --chart-4: oklch(0.8 0.04 260);
+  --chart-5: oklch(0.87 0.03 260);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0.002 260);
+  --sidebar-foreground: oklch(0.21 0.01 260);
+  --sidebar-accent: oklch(0.96 0.004 260);
+  --sidebar-accent-foreground: oklch(0.25 0.01 260);
+  --sidebar-border: oklch(0.922 0.004 260);
+}
+
+[data-wacrm-scope][data-theme="violet"] {
+  --primary: oklch(0.526 0.247 293);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.6 0.22 293);
+  --primary-soft: oklch(0.526 0.247 293 / 0.12);
+  --primary-soft-2: oklch(0.526 0.247 293 / 0.2);
+  --ring: oklch(0.526 0.247 293);
+  --chart-1: oklch(0.526 0.247 293);
+  --sidebar-primary: oklch(0.526 0.247 293);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.526 0.247 293);
+}
+
+[data-wacrm-scope][data-theme="emerald"] {
+  --primary: oklch(0.62 0.16 162);
+  --primary-foreground: oklch(0.16 0.02 162);
+  --primary-hover: oklch(0.68 0.15 162);
+  --primary-soft: oklch(0.62 0.16 162 / 0.12);
+  --primary-soft-2: oklch(0.62 0.16 162 / 0.22);
+  --ring: oklch(0.62 0.16 162);
+  --chart-1: oklch(0.62 0.16 162);
+  --chart-2: oklch(0.7 0.14 195);
+  --sidebar-primary: oklch(0.62 0.16 162);
+  --sidebar-primary-foreground: oklch(0.16 0.02 162);
+  --sidebar-ring: oklch(0.62 0.16 162);
+}
+
+[data-wacrm-scope][data-theme="cobalt"] {
+  --primary: oklch(0.585 0.2 254);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.66 0.18 254);
+  --primary-soft: oklch(0.585 0.2 254 / 0.12);
+  --primary-soft-2: oklch(0.585 0.2 254 / 0.22);
+  --ring: oklch(0.585 0.2 254);
+  --chart-1: oklch(0.585 0.2 254);
+  --chart-2: oklch(0.7 0.15 220);
+  --sidebar-primary: oklch(0.585 0.2 254);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.585 0.2 254);
+}
+
+[data-wacrm-scope][data-theme="amber"] {
+  --primary: oklch(0.745 0.16 65);
+  --primary-foreground: oklch(0.18 0.03 65);
+  --primary-hover: oklch(0.8 0.15 65);
+  --primary-soft: oklch(0.745 0.16 65 / 0.12);
+  --primary-soft-2: oklch(0.745 0.16 65 / 0.22);
+  --ring: oklch(0.745 0.16 65);
+  --chart-1: oklch(0.745 0.16 65);
+  --chart-2: oklch(0.7 0.15 35);
+  --sidebar-primary: oklch(0.745 0.16 65);
+  --sidebar-primary-foreground: oklch(0.18 0.03 65);
+  --sidebar-ring: oklch(0.745 0.16 65);
+}
+
+[data-wacrm-scope][data-theme="rose"] {
+  --primary: oklch(0.645 0.22 16);
+  --primary-foreground: oklch(0.985 0 0);
+  --primary-hover: oklch(0.71 0.2 16);
+  --primary-soft: oklch(0.645 0.22 16 / 0.12);
+  --primary-soft-2: oklch(0.645 0.22 16 / 0.22);
+  --ring: oklch(0.645 0.22 16);
+  --chart-1: oklch(0.645 0.22 16);
+  --chart-2: oklch(0.7 0.18 340);
+  --sidebar-primary: oklch(0.645 0.22 16);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-ring: oklch(0.645 0.22 16);
+}
