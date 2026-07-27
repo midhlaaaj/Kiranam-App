@@ -23,7 +23,7 @@ export function useUnreadNotifications(): number {
       // head:true skips fetching rows — we only need the `count`
       // supabase-js returns alongside the (empty) response body.
       const { count: unreadCount, error } = await supabase
-        .from("notifications")
+        .from("wacrm_notifications")
         .select("*", { count: "exact", head: true })
         .is("read_at", null);
       if (cancelled || error) return;
@@ -31,10 +31,10 @@ export function useUnreadNotifications(): number {
     })();
 
     const channel = supabase
-      .channel("notifications-unread-count")
+      .channel("wacrm-notifications-unread-count")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "notifications" },
+        { event: "*", schema: "public", table: "wacrm_notifications" },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const row = payload.new as Notification;

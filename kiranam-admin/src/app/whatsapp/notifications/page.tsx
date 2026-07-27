@@ -30,7 +30,7 @@ export default function NotificationsPage() {
     if (!accountId) return;
     const supabase = createClient();
     const { data, error: fetchErr } = await supabase
-      .from("notifications")
+      .from("wacrm_notifications")
       .select("*")
       .eq("account_id", accountId)
       .order("created_at", { ascending: false })
@@ -52,10 +52,10 @@ export default function NotificationsPage() {
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel("notifications-page")
+      .channel("wacrm-notifications-page")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "notifications" },
+        { event: "*", schema: "public", table: "wacrm_notifications" },
         (payload) => {
           if (payload.eventType === "INSERT") {
             const row = payload.new as Notification;
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
       );
       const supabase = createClient();
       const { error: updateErr } = await supabase
-        .from("notifications")
+        .from("wacrm_notifications")
         .update({ read_at: new Date().toISOString() })
         .eq("id", id)
         .is("read_at", null);
@@ -132,7 +132,7 @@ export default function NotificationsPage() {
     );
     const supabase = createClient();
     const { error: updateErr } = await supabase
-      .from("notifications")
+      .from("wacrm_notifications")
       .update({ read_at: now })
       .is("read_at", null);
     setMarkingAll(false);
