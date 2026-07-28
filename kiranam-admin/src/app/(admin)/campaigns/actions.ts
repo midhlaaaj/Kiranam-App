@@ -18,6 +18,7 @@ export async function createCampaign(formData: FormData) {
       description: String(formData.get('description') || ''),
       goal: Number(formData.get('goal') || 0),
       raised: Number(formData.get('raised') || 0),
+      end_date: String(formData.get('end_date') || '') || null,
       status: 'active',
     })
     .select('id')
@@ -47,6 +48,7 @@ export async function updateCampaign(id: string, formData: FormData) {
       // `raised` is intentionally NOT written here — it's auto-incremented by the
       // bump_campaign_raised DB trigger on successful contributions. Editing it
       // here would desync the displayed total from the real contribution sum.
+      end_date: String(formData.get('end_date') || '') || null,
       status: String(formData.get('status') || 'active'),
     })
     .eq('id', id);

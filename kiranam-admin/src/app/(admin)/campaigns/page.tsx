@@ -77,6 +77,10 @@ export default async function CampaignsPage({
           <textarea name="description" placeholder="Description" className={`${inputClass} sm:col-span-2`} />
           <input name="goal" type="number" placeholder="Goal (₹)" required className={inputClass} />
           <input name="raised" type="number" placeholder="Already raised (₹, optional)" className={inputClass} />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">End date (optional)</label>
+            <input name="end_date" type="date" className={inputClass} />
+          </div>
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image (optional)</label>
             <input name="cover" type="file" accept="image/*" className={`${inputClass} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`} />
@@ -96,6 +100,11 @@ export default async function CampaignsPage({
 
 async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
   const supabase = await createClient();
+
+  // Self-heal: a campaign whose end date has passed becomes "completed"
+  // automatically, regardless of whether an admin remembered to flip it.
+  const today = new Date().toISOString().slice(0, 10);
+  await supabase.from('campaigns').update({ status: 'completed' }).lt('end_date', today).neq('status', 'completed');
 
   let query = supabase.from('campaigns').select('*').order('created_at', { ascending: false });
   if (q) query = query.ilike('title', `%${q}%`);

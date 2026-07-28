@@ -1,15 +1,38 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, StatusBar, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp, NotificationRecord } from '@/context/AppContext';
-import { Card } from '@/components/Card';
-import { ArrowLeft, CreditCard, Flag, Info, Check } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Flag, Info, Check, MoreVertical, Trash2, CheckCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { notifications, markNotificationAsRead, clearNotifications } = useApp();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteAllNotifications } = useApp();
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'contribution' | 'campaign' | 'system'>('all');
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const hasUnread = notifications.some((n) => n.unread);
+
+  const handleMarkAllRead = () => {
+    setMenuVisible(false);
+    markAllNotificationsAsRead();
+  };
+
+  const handleDeleteAll = () => {
+    setMenuVisible(false);
+    if (hasUnread) {
+      Alert.alert(
+        'Unread messages',
+        'You have unread notifications. Delete all messages anyway?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete All', style: 'destructive', onPress: () => deleteAllNotifications() },
+        ]
+      );
+      return;
+    }
+    deleteAllNotifications();
+  };
 
   const filteredNotifications = notifications.filter(n => {
     if (selectedFilter === 'all') return true;
@@ -47,10 +70,25 @@ export default function NotificationsScreen() {
           <ArrowLeft size={20} color="#0C0C0D" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity style={styles.clearButton} onPress={clearNotifications} activeOpacity={0.7}>
-          <Check size={18} color="#7A756E" />
+        <TouchableOpacity style={styles.clearButton} onPress={() => setMenuVisible(true)} activeOpacity={0.7}>
+          <MoreVertical size={18} color="#7A756E" />
         </TouchableOpacity>
       </View>
+
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+          <View style={styles.menuSheet}>
+            <TouchableOpacity style={styles.menuItem} onPress={handleMarkAllRead} activeOpacity={0.7}>
+              <CheckCheck size={18} color="#0C0C0D" />
+              <Text style={styles.menuItemText}>Mark all as read</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]} onPress={handleDeleteAll} activeOpacity={0.7}>
+              <Trash2 size={18} color="#EC2028" />
+              <Text style={[styles.menuItemText, styles.menuItemDanger]}>Delete all messages</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Horizontal categories picker */}
       <View style={styles.filterScrollWrapper}>
@@ -117,7 +155,7 @@ export default function NotificationsScreen() {
             <View style={styles.emptyIconBg}>
               <Check size={28} color="#22A559" strokeWidth={2.2} />
             </View>
-            <Text style={styles.emptyTitle}>You're all caught up</Text>
+            <Text style={styles.emptyTitle}>You&apos;re all caught up</Text>
             <Text style={styles.emptySubtitle}>
               New updates about your contributions and campaigns will appear here.
             </Text>
@@ -163,6 +201,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F9F8F6',
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(12,12,13,0.15)',
+    alignItems: 'flex-end',
+    paddingTop: 60,
+    paddingRight: 20,
+  },
+  menuSheet: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1EEEA',
+    paddingVertical: 6,
+    minWidth: 200,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EEEA',
+  },
+  menuItemLast: {
+    borderBottomWidth: 0,
+  },
+  menuItemText: {
+    fontFamily: 'Inter',
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#0C0C0D',
+  },
+  menuItemDanger: {
+    color: '#EC2028',
   },
   filterScrollWrapper: {
     height: 48,

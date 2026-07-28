@@ -46,7 +46,7 @@ export default function PendingScreen() {
         {/* Messaging */}
         <Text style={styles.title}>Your application is under review</Text>
         <Text style={styles.subtitle}>
-          We'll notify you once an admin approves your volunteer account — this usually takes a few days.
+          We&apos;ll notify you once an admin approves your volunteer account — this usually takes a few days.
         </Text>
 
         {notYetApproved && (

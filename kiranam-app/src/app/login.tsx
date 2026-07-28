@@ -55,9 +55,9 @@ export default function LoginScreen() {
         {/* Headers */}
         <Text style={styles.title}>
           {mode === 'volunteer' ? (
-            <>Let's get you{"\n"}<Text style={styles.titleAccent}>volunteering</Text></>
+            <>Let&apos;s get you{"\n"}<Text style={styles.titleAccent}>volunteering</Text></>
           ) : (
-            <>Let's get you{"\n"}<Text style={styles.titleAccent}>contributing</Text></>
+            <>Let&apos;s get you{"\n"}<Text style={styles.titleAccent}>contributing</Text></>
           )}
         </Text>
         <Text style={styles.subtitle}>
@@ -111,7 +111,7 @@ export default function LoginScreen() {
         {/* Terms footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By continuing, you agree to Kiranam's Terms &amp; Privacy Policy.
+            By continuing, you agree to Kiranam&apos;s Terms &amp; Privacy Policy.
           </Text>
         </View>
       </ScrollView>

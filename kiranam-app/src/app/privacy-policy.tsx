@@ -24,7 +24,7 @@ export default function PrivacyPolicyScreen() {
         <Text style={styles.updated}>Last updated: {LAST_UPDATED}</Text>
 
         <Section title="1. Who we are">
-          Kiranam ("we", "us", "our") operates this app to connect contributors and
+          Kiranam (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) operates this app to connect contributors and
           volunteers with our charitable work. This policy explains what information
           we collect through the app, why we collect it, and how you can control it.
         </Section>
@@ -38,7 +38,7 @@ export default function PrivacyPolicyScreen() {
           information directly.{'\n\n'}
           {'•'} Volunteer details: if you apply to volunteer, the information you
           submit in that application (e.g. your motivation, availability).{'\n\n'}
-          {'•'} Communication preferences: whether you've agreed to receive
+          {'•'} Communication preferences: whether you&apos;ve agreed to receive
           contribution reminders over WhatsApp.
         </Section>
 
@@ -46,15 +46,15 @@ export default function PrivacyPolicyScreen() {
           We use your information to create and manage your account, process and
           record contributions, connect volunteers with contributors, send
           contribution reminders and updates (via WhatsApp or in-app notifications,
-          only where you've agreed to this), and to communicate with you about your
+          only where you&apos;ve agreed to this), and to communicate with you about your
           account or our work.
         </Section>
 
         <Section title="4. Who we share it with">
           We share the minimum necessary information with the service providers
           that make the app work: Supabase (our database and authentication
-          provider), Razorpay (payment processing), and Meta's WhatsApp Business
-          Platform (for WhatsApp reminders, only if you've opted in). We do not
+          provider), Razorpay (payment processing), and Meta&apos;s WhatsApp Business
+          Platform (for WhatsApp reminders, only if you&apos;ve opted in). We do not
           sell your personal information to anyone.
         </Section>
 
@@ -63,7 +63,7 @@ export default function PrivacyPolicyScreen() {
           within the app. You can also permanently delete your account and
           associated data from Profile → Delete Account — this removes your
           account and personal information from our systems, other than records
-          we're legally required to retain (such as financial contribution
+          we&apos;re legally required to retain (such as financial contribution
           records for accounting/tax purposes).
         </Section>
 
@@ -80,8 +80,8 @@ export default function PrivacyPolicyScreen() {
         </Section>
 
         <Section title="8. Changes to this policy">
-          If we make material changes to this policy, we'll update the "Last
-          updated" date above and, where appropriate, notify you in the app.
+          If we make material changes to this policy, we&apos;ll update the &quot;Last
+          updated&quot; date above and, where appropriate, notify you in the app.
         </Section>
 
         <Section title="9. Contact us">

@@ -10,11 +10,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ChooseAmountScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { commitmentAmount, setCommitmentAmount } = useApp();
+  const { commitmentAmount, setCommitmentAmount, campaigns } = useApp();
 
   const campaignId = params.campaignId as string | undefined;
   const campaignTitle = params.campaignTitle as string | undefined;
   const isCommitmentMode = !campaignId;
+
+  const campaign = campaignId ? campaigns.find((c) => c.id === campaignId) : undefined;
+  // Cap donations at what's actually left to fill the campaign, so a person
+  // can't pledge more than the campaign still needs.
+  const remaining = campaign ? Math.max(0, campaign.goal - campaign.raised) : null;
 
   const [selectedAmount, setSelectedAmount] = useState<number | null>(campaignId ? 100 : commitmentAmount);
   const [customAmount, setCustomAmount] = useState('');
@@ -31,6 +36,7 @@ export default function ChooseAmountScreen() {
   ];
 
   const handleSelectOption = (value: number) => {
+    if (remaining !== null && value > remaining) return;
     setSelectedAmount(value);
     setIsCustomOpen(false);
     setCustomAmount('');
@@ -43,14 +49,16 @@ export default function ChooseAmountScreen() {
 
   const handleCustomAmountChange = (text: string) => {
     const numeric = text.replace(/[^0-9]/g, '');
-    setCustomAmount(numeric);
-    setSelectedAmount(numeric ? parseInt(numeric, 10) : null);
+    const capped = remaining !== null && numeric ? Math.min(parseInt(numeric, 10), remaining).toString() : numeric;
+    setCustomAmount(capped);
+    setSelectedAmount(capped ? parseInt(capped, 10) : null);
   };
 
   const currentFinalAmount = selectedAmount;
 
   const handleContinue = () => {
     if (!currentFinalAmount || currentFinalAmount <= 0) return;
+    if (remaining !== null && currentFinalAmount > remaining) return;
 
     // Route to secure payment
     router.push({
@@ -92,23 +100,31 @@ export default function ChooseAmountScreen() {
               : "Choose your monthly\ncontribution"}
           </Text>
           <Text style={styles.subtitle}>
-            {campaignTitle 
+            {campaignTitle
               ? "Your donation goes directly to fund active on-ground relief operations."
               : "You can change or pause this commitment anytime."}
           </Text>
+
+          {remaining !== null && (
+            <Text style={styles.remainingHint}>
+              Only ₹{remaining.toLocaleString('en-IN')} left to fully fund this campaign
+            </Text>
+          )}
 
           {/* Amount Chips Grid */}
           <View style={styles.gridContainer}>
             {amountOptions.map((opt) => {
               const isSelected = selectedAmount === opt.value && !isCustomOpen;
+              const isDisabled = remaining !== null && opt.value > remaining;
               return (
                 <TouchableOpacity
                   key={opt.value}
-                  style={[styles.chip, isSelected ? styles.activeChip : null]}
+                  style={[styles.chip, isSelected ? styles.activeChip : null, isDisabled ? styles.disabledChip : null]}
                   onPress={() => handleSelectOption(opt.value)}
-                  activeOpacity={0.8}
+                  activeOpacity={isDisabled ? 1 : 0.55}
+                  disabled={isDisabled}
                 >
-                  <Text style={[styles.chipLabel, isSelected ? styles.activeChipLabel : null]}>
+                  <Text style={[styles.chipLabel, isSelected ? styles.activeChipLabel : null, isDisabled ? styles.disabledChipLabel : null]}>
                     {opt.label}
                   </Text>
                   {opt.sub && (
@@ -210,6 +226,18 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 24,
   },
+  remainingHint: {
+    fontFamily: 'Inter',
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#B0752E',
+    backgroundColor: '#FBF3E7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
+    alignSelf: 'flex-start',
+  },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -251,6 +279,12 @@ const styles = StyleSheet.create({
   },
   activeChipSubText: {
     color: 'rgba(255,255,255,0.8)',
+  },
+  disabledChip: {
+    opacity: 0.4,
+  },
+  disabledChipLabel: {
+    color: '#B0ADA8',
   },
   customBox: {
     width: '100%',
@@ -308,7 +342,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: '#FFFFFF',
     padding: 0,
-    outlineStyle: 'none',
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null),
   },
   buttonContainer: {
     marginTop: 'auto',

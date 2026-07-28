@@ -29,7 +29,14 @@ export default function RegisterScreen() {
       return;
     }
     setSubmitting(true);
-    const { error } = await saveProfile({ fullName: name, email, role, whatsappConsent });
+    // Always save as 'contributor' here, even when the person picked
+    // "volunteer" — that only reflects their *intent* to apply. The real
+    // 'volunteer' role is granted by an admin approving the application
+    // (kiranam-admin's volunteers/actions.ts), not at signup. Setting it
+    // here early let people get full volunteer-tab access — or get stuck
+    // in a half-registered state with no reviewable application — just by
+    // abandoning the next screen before actually applying.
+    const { error } = await saveProfile({ fullName: name, email, role: 'contributor', whatsappConsent });
     setSubmitting(false);
     if (error) {
       setErrors({ name: error });
@@ -106,7 +113,7 @@ export default function RegisterScreen() {
             {whatsappConsent && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
           </View>
           <Text style={styles.checkboxLabel}>
-            I'd like to receive contribution reminders over WhatsApp.
+            I&apos;d like to receive contribution reminders over WhatsApp.
           </Text>
         </TouchableOpacity>
 

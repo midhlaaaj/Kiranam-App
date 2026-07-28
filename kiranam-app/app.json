@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.kiranam.app",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Kiranam uses your photo library to let you set a profile picture."
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -47,7 +48,13 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Kiranam uses your photo library to let you set a profile picture."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

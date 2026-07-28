@@ -43,6 +43,12 @@ export default async function EditCampaignPage({
         </select>
 
         <div>
+          <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">End date (optional)</label>
+          <input name="end_date" type="date" defaultValue={campaign.end_date || ''} className={inputClass} />
+          <p className="mt-1 text-xs text-kiranam-muted">Campaign auto-completes once this date passes.</p>
+        </div>
+
+        <div>
           <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image</label>
           {campaign.cover_image_url && (
             // eslint-disable-next-line @next/next/no-img-element

@@ -1,5 +1,8 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 
 // Interfaces for our app types
@@ -62,6 +65,7 @@ interface AppContextType {
   setUserName: (name: string) => void;
   userEmail: string;
   setUserEmail: (email: string) => void;
+  userAvatarUrl: string;
   referralCode: string;
   setReferralCode: (code: string) => void;
   isLoggedIn: boolean;
@@ -79,6 +83,8 @@ interface AppContextType {
     role: 'contributor' | 'volunteer';
     whatsappConsent?: boolean;
   }) => Promise<{ error: string | null }>;
+  updateName: (fullName: string) => Promise<{ error: string | null }>;
+  updateProfilePhoto: (localUri: string) => Promise<{ error: string | null; url?: string }>;
   applyForVolunteer: (motivation: string) => Promise<{ error: string | null }>;
 
   // App settings & configuration
@@ -103,7 +109,8 @@ interface AppContextType {
   // App Actions
   makePayment: (amount: number, label: string, campaignId?: string) => Promise<PaymentRecord>;
   markNotificationAsRead: (id: string) => void;
-  clearNotifications: () => void;
+  markAllNotificationsAsRead: () => void;
+  deleteAllNotifications: () => Promise<void>;
   addCampaign: (campaign: Omit<Campaign, 'id' | 'raisedFmt' | 'goalFmt' | 'pct'>) => void;
 }
 
@@ -178,6 +185,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [phone, setPhone] = useState('');
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userAvatarUrl, setUserAvatarUrl] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [isVolunteer, setIsVolunteer] = useState(false);
   const [myReferralCode, setMyReferralCode] = useState('');
@@ -212,12 +220,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshCampaigns = useCallback(async () => {
     const { data } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
     if (!data) return;
+    const today = new Date().toISOString().slice(0, 10);
     setCampaigns(data.map((c) => {
       const pct = c.goal > 0 ? Math.min(100, Math.round((Number(c.raised) / Number(c.goal)) * 100)) : 0;
+      // Derived defensively at read time so a campaign shows as completed the
+      // moment its goal is filled or end date passes, even if the admin panel
+      // hasn't re-synced its own stored status yet.
+      const isCompleted = c.status === 'completed' || pct >= 100 || (c.end_date && c.end_date < today);
       return {
         id: c.id,
         title: c.title,
-        status: c.status,
+        status: isCompleted ? 'completed' : 'active',
         pct,
         raised: Number(c.raised),
         goal: Number(c.goal),
@@ -230,6 +243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshEvents = useCallback(async () => {
     const { data } = await supabase.from('events').select('*').order('event_date', { ascending: true });
     if (!data) return;
+    const today = new Date().toISOString().slice(0, 10);
     setEvents(data.map((e) => ({
       id: e.id,
       title: e.title,
@@ -238,7 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : '',
       timeStr: e.time_label || '',
       location: e.location || '',
-      isPast: e.is_past,
+      isPast: e.is_past || (e.event_date && e.event_date < today),
       desc: e.description || '',
     })));
   }, []);
@@ -246,6 +260,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     refreshCampaigns();
     refreshEvents();
+
+    // Admin-panel edits happen out-of-band (a different device/browser), so
+    // there's nothing in-app that would otherwise trigger a refetch. Refresh
+    // whenever the app returns to the foreground, and poll at a light
+    // interval while it's active, so edits show up without a manual restart.
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') {
+        refreshCampaigns();
+        refreshEvents();
+      }
+    });
+    const interval = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        refreshCampaigns();
+        refreshEvents();
+      }
+    }, 60000);
+
+    return () => {
+      subscription.remove();
+      clearInterval(interval);
+    };
   }, [refreshCampaigns, refreshEvents]);
 
   // Load everything scoped to the signed-in user whenever the session changes
@@ -253,6 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) {
       setUserName('');
       setUserEmail('');
+      setUserAvatarUrl('');
       setPhone('');
       setIsVolunteer(false);
       setMyReferralCode('');
@@ -277,6 +314,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (profile) {
         setUserName(profile.full_name || '');
         setUserEmail(profile.email || '');
+        setUserAvatarUrl(profile.avatar_url || '');
         setPhone(profile.phone ? normalizePhone(profile.phone) : '');
       }
 
@@ -455,6 +493,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { error: null };
   };
 
+  const updateName = async (fullName: string) => {
+    if (!session) return { error: 'Not signed in' };
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName })
+      .eq('id', session.user.id);
+    if (error) return { error: error.message };
+    setUserName(fullName);
+    return { error: null };
+  };
+
+  const updateProfilePhoto = async (localUri: string) => {
+    if (!session) return { error: 'Not signed in' };
+    try {
+      const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
+      const path = `${session.user.id}/avatar.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, decode(base64), { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) return { error: uploadError.message };
+
+      const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
+      const url = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: url })
+        .eq('id', session.user.id);
+      if (updateError) return { error: updateError.message };
+
+      setUserAvatarUrl(url);
+      return { error: null, url };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Failed to update photo' };
+    }
+  };
+
   const applyForVolunteer = async (motivation: string) => {
     if (!session) return { error: 'Not signed in' };
     const uid = session.user.id;
@@ -597,10 +672,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     supabase.from('notifications').update({ is_read: true }).eq('id', id).then();
   };
 
-  const clearNotifications = () => {
+  const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
     if (session) {
       supabase.from('notifications').update({ is_read: true }).eq('profile_id', session.user.id).then();
+    }
+  };
+
+  const deleteAllNotifications = async () => {
+    setNotifications([]);
+    if (session) {
+      const { error } = await supabase.from('notifications').delete().eq('profile_id', session.user.id);
+      if (error) console.error('Failed to delete notifications:', error.message);
     }
   };
 
@@ -618,6 +701,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       phone, setPhone,
       userName, setUserName,
       userEmail, setUserEmail,
+      userAvatarUrl,
       referralCode, setReferralCode,
       isLoggedIn: !!session,
       isVolunteer,
@@ -627,6 +711,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       signOut,
       deleteAccount,
       saveProfile,
+      updateName,
+      updateProfilePhoto,
       applyForVolunteer,
       profileLoading,
       hasCommitment,
@@ -642,7 +728,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       campaignGiving,
       makePayment,
       markNotificationAsRead,
-      clearNotifications,
+      markAllNotificationsAsRead,
+      deleteAllNotifications,
       addCampaign
     }}>
       {children}

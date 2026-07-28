@@ -97,6 +97,11 @@ export default async function EventsPage({
 async function EventsTable({ q, status }: { q?: string; status?: string }) {
   const supabase = await createClient();
 
+  // Self-heal: any event whose date has passed becomes "past" automatically,
+  // regardless of whether an admin remembered to flip it manually.
+  const today = new Date().toISOString().slice(0, 10);
+  await supabase.from('events').update({ is_past: true }).lt('event_date', today).eq('is_past', false);
+
   let query = supabase.from('events').select('*').order('event_date', { ascending: false });
   if (q) query = query.ilike('title', `%${q}%`);
   if (status === 'upcoming') query = query.eq('is_past', false);

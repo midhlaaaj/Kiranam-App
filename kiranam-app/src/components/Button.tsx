@@ -20,8 +20,13 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
 }) => {
+  // `loading` intentionally does NOT fall through to the grayed-out
+  // disabled style — a button that's mid-save should stay visually
+  // prominent (its normal branded color) with a clearly visible spinner,
+  // not fade to a pale, low-contrast gray that makes the spinner nearly
+  // invisible. Only a genuinely disabled (e.g. invalid form) button grays out.
   const getButtonStyles = () => {
-    if (disabled) return styles.disabledButton;
+    if (disabled && !loading) return styles.disabledButton;
     switch (variant) {
       case 'secondary':
         return styles.secondaryButton;

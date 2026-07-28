@@ -1,45 +1,35 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Pencil } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { DeleteAccountModal } from '@/components/DeleteAccountModal';
+import { EditProfileModal } from '@/components/EditProfileModal';
 
 export default function VolunteerProfileScreen() {
   const router = useRouter();
   const {
     userName,
     phone,
+    userAvatarUrl,
     myReferralCode,
     signOut,
     deleteAccount,
+    updateName,
+    updateProfilePhoto,
   } = useApp();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
     router.replace('/');
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This permanently deletes your account and volunteer history. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const { error } = await deleteAccount();
-            if (error) {
-              Alert.alert('Could not delete account', error);
-              return;
-            }
-            router.replace('/');
-          },
-        },
-      ]
-    );
+  const handleAccountDeleted = () => {
+    setDeleteModalVisible(false);
+    router.replace('/');
   };
 
   const getInitials = (name: string) =>
@@ -52,9 +42,22 @@ export default function VolunteerProfileScreen() {
 
         {/* Identity Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{getInitials(userName)}</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => setEditModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Pencil size={14} color="#0C0C0D" />
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
+
+          {userAvatarUrl ? (
+            <Image source={{ uri: userAvatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{getInitials(userName)}</Text>
+            </View>
+          )}
           <Text style={styles.userName}>{userName}</Text>
           <Text style={styles.userPhone}>{phone || '+91 98765 43210'}</Text>
           <View style={styles.volunteerBadge}>
@@ -89,12 +92,29 @@ export default function VolunteerProfileScreen() {
             <ChevronRight size={16} color="#D8D5D0" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionRow, styles.noBorder]} onPress={handleDeleteAccount} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.actionRow, styles.noBorder]} onPress={() => setDeleteModalVisible(true)} activeOpacity={0.7}>
             <Text style={styles.logoutText}>Delete Account</Text>
           </TouchableOpacity>
         </View>
 
       </ScrollView>
+
+      <DeleteAccountModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirmed={deleteAccount}
+        onDeleted={handleAccountDeleted}
+        description="This permanently deletes your account and volunteer history. This cannot be undone."
+      />
+
+      <EditProfileModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        currentName={userName}
+        currentAvatarUrl={userAvatarUrl}
+        onSaveName={updateName}
+        onSavePhoto={updateProfilePhoto}
+      />
     </SafeAreaView>
   );
 }
@@ -112,6 +132,27 @@ const styles = StyleSheet.create({
   profileHeader: {
     alignItems: 'center',
     marginBottom: 24,
+    position: 'relative',
+  },
+  editButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1EEEA',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  editButtonText: {
+    fontFamily: 'Inter',
+    fontWeight: '600',
+    fontSize: 12.5,
+    color: '#0C0C0D',
   },
   avatar: {
     width: 74,
@@ -120,6 +161,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#0C0C0D',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 10,
+  },
+  avatarImage: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     marginBottom: 10,
   },
   avatarText: {
