@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import { useApp } from '@/context/AppContext';
+import { Button } from '@/components/Button';
 import { statusMeta } from '@/utils/volunteerStatus';
 import {
   Users,
@@ -14,12 +16,23 @@ import {
   BellRing,
   Bell,
   Gift,
+  Check,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function VolunteerDashboardScreen() {
   const router = useRouter();
-  const { userName, myReferralCode, volunteerMembers, notifications } = useApp();
+  const {
+    userName,
+    myReferralCode,
+    volunteerMembers,
+    notifications,
+    profileLoading,
+    hasCommitment,
+    commitmentAmount,
+    nextDueDate,
+    isPaidThisCycle,
+  } = useApp();
   const [copied, setCopied] = useState(false);
 
   const firstName = userName.split(' ')[0];
@@ -27,6 +40,8 @@ export default function VolunteerDashboardScreen() {
   const overdueCount = volunteerMembers.filter((m) => m.status === 'overdue').length;
   const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
   const topMembers = volunteerMembers.slice(0, 3);
+
+  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(myReferralCode);
@@ -57,8 +72,66 @@ export default function VolunteerDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Contribution stats — moved to the top so volunteers see their
-            pending/overdue workload first thing */}
+        {/* My Giving — a volunteer can also be a personal contributor.
+            Moved here from the profile tab so it's the first thing seen. */}
+        <LinearGradient
+          colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
+          locations={[0, 0.3, 0.65, 1]}
+          start={{ x: 0.29, y: 0.05 }}
+          end={{ x: 0.71, y: 0.95 }}
+          style={styles.givingCard}
+        >
+          <View style={styles.givingHeader}>
+            <Text style={styles.givingLabel}>Monthly Commitment</Text>
+            {!profileLoading && hasCommitment && (
+              <View style={styles.activeBadge}>
+                <View style={styles.activeBadgeDot} />
+                <Text style={styles.activeBadgeText}>Active</Text>
+              </View>
+            )}
+          </View>
+
+          {!profileLoading && hasCommitment ? (
+            <>
+              <View style={styles.givingAmountRow}>
+                <Text style={styles.givingAmount}>
+                  {formatMoney(commitmentAmount)}
+                  <Text style={styles.givingUnit}> /month</Text>
+                </Text>
+                <TouchableOpacity onPress={() => router.push('/choose-amount')} activeOpacity={0.7}>
+                  <Text style={styles.updateLink}>Change</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.givingDueDate}>
+                {isPaidThisCycle ? `Paid · Next due ${nextDueDate}` : `Next due ${nextDueDate}`}
+              </Text>
+              {isPaidThisCycle ? (
+                <View style={styles.paidBadge}>
+                  <Check size={15} color="#22A559" strokeWidth={3} />
+                  <Text style={styles.paidBadgeText}>Paid for this cycle</Text>
+                </View>
+              ) : (
+                <Button
+                  title="Quick Pay"
+                  onPress={() => router.push({ pathname: '/secure-payment', params: { amount: commitmentAmount, label: 'Monthly Contribution' } })}
+                  style={styles.givingButton}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={styles.givingAmount}>Not set yet</Text>
+              <Text style={styles.givingDueDate}>Start your own recurring monthly contribution.</Text>
+              <Button
+                title="Set Up Monthly Giving"
+                onPress={() => router.push('/choose-amount')}
+                style={styles.givingButton}
+              />
+            </>
+          )}
+        </LinearGradient>
+
+        {/* Contribution stats — pending/overdue workload for assigned contributors */}
         <FlatList
           data={[
             { key: 'assigned', label: 'Assigned Contributors', value: volunteerMembers.length.toString(), Icon: Users },
@@ -228,6 +301,98 @@ const styles = StyleSheet.create({
     backgroundColor: '#EC2028',
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
+  },
+  givingCard: {
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 20,
+  },
+  givingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    zIndex: 1,
+  },
+  givingLabel: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.55)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.04,
+  },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(74,222,128,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 6,
+  },
+  activeBadgeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#4ADE80',
+  },
+  activeBadgeText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4ADE80',
+  },
+  givingAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  updateLink: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 13,
+    color: '#FFFFFF',
+    textDecorationLine: 'underline',
+  },
+  givingAmount: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 30,
+    color: '#FFFFFF',
+    letterSpacing: -0.6,
+    marginBottom: 6,
+  },
+  givingUnit: {
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  givingDueDate: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    marginBottom: 16,
+  },
+  givingButton: {
+    backgroundColor: '#EC2028',
+    height: 48,
+  },
+  paidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  paidBadgeText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
   referralCompactCard: {
     flexDirection: 'row',

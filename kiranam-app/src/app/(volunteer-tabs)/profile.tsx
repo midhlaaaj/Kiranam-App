@@ -65,6 +65,17 @@ export default function VolunteerProfileScreen() {
           </View>
         </View>
 
+        <View style={styles.sectionCard}>
+          <TouchableOpacity
+            style={[styles.actionRow, styles.noBorder]}
+            activeOpacity={0.7}
+            onPress={() => router.push('/volunteer-payment-history')}
+          >
+            <Text style={styles.actionRowText}>My Contribution History</Text>
+            <ChevronRight size={16} color="#D8D5D0" />
+          </TouchableOpacity>
+        </View>
+
         {/* Account Options */}
         <Text style={styles.sectionHeader}>Account</Text>
         <View style={styles.sectionCard}>
