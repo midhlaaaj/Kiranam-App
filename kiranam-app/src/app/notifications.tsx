@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, StatusBar, Modal, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp, NotificationRecord } from '@/context/AppContext';
-import { ArrowLeft, CreditCard, Flag, Info, Check, MoreVertical, Trash2, CheckCheck } from 'lucide-react-native';
+import { ArrowLeft, CreditCard, Flag, Info, Check, MoreVertical, Trash2, CheckCheck, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NotificationsScreen() {
@@ -39,8 +39,11 @@ export default function NotificationsScreen() {
     return n.cat === selectedFilter;
   });
 
-  const handleRowClick = (id: string) => {
-    markNotificationAsRead(id);
+  const handleRowClick = (item: NotificationRecord) => {
+    markNotificationAsRead(item.id);
+    if (item.deepLink) {
+      router.push(item.deepLink as never);
+    }
   };
 
   const getIcon = (item: NotificationRecord) => {
@@ -128,9 +131,9 @@ export default function NotificationsScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => handleRowClick(item.id)}
+            onPress={() => handleRowClick(item)}
           >
             <View style={[
               styles.notifCard,
@@ -146,6 +149,9 @@ export default function NotificationsScreen() {
               </View>
               {item.unread && (
                 <View style={styles.unreadDot} />
+              )}
+              {item.deepLink && (
+                <ChevronRight size={16} color="#D8D5D0" />
               )}
             </View>
           </TouchableOpacity>

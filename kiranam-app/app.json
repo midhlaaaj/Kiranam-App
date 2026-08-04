@@ -13,7 +13,8 @@
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Kiranam uses your photo library to let you set a profile picture."
+        "NSPhotoLibraryUsageDescription": "Kiranam uses your photo library to let you set a profile picture.",
+        "LSApplicationQueriesSchemes": ["tez", "phonepe", "paytmmp"]
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -25,6 +26,8 @@
       }
     },
     "android": {
+      "package": "com.kiranam.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -52,7 +55,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Kiranam uses your photo library to let you set a profile picture."
+          "photosPermission": "Kiranam uses your photo library to let you set a profile picture.",
+          "cameraPermission": "Kiranam uses your camera to let you take a profile picture."
         }
       ]
     ],

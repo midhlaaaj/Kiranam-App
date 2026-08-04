@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '@/components/Button';
-import { Bell, Heart, Calendar, ArrowRight, ShieldCheck, ChevronRight } from 'lucide-react-native';
+import { Bell, Heart, Calendar, ArrowRight, ShieldCheck, ChevronRight, Check, Circle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function SkeletonBlock({ style }: { style: any }) {
@@ -28,10 +28,13 @@ export default function HomeScreen() {
   const router = useRouter();
   const {
     userName,
+    userEmail,
     profileLoading,
     hasCommitment,
     commitmentAmount,
     nextDueDate,
+    isPaidThisCycle,
+    userAvatarUrl,
     campaigns,
     payments,
     events,
@@ -44,6 +47,13 @@ export default function HomeScreen() {
   const upcomingEvents = events.filter(e => !e.isPast).slice(0, 2);
   const recentPayments = payments.slice(0, 3);
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
+
+  const setupSteps = [
+    { key: 'amount', label: 'Set your monthly amount', done: hasCommitment, onPress: () => router.push('/choose-amount') },
+    { key: 'photo', label: 'Add a profile photo', done: !!userAvatarUrl, onPress: () => router.push('/(tabs)/profile') },
+    { key: 'email', label: 'Add your email', done: !!userEmail, onPress: () => router.push('/(tabs)/profile') },
+  ];
+  const showSetupCard = !profileLoading && setupSteps.some((s) => !s.done);
 
   const formatMoney = (amount: number) => {
     return '₹' + amount.toLocaleString('en-IN');
@@ -101,12 +111,21 @@ export default function HomeScreen() {
                 {formatMoney(commitmentAmount)}
                 <Text style={styles.commitmentUnit}> /month</Text>
               </Text>
-              <Text style={styles.commitmentDueDate}>Next due {nextDueDate}</Text>
-              <Button
-                title="Quick Pay"
-                onPress={() => router.push({ pathname: '/secure-payment', params: { amount: commitmentAmount, label: 'Monthly Contribution' } })}
-                style={styles.quickPayButton}
-              />
+              <Text style={styles.commitmentDueDate}>
+                {isPaidThisCycle ? `Paid · Next due ${nextDueDate}` : `Next due ${nextDueDate}`}
+              </Text>
+              {isPaidThisCycle ? (
+                <View style={styles.paidBadgeButton}>
+                  <Check size={16} color="#FFFFFF" strokeWidth={3} />
+                  <Text style={styles.paidBadgeButtonText}>Paid for this cycle</Text>
+                </View>
+              ) : (
+                <Button
+                  title="Quick Pay"
+                  onPress={() => router.push({ pathname: '/secure-payment', params: { amount: commitmentAmount, label: 'Monthly Contribution' } })}
+                  style={styles.quickPayButton}
+                />
+              )}
             </>
           ) : (
             <>
@@ -121,68 +140,118 @@ export default function HomeScreen() {
           )}
         </LinearGradient>
 
+        {/* Getting Started checklist — disappears once every step is done */}
+        {showSetupCard && (
+          <View style={styles.setupCard}>
+            <Text style={styles.setupCardTitle}>Getting Started</Text>
+            {setupSteps.map((step) => (
+              <TouchableOpacity
+                key={step.key}
+                style={styles.setupStepRow}
+                onPress={step.onPress}
+                activeOpacity={0.7}
+                disabled={step.done}
+              >
+                {step.done ? (
+                  <View style={styles.setupStepCheckDone}>
+                    <Check size={13} color="#FFFFFF" strokeWidth={3} />
+                  </View>
+                ) : (
+                  <Circle size={20} color="#D8D5D0" strokeWidth={1.5} />
+                )}
+                <Text style={[styles.setupStepLabel, step.done ? styles.setupStepLabelDone : null]}>
+                  {step.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
         {/* Active Campaigns Slider */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Active Campaigns</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/campaigns')} activeOpacity={0.7}>
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          data={activeCampaigns}
-          keyExtractor={(item) => item.id.toString()}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.campaignListContainer}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.campaignCard}
-              activeOpacity={0.9}
-              onPress={() => router.push({ pathname: '/campaign-detail', params: { id: item.id } })}
-            >
-              <View style={styles.campaignImagePlaceholder}>
-                <Heart size={20} color="#D8A8A8" strokeWidth={1.5} />
-              </View>
-              <Text style={styles.campaignCardTitle} numberOfLines={2}>{item.title}</Text>
-              
-              <View style={styles.progressRow}>
-                <View style={styles.progressBarBg}>
-                  <View style={[styles.progressBarFill, { width: `${item.pct}%` }]} />
-                </View>
-                <Text style={styles.progressText}>{item.pct}%</Text>
-              </View>
+          {activeCampaigns.length > 0 && (
+            <TouchableOpacity onPress={() => router.push('/(tabs)/campaigns')} activeOpacity={0.7}>
+              <Text style={styles.seeAllText}>See all</Text>
             </TouchableOpacity>
           )}
-        />
+        </View>
+
+        {activeCampaigns.length === 0 ? (
+          <View style={[styles.emptyStateCard, styles.campaignsEmptyStateCard]}>
+            <View style={styles.emptyStateIconBox}>
+              <Heart size={20} color="#D8A8A8" strokeWidth={1.5} />
+            </View>
+            <Text style={styles.emptyStateTitle}>No active campaigns</Text>
+            <Text style={styles.emptyStateSubtitle}>Check back soon for new ways to give.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={activeCampaigns}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.campaignListContainer}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.campaignCard}
+                activeOpacity={0.9}
+                onPress={() => router.push({ pathname: '/campaign-detail', params: { id: item.id } })}
+              >
+                <View style={styles.campaignImagePlaceholder}>
+                  <Heart size={20} color="#D8A8A8" strokeWidth={1.5} />
+                </View>
+                <Text style={styles.campaignCardTitle} numberOfLines={2}>{item.title}</Text>
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${item.pct}%` }]} />
+                  </View>
+                  <Text style={styles.progressText}>{item.pct}%</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
 
         {/* Upcoming Events list */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/events')} activeOpacity={0.7}>
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
+          {upcomingEvents.length > 0 && (
+            <TouchableOpacity onPress={() => router.push('/(tabs)/events')} activeOpacity={0.7}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        <View style={styles.eventsContainer}>
-          {upcomingEvents.map((item) => (
-            <TouchableOpacity 
-              key={item.id} 
-              style={styles.eventRow}
-              activeOpacity={0.8}
-              onPress={() => router.push({ pathname: '/event-detail', params: { id: item.id } })}
-            >
-              <View style={styles.eventIconBox}>
-                <Calendar size={20} color="#B0ADA8" />
-              </View>
-              <View style={styles.eventInfo}>
-                <Text style={styles.eventTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.eventSubtitle}>{item.dateStr} · {item.location}</Text>
-              </View>
-              <ChevronRight size={16} color="#B0ADA8" />
-            </TouchableOpacity>
-          ))}
-        </View>
+        {upcomingEvents.length === 0 ? (
+          <View style={[styles.emptyStateCard, styles.eventsEmptyStateCard]}>
+            <View style={styles.emptyStateIconBox}>
+              <Calendar size={20} color="#B0ADA8" strokeWidth={1.5} />
+            </View>
+            <Text style={styles.emptyStateTitle}>No upcoming events</Text>
+          </View>
+        ) : (
+          <View style={styles.eventsContainer}>
+            {upcomingEvents.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.eventRow}
+                activeOpacity={0.8}
+                onPress={() => router.push({ pathname: '/event-detail', params: { id: item.id } })}
+              >
+                <View style={styles.eventIconBox}>
+                  <Calendar size={20} color="#B0ADA8" />
+                </View>
+                <View style={styles.eventInfo}>
+                  <Text style={styles.eventTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.eventSubtitle}>{item.dateStr} · {item.location}</Text>
+                </View>
+                <ChevronRight size={16} color="#B0ADA8" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Recent Contributions */}
         <View style={styles.sectionHeaderRow}>
@@ -359,6 +428,22 @@ const styles = StyleSheet.create({
     height: 50,
     zIndex: 1,
   },
+  paidBadgeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    zIndex: 1,
+  },
+  paidBadgeButtonText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 15,
+    color: '#FFFFFF',
+  },
   skeletonAmount: {
     width: 140,
     height: 36,
@@ -375,6 +460,50 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 50,
     borderRadius: 25,
+  },
+  setupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  setupCardTitle: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 13,
+    color: '#0C0C0D',
+    textTransform: 'uppercase',
+    letterSpacing: 0.04,
+    marginBottom: 14,
+  },
+  setupStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  setupStepCheckDone: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#22A559',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setupStepLabel: {
+    fontFamily: 'Inter',
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#0C0C0D',
+  },
+  setupStepLabelDone: {
+    color: '#B0ADA8',
+    textDecorationLine: 'line-through',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -456,6 +585,45 @@ const styles = StyleSheet.create({
   eventsContainer: {
     gap: 10,
     marginBottom: 24,
+  },
+  emptyStateCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F9F8F6',
+    borderRadius: 22,
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  // Matches campaignCard's total rendered height (padding + image + title + progress row)
+  // so the empty state doesn't jump the layout smaller than a real card would be.
+  campaignsEmptyStateCard: {
+    height: 176,
+  },
+  // Matches a single eventRow's rendered height (padding + icon box).
+  eventsEmptyStateCard: {
+    height: 76,
+  },
+  emptyStateIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  emptyStateTitle: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 14,
+    color: '#0C0C0D',
+    marginBottom: 3,
+  },
+  emptyStateSubtitle: {
+    fontFamily: 'Inter',
+    fontSize: 12.5,
+    color: '#7A756E',
+    textAlign: 'center',
   },
   eventRow: {
     flexDirection: 'row',

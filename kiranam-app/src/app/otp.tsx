@@ -76,10 +76,17 @@ export default function OtpScreen() {
   };
 
   const handleResend = async (phoneE164?: string) => {
-    setResendSeconds(30);
     setOtp(['', '', '', '', '', '']);
     setError('');
-    await signInWithPhone(phoneE164 || phone);
+    // Countdown only resets on a *confirmed* send — otherwise a rejected
+    // resend (e.g. blocked by the server-side OTP rate limit) would silently
+    // look like it worked, with no way to tell the user actually got nothing.
+    const { error: resendError } = await signInWithPhone(phoneE164 || phone);
+    if (resendError) {
+      setError(resendError);
+      return;
+    }
+    setResendSeconds(30);
     inputRefs[0].current?.focus();
   };
 
@@ -132,19 +139,23 @@ export default function OtpScreen() {
     setVerifying(false);
 
     if (profile?.full_name) {
-      if (profile.role === 'volunteer') {
-        // profiles.role is set to 'volunteer' at registration time, before
-        // admin review — only an *approved* application grants dashboard
-        // access. Anyone else (pending, rejected, or no application yet)
-        // sees the status screen instead.
-        const { data: application } = await supabase
-          .from('volunteer_applications')
-          .select('status')
-          .eq('profile_id', uid)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        router.replace(application?.status === 'approved' ? '/(volunteer-tabs)/dashboard' : '/pending');
+      // profiles.role only ever becomes 'volunteer' once an admin approves
+      // the application (register.tsx always saves 'contributor' at signup,
+      // regardless of which mode was picked) — so a pending/rejected/no-
+      // application account still has role 'contributor' and must be routed
+      // by application status, not role, to land on /pending correctly.
+      const { data: application } = await supabase
+        .from('volunteer_applications')
+        .select('status')
+        .eq('profile_id', uid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (profile.role === 'volunteer' && application?.status === 'approved') {
+        router.replace('/(volunteer-tabs)/dashboard');
+      } else if (profile.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved') {
+        router.replace('/pending');
       } else {
         router.replace('/(tabs)/home');
       }

@@ -2,7 +2,6 @@ import React, { createContext, useState, useEffect, useContext, useCallback, use
 import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 
 // Interfaces for our app types
@@ -36,6 +35,9 @@ export interface NotificationRecord {
   time: string;
   unread: boolean;
   cat: 'contribution' | 'campaign' | 'system';
+  /** Relative in-app route to navigate to on tap (e.g. "/campaign-detail?id=…").
+   * Null for purely informational notifications. */
+  deepLink: string | null;
 }
 
 export interface EventRecord {
@@ -46,6 +48,12 @@ export interface EventRecord {
   location: string;
   isPast: boolean;
   desc: string;
+}
+
+export interface ContributorNote {
+  id: string;
+  body: string;
+  createdAt: string;
 }
 
 export interface VolunteerMember {
@@ -65,6 +73,8 @@ interface AppContextType {
   setUserName: (name: string) => void;
   userEmail: string;
   setUserEmail: (email: string) => void;
+  isEmailVerified: boolean;
+  emailReceipt: (receipt: { txnId: string; amount: number; label: string; dateStr: string; pdfBase64: string }) => Promise<{ error: string | null }>;
   userAvatarUrl: string;
   referralCode: string;
   setReferralCode: (code: string) => void;
@@ -84,6 +94,7 @@ interface AppContextType {
     whatsappConsent?: boolean;
   }) => Promise<{ error: string | null }>;
   updateName: (fullName: string) => Promise<{ error: string | null }>;
+  updateEmail: (email: string) => Promise<{ error: string | null }>;
   updateProfilePhoto: (localUri: string) => Promise<{ error: string | null; url?: string }>;
   applyForVolunteer: (motivation: string) => Promise<{ error: string | null }>;
 
@@ -91,11 +102,12 @@ interface AppContextType {
   profileLoading: boolean;
   hasCommitment: boolean;
   commitmentAmount: number;
-  setCommitmentAmount: (amount: number) => Promise<void>;
+  setCommitmentAmount: (amount: number) => Promise<{ error: string | null }>;
   isAutopayEnabled: boolean;
-  setAutopayEnabled: (val: boolean) => void;
+  setAutopayEnabled: (val: boolean) => Promise<{ error: string | null }>;
   nextDueDate: string;
   setNextDueDate: (date: string) => void;
+  isPaidThisCycle: boolean;
 
   // Data lists (loaded from Supabase)
   campaigns: Campaign[];
@@ -107,7 +119,16 @@ interface AppContextType {
   campaignGiving: number;
 
   // App Actions
-  makePayment: (amount: number, label: string, campaignId?: string) => Promise<PaymentRecord>;
+  makeRazorpayPayment: (amount: number, label: string, campaignId?: string) => Promise<PaymentRecord>;
+  recordOfflineContribution: (
+    contributorId: string,
+    amount: number,
+    campaignId: string | null,
+    label: string,
+    note?: string
+  ) => Promise<{ error: string | null }>;
+  fetchContributorNotes: (contributorId: string) => Promise<{ notes: ContributorNote[]; error: string | null }>;
+  addContributorNote: (contributorId: string, body: string) => Promise<{ error: string | null }>;
   markNotificationAsRead: (id: string) => void;
   markAllNotificationsAsRead: () => void;
   deleteAllNotifications: () => Promise<void>;
@@ -195,6 +216,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [commitmentAmount, setCommitmentAmountState] = useState(500);
   const [isAutopayEnabled, setAutopayEnabledState] = useState(true);
   const [nextDueDate, setNextDueDateState] = useState('');
+  // Raw ISO next_due_date, kept alongside the formatted display string so
+  // payment code can compare it to "today" without re-parsing display text.
+  const [nextDueDateIso, setNextDueDateIso] = useState<string | null>(null);
 
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
@@ -208,6 +232,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Keep the latest userName available inside async callbacks without re-subscribing.
   const userNameRef = useRef(userName);
   userNameRef.current = userName;
+  const userEmailRef = useRef(userEmail);
+  userEmailRef.current = userEmail;
 
   // Track auth session
   useEffect(() => {
@@ -215,6 +241,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => setSession(sess));
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  // Confirming a new email (see updateEmail) happens by tapping a link outside
+  // the app, so there's no in-app event for it. On resume, re-check with the
+  // server: getUser() reflects a freshly-confirmed email_confirmed_at (unlike
+  // the cached session), and sync_confirmed_email() writes the confirmed
+  // address into profiles.email and claims any matching admin invite.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+
+    const reconcileEmail = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (cancelled || !data.user) return;
+      // Only touch session state (which every consumer of `session` re-runs
+      // off of) when something about the user actually changed — most
+      // resumes are a no-op here, and creating a new session reference every
+      // foreground was forcing the whole profile to re-fetch and flash its
+      // loading skeletons for no reason.
+      setSession((prev) => {
+        if (!prev) return prev;
+        if (prev.user.email === data.user.email && prev.user.email_confirmed_at === data.user.email_confirmed_at) {
+          return prev;
+        }
+        return { ...prev, user: data.user };
+      });
+      if (data.user.email_confirmed_at) {
+        const { data: result } = await supabase.rpc('sync_confirmed_email');
+        if (!cancelled && result?.email && result.email !== userEmailRef.current) setUserEmail(result.email);
+      }
+    };
+
+    reconcileEmail();
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') reconcileEmail();
+    });
+    return () => {
+      cancelled = true;
+      subscription.remove();
+    };
+  }, [session?.user?.id]);
 
   // Load public campaign/event data regardless of auth state
   const refreshCampaigns = useCallback(async () => {
@@ -261,10 +327,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshCampaigns();
     refreshEvents();
 
-    // Admin-panel edits happen out-of-band (a different device/browser), so
-    // there's nothing in-app that would otherwise trigger a refetch. Refresh
-    // whenever the app returns to the foreground, and poll at a light
-    // interval while it's active, so edits show up without a manual restart.
+    // Any contribution (in-app payment, or a volunteer/admin recording one
+    // offline) bumps campaigns.raised via a DB trigger. Subscribing to that
+    // table's changes pushes the new progress to every viewer instantly,
+    // instead of waiting on the poll/foreground refresh below.
+    const campaignsChannel = supabase
+      .channel('campaigns-progress')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => {
+        refreshCampaigns();
+      })
+      .subscribe();
+
+    // Fallback for edits the realtime channel might miss (e.g. a dropped
+    // connection): refresh whenever the app returns to the foreground, and
+    // poll at a light interval while it's active.
     const subscription = AppState.addEventListener('change', (next) => {
       if (next === 'active') {
         refreshCampaigns();
@@ -279,6 +355,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 60000);
 
     return () => {
+      supabase.removeChannel(campaignsChannel);
       subscription.remove();
       clearInterval(interval);
     };
@@ -398,6 +475,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           time: new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           unread: !n.is_read,
           cat: n.category,
+          deepLink: n.deep_link || null,
         })));
       }
 
@@ -412,11 +490,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setCommitmentAmountState(Number(commitment.monthly_amount));
           setAutopayEnabledState(commitment.autopay_enabled);
           setNextDueDateState(formatDueDateLabel(commitment.next_due_date));
+          setNextDueDateIso(commitment.next_due_date);
         } else {
           setHasCommitment(false);
           setCommitmentAmountState(500);
           setAutopayEnabledState(true);
           setNextDueDateState('');
+          setNextDueDateIso(null);
         }
       }
       if (!cancelled) setProfileLoading(false);
@@ -425,7 +505,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  // Only the signed-in *user* changing (login/logout/switch account) should
+  // trigger a full reload — a session reference change for the same user
+  // (token refresh, the email-reconciliation effect above, etc.) shouldn't
+  // flash every card on the screen back to its loading skeleton.
+  }, [session?.user?.id]);
 
   // Recalculate giving totals when payments list updates
   useEffect(() => {
@@ -481,6 +565,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) return { error: 'Not signed in' };
     const { error } = await supabase.from('profiles').upsert({
       id: session.user.id,
+      user_id: session.user.id,
       full_name: fields.fullName,
       email: fields.email || null,
       role: fields.role,
@@ -504,14 +589,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { error: null };
   };
 
+  // Changing email requires confirming the new address via a link Supabase emails
+  // to it, so this only kicks off that flow — profiles.email is updated separately,
+  // once the change is confirmed (see the reconciliation effect below).
+  const updateEmail = async (email: string) => {
+    if (!session) return { error: 'Not signed in' };
+    const trimmed = email.trim();
+    if (!trimmed) return { error: 'Email required' };
+    const { error } = await supabase.auth.updateUser({ email: trimmed });
+    if (error) return { error: error.message };
+    // Show the typed address right away (as unverified — see isEmailVerified
+    // below) instead of leaving the old one displayed until the confirmation
+    // link is clicked, which could be minutes or days later.
+    setUserEmail(trimmed);
+    return { error: null };
+  };
+
+  const emailReceipt = async (receipt: { txnId: string; amount: number; label: string; dateStr: string; pdfBase64: string }) => {
+    if (!session) return { error: 'Not signed in' };
+    const { error } = await supabase.functions.invoke('send-receipt-email', { body: receipt });
+    if (error) return { error: error.message };
+    return { error: null };
+  };
+
   const updateProfilePhoto = async (localUri: string) => {
     if (!session) return { error: 'Not signed in' };
     try {
-      const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
+      const fileBytes = await new FileSystem.File(localUri).arrayBuffer();
       const path = `${session.user.id}/avatar.jpg`;
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, decode(base64), { contentType: 'image/jpeg', upsert: true });
+        .upload(path, fileBytes, { contentType: 'image/jpeg', upsert: true });
       if (uploadError) return { error: uploadError.message };
 
       const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
@@ -550,63 +658,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const setCommitmentAmount = async (amount: number) => {
-    setCommitmentAmountState(amount);
-    if (session) {
-      // `contributor_id` (not `id`) is the unique column commitments already
-      // has one row per — without onConflict, upsert() matches on the
-      // primary key instead, tries to INSERT a fresh row every time, and
-      // silently fails the contributor_id uniqueness check (the error was
-      // never checked here), so the change never actually persisted.
-      const { error } = await supabase
-        .from('commitments')
-        .upsert(
-          { contributor_id: session.user.id, monthly_amount: amount },
-          { onConflict: 'contributor_id' }
-        );
-      if (error) console.error('Failed to save monthly commitment:', error.message);
-      setHasCommitment(true);
+  // Only updates local state after a confirmed successful write — a donation
+  // app must never show "Saved" (or leave a toggle visually flipped) when the
+  // change didn't actually persist.
+  const setCommitmentAmount = async (amount: number): Promise<{ error: string | null }> => {
+    if (!session) return { error: 'Not signed in' };
+    // `contributor_id` (not `id`) is the unique column commitments already
+    // has one row per — without onConflict, upsert() matches on the
+    // primary key instead, tries to INSERT a fresh row every time, and
+    // silently fails the contributor_id uniqueness check.
+    const { error } = await supabase
+      .from('commitments')
+      .upsert(
+        { contributor_id: session.user.id, monthly_amount: amount },
+        { onConflict: 'contributor_id' }
+      );
+    if (error) {
+      console.error('Failed to save monthly commitment:', error.message);
+      return { error: error.message };
     }
+    setCommitmentAmountState(amount);
+    setHasCommitment(true);
+    return { error: null };
   };
 
-  const setAutopayEnabled = (val: boolean) => {
-    setAutopayEnabledState(val);
-    if (session) {
-      supabase
-        .from('commitments')
-        .upsert(
-          { contributor_id: session.user.id, autopay_enabled: val },
-          { onConflict: 'contributor_id' }
-        )
-        .then(({ error }) => {
-          if (error) console.error('Failed to save autopay setting:', error.message);
-        });
+  const setAutopayEnabled = async (val: boolean): Promise<{ error: string | null }> => {
+    if (!session) return { error: 'Not signed in' };
+    const { error } = await supabase
+      .from('commitments')
+      .upsert(
+        { contributor_id: session.user.id, autopay_enabled: val },
+        { onConflict: 'contributor_id' }
+      );
+    if (error) {
+      console.error('Failed to save autopay setting:', error.message);
+      return { error: error.message };
     }
+    setAutopayEnabledState(val);
+    return { error: null };
   };
 
   const setNextDueDate = (date: string) => {
     setNextDueDateState(date);
   };
 
-  // Action: persist a contribution/payment
-  const makePayment = async (amount: number, label: string, campaignId?: string): Promise<PaymentRecord> => {
+  // Shared bookkeeping for a contribution row that has already been persisted as
+  // 'success' by a real, server-verified Razorpay payment.
+  const applySuccessfulPayment = async (
+    inserted: { id: string; transaction_ref?: string | null; created_at: string },
+    amount: number,
+    label: string,
+    campaignId?: string
+  ): Promise<PaymentRecord> => {
     if (!session) throw new Error('Not signed in');
     const uid = session.user.id;
-    const txnId = 'TXN' + Math.floor(1000000000 + Math.random() * 9000000000);
-
-    const { data: inserted, error } = await supabase
-      .from('contributions')
-      .insert({
-        contributor_id: uid,
-        campaign_id: campaignId ?? null,
-        amount,
-        label,
-        status: 'success',
-        transaction_ref: txnId,
-      })
-      .select('*')
-      .single();
-    if (error || !inserted) throw error || new Error('Payment failed to save');
 
     const dateStr = new Date(inserted.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const newRecord: PaymentRecord = {
@@ -632,23 +737,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const next = new Date();
       next.setMonth(next.getMonth() + 1);
       const nextIso = next.toISOString().slice(0, 10);
-      await supabase.from('commitments').upsert({
-        contributor_id: uid,
-        monthly_amount: amount,
-        autopay_enabled: isAutopayEnabled,
-        next_due_date: nextIso,
-      });
+      const { error: commitmentError } = await supabase.from('commitments').upsert(
+        {
+          contributor_id: uid,
+          monthly_amount: amount,
+          autopay_enabled: isAutopayEnabled,
+          next_due_date: nextIso,
+        },
+        { onConflict: 'contributor_id' }
+      );
+      if (commitmentError) console.error('Failed to update commitment after payment:', commitmentError.message);
       setHasCommitment(true);
       setCommitmentAmountState(amount);
       setNextDueDateState(formatDueDateLabel(nextIso));
+      setNextDueDateIso(nextIso);
     }
 
+    const receiptLink = `/receipt?id=${encodeURIComponent(newRecord.id)}&amount=${amount}&date=${encodeURIComponent(newRecord.date)}&label=${encodeURIComponent(label)}`;
     const { data: notifRow } = await supabase.from('notifications').insert({
       profile_id: uid,
       title: 'Payment Successful',
       body: `Your ₹${amount.toLocaleString('en-IN')} payment for "${label}" was successful.`,
       category: label === 'Monthly Contribution' ? 'contribution' : 'campaign',
       is_read: false,
+      deep_link: receiptLink,
     }).select('*').single();
     if (notifRow) {
       setNotifications((prev) => [{
@@ -661,21 +773,146 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         time: 'Just now',
         unread: true,
         cat: notifRow.category,
+        deepLink: notifRow.deep_link || null,
       }, ...prev]);
     }
 
     return newRecord;
   };
 
+  // Guards against paying the same monthly commitment twice in one cycle — e.g. a
+  // double-tap on Quick Pay, or the button still showing while a prior payment's
+  // response is in flight. next_due_date is pushed a month out the moment a
+  // Monthly Contribution payment succeeds, so "still in the future" reliably
+  // means this cycle is already paid for.
+  const assertNotAlreadyPaidThisCycle = (label: string) => {
+    if (label !== 'Monthly Contribution') return;
+    if (nextDueDateIso && new Date(nextDueDateIso).getTime() > Date.now()) {
+      throw new Error(`You've already paid for this cycle. Next due ${formatDueDateLabel(nextDueDateIso)}.`);
+    }
+  };
+
+  // Action: real Razorpay payment — creates an order server-side, launches native
+  // checkout, then verifies the signature server-side before recording the payment.
+  const makeRazorpayPayment = async (amount: number, label: string, campaignId?: string): Promise<PaymentRecord> => {
+    if (!session) throw new Error('Not signed in');
+    assertNotAlreadyPaidThisCycle(label);
+
+    const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
+      body: { amount, label, campaignId },
+    });
+    if (orderError || !orderData) throw orderError || new Error('Could not create payment order');
+
+    const RazorpayCheckout = require('react-native-razorpay').default;
+    const checkoutResult = await RazorpayCheckout.open({
+      key: orderData.keyId,
+      amount: orderData.amount,
+      currency: orderData.currency,
+      order_id: orderData.orderId,
+      name: 'Kiranam',
+      description: label,
+      prefill: {
+        name: userName || undefined,
+        email: userEmail || undefined,
+        contact: phone || undefined,
+      },
+      theme: { color: '#EC2028' },
+    });
+
+    const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
+      body: {
+        razorpay_order_id: checkoutResult.razorpay_order_id,
+        razorpay_payment_id: checkoutResult.razorpay_payment_id,
+        razorpay_signature: checkoutResult.razorpay_signature,
+      },
+    });
+    if (verifyError || !verifyData?.record) throw verifyError || new Error('Payment verification failed');
+
+    return applySuccessfulPayment(verifyData.record, amount, label, campaignId);
+  };
+
+  // Action: a volunteer records a monthly/campaign payment collected offline
+  // (cash, UPI outside the app, etc.) for a contributor assigned to them.
+  // Mirrors the admin's manual offline payment flow — inserted as is_offline
+  // so it's distinguishable from real gateway payments, with collected_by
+  // set to the volunteer for accountability (RLS enforces both).
+  const recordOfflineContribution = async (
+    contributorId: string,
+    amount: number,
+    campaignId: string | null,
+    label: string,
+    note?: string
+  ): Promise<{ error: string | null }> => {
+    if (!session) return { error: 'Not signed in' };
+    if (!(amount > 0)) return { error: 'Amount must be greater than zero.' };
+
+    const { error } = await supabase.from('contributions').insert({
+      contributor_id: contributorId,
+      campaign_id: campaignId,
+      amount,
+      label,
+      status: 'success',
+      is_offline: true,
+      collected_by: session.user.id,
+      note: note?.trim() || null,
+    });
+    if (error) return { error: error.message };
+
+    if (campaignId) {
+      setCampaigns((prev) => prev.map((c) => {
+        if (c.id !== campaignId) return c;
+        const newRaised = c.raised + amount;
+        const newPct = c.goal > 0 ? Math.min(100, Math.round((newRaised / c.goal) * 100)) : 0;
+        return { ...c, raised: newRaised, pct: newPct, raisedFmt: newRaised.toLocaleString('en-IN') };
+      }));
+    }
+
+    return { error: null };
+  };
+
+  const fetchContributorNotes = async (contributorId: string): Promise<{ notes: ContributorNote[]; error: string | null }> => {
+    const { data, error } = await supabase
+      .from('contributor_notes')
+      .select('id, body, created_at')
+      .eq('contributor_id', contributorId)
+      .order('created_at', { ascending: false });
+    if (error) return { notes: [], error: error.message };
+    return {
+      notes: (data || []).map((row) => ({
+        id: row.id,
+        body: row.body,
+        createdAt: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      })),
+      error: null,
+    };
+  };
+
+  const addContributorNote = async (contributorId: string, body: string): Promise<{ error: string | null }> => {
+    if (!session) return { error: 'Not signed in' };
+    const trimmed = body.trim();
+    if (!trimmed) return { error: 'Note cannot be empty.' };
+    const { error } = await supabase.from('contributor_notes').insert({
+      contributor_id: contributorId,
+      volunteer_id: session.user.id,
+      body: trimmed,
+    });
+    if (error) return { error: error.message };
+    return { error: null };
+  };
+
   const markNotificationAsRead = (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, unread: false } : n)));
-    supabase.from('notifications').update({ is_read: true }).eq('id', id).then();
+    supabase.from('notifications').update({ is_read: true }).eq('id', id).then(({ error }) => {
+      if (error) console.error('Failed to mark notification as read:', error.message);
+    });
   };
 
   const markAllNotificationsAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
     if (session) {
-      supabase.from('notifications').update({ is_read: true }).eq('profile_id', session.user.id).then();
+      supabase.from('notifications').update({ is_read: true }).eq('profile_id', session.user.id).then(({ error }) => {
+        if (error) console.error('Failed to mark all notifications as read:', error.message);
+      });
     }
   };
 
@@ -693,14 +930,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       goal: camp.goal,
       raised: camp.raised,
       status: camp.status,
-    }).then(() => refreshCampaigns());
+    }).then(({ error }) => {
+      if (error) console.error('Failed to add campaign:', error.message);
+      else refreshCampaigns();
+    });
   };
+
+  const isPaidThisCycle = !!nextDueDateIso && new Date(nextDueDateIso).getTime() > Date.now();
+  // Not just "does this session have a confirmed email" — it must be *this*
+  // email that's confirmed. Otherwise, right after typing in a new unverified
+  // address (still != session.user.email until the confirmation link is
+  // clicked), it'd incorrectly show as verified because the *old* address
+  // is still the confirmed one on the session.
+  const isEmailVerified = !!(
+    session?.user?.email_confirmed_at &&
+    userEmail &&
+    session.user.email?.toLowerCase() === userEmail.toLowerCase()
+  );
 
   return (
     <AppContext.Provider value={{
       phone, setPhone,
       userName, setUserName,
       userEmail, setUserEmail,
+      isEmailVerified,
+      emailReceipt,
       userAvatarUrl,
       referralCode, setReferralCode,
       isLoggedIn: !!session,
@@ -712,6 +966,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deleteAccount,
       saveProfile,
       updateName,
+      updateEmail,
       updateProfilePhoto,
       applyForVolunteer,
       profileLoading,
@@ -719,6 +974,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       commitmentAmount, setCommitmentAmount,
       isAutopayEnabled, setAutopayEnabled,
       nextDueDate, setNextDueDate,
+      isPaidThisCycle,
       campaigns,
       payments,
       notifications,
@@ -726,7 +982,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       volunteerMembers,
       totalContributed,
       campaignGiving,
-      makePayment,
+      makeRazorpayPayment,
+      recordOfflineContribution,
+      fetchContributorNotes,
+      addContributorNote,
       markNotificationAsRead,
       markAllNotificationsAsRead,
       deleteAllNotifications,

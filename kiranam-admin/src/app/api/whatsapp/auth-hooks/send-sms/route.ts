@@ -53,6 +53,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'missing phone or otp' }, { status: 400 })
   }
 
+  // Extra layer of control on top of whatever Supabase's own platform OTP
+  // rate limits already do — this one we can see and tune ourselves, and it
+  // caps the real cost driver here (a WhatsApp template send per OTP).
+  const { data: limitCheck } = await supabaseAdmin()
+    .rpc('check_and_record_rate_limit', {
+      p_key: `otp_send:${phone.replace(/\D/g, '')}`,
+      p_limit: 5,
+      p_window_seconds: 60 * 60,
+      p_lockout_seconds: 60 * 60,
+    })
+    .single<{ allowed: boolean; retry_after_seconds: number }>()
+  if (limitCheck && !limitCheck.allowed) {
+    console.warn('[send-sms-hook] rate limited', phone, 'retry after', limitCheck.retry_after_seconds)
+    return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
+  }
+
   const accountId = process.env.KIRANAM_WACRM_ACCOUNT_ID
   const templateName = process.env.OTP_TEMPLATE_NAME
   if (!accountId || !templateName) {

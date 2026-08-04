@@ -50,6 +50,7 @@ export default async function ContributorsPage({
         title="Contributors"
         label="Register contributor"
         description="For a contributor who committed offline and hasn't signed up in the app yet."
+        modal
         filters={
           <div className={pillTabClass}>
             <Link href={`/contributors${q ? `?q=${encodeURIComponent(q)}` : ''}`} className={pillTabItemClass(!status)}>

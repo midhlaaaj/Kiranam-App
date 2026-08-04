@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Linking, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Linking, StatusBar, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useApp } from '@/context/AppContext';
+import { useApp, ContributorNote } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { statusMeta } from '@/utils/volunteerStatus';
-import { ArrowLeft, Phone, MessageCircle, Send, Plus } from 'lucide-react-native';
+import { RecordContributionModal } from '@/components/RecordContributionModal';
+import { ArrowLeft, Phone, MessageCircle, Send, Plus, IndianRupee } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface HistoryRow {
@@ -16,13 +17,33 @@ interface HistoryRow {
 export default function VolunteerContributorDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
-  const { volunteerMembers } = useApp();
+  const { volunteerMembers, campaigns, recordOfflineContribution, fetchContributorNotes, addContributorNote } = useApp();
   const [noteDraft, setNoteDraft] = useState('');
-  const [notes, setNotes] = useState<string[]>([]);
+  const [notes, setNotes] = useState<ContributorNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [addingNote, setAddingNote] = useState(false);
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [isRecordModalVisible, setIsRecordModalVisible] = useState(false);
+  const [notesRefreshKey, setNotesRefreshKey] = useState(0);
 
   const member = volunteerMembers.find((m) => m.id === params.id);
+
+  useEffect(() => {
+    if (!member) return;
+    let cancelled = false;
+    setNotesLoading(true);
+    fetchContributorNotes(member.id).then(({ notes: fetched, error }) => {
+      if (cancelled) return;
+      if (error) console.error('Failed to load notes:', error);
+      setNotes(fetched);
+      setNotesLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [member, notesRefreshKey]);
 
   useEffect(() => {
     if (!member) return;
@@ -52,7 +73,14 @@ export default function VolunteerContributorDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [member]);
+  }, [member, historyRefreshKey]);
+
+  const handleRecordContribution = async (amount: number, campaignId: string | null, label: string, note?: string) => {
+    if (!member) return { error: 'Contributor not found' };
+    const result = await recordOfflineContribution(member.id, amount, campaignId, label, note);
+    if (!result.error) setHistoryRefreshKey((k) => k + 1);
+    return result;
+  };
 
   if (!member) {
     return (
@@ -80,10 +108,17 @@ export default function VolunteerContributorDetailScreen() {
     const message = `Hi ${member.name}, this is a friendly reminder about your Kiranam contribution. Thank you for your support!`;
     Linking.openURL(`https://wa.me/${digitsOnly.replace('+', '')}?text=${encodeURIComponent(message)}`);
   };
-  const handleAddNote = () => {
-    if (!noteDraft.trim()) return;
-    setNotes((prev) => [noteDraft.trim(), ...prev]);
+  const handleAddNote = async () => {
+    if (!noteDraft.trim() || !member) return;
+    setAddingNote(true);
+    const { error } = await addContributorNote(member.id, noteDraft.trim());
+    setAddingNote(false);
+    if (error) {
+      Alert.alert('Could not save note', error);
+      return;
+    }
     setNoteDraft('');
+    setNotesRefreshKey((k) => k + 1);
   };
 
   return (
@@ -132,6 +167,15 @@ export default function VolunteerContributorDetailScreen() {
             <Text style={[styles.actionButtonText, styles.waButtonText]}>Remind</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.recordContributionButton}
+          onPress={() => setIsRecordModalVisible(true)}
+          activeOpacity={0.85}
+        >
+          <IndianRupee size={17} color="#FFFFFF" />
+          <Text style={styles.recordContributionButtonText}>Record Contribution</Text>
+        </TouchableOpacity>
 
         {/* Contribution summary */}
         <Text style={styles.sectionHeader}>Contribution Summary</Text>
@@ -183,15 +227,18 @@ export default function VolunteerContributorDetailScreen() {
             value={noteDraft}
             onChangeText={setNoteDraft}
           />
-          <TouchableOpacity style={styles.addNoteButton} onPress={handleAddNote} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.addNoteButton} onPress={handleAddNote} activeOpacity={0.8} disabled={addingNote}>
             <Plus size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-        {notes.length > 0 ? (
+        {notesLoading ? (
+          <Text style={styles.noNotesText}>Loading…</Text>
+        ) : notes.length > 0 ? (
           <View style={styles.notesList}>
-            {notes.map((note, i) => (
-              <View key={i} style={styles.noteRow}>
-                <Text style={styles.noteText}>{note}</Text>
+            {notes.map((note) => (
+              <View key={note.id} style={styles.noteRow}>
+                <Text style={styles.noteText}>{note.body}</Text>
+                <Text style={styles.noteDate}>{note.createdAt}</Text>
               </View>
             ))}
           </View>
@@ -199,6 +246,14 @@ export default function VolunteerContributorDetailScreen() {
           <Text style={styles.noNotesText}>No notes yet.</Text>
         )}
       </ScrollView>
+
+      <RecordContributionModal
+        visible={isRecordModalVisible}
+        onClose={() => setIsRecordModalVisible(false)}
+        contributorName={member.name}
+        campaigns={campaigns}
+        onSubmit={handleRecordContribution}
+      />
     </SafeAreaView>
   );
 }
@@ -319,6 +374,22 @@ const styles = StyleSheet.create({
   waButtonText: {
     color: '#FFFFFF',
   },
+  recordContributionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#0C0C0D',
+    marginBottom: 24,
+  },
+  recordContributionButtonText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 13.5,
+    color: '#FFFFFF',
+  },
   sectionHeader: {
     fontFamily: 'Inter',
     fontSize: 11.5,
@@ -398,6 +469,12 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: '#4A4640',
     lineHeight: 20,
+  },
+  noteDate: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    color: '#B0ADA8',
+    marginTop: 4,
   },
   noNotesText: {
     fontFamily: 'Inter',

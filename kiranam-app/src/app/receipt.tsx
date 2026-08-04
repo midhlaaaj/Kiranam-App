@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Clipboard, TouchableOpacity, ScrollView, Alert, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Clipboard, TouchableOpacity, ScrollView, StatusBar, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { Button } from '@/components/Button';
 import { Check, Clipboard as CopyIcon } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useApp } from '@/context/AppContext';
 
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { userName, isEmailVerified, emailReceipt, isVolunteer } = useApp();
 
   const txnId = (params.id as string) || 'TXN9284KLM2';
   const amount = params.amount ? parseInt(params.amount as string, 10) : 500;
@@ -15,6 +19,7 @@ export default function ReceiptScreen() {
   const label = (params.label as string) || 'Monthly Contribution';
 
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const formatMoney = (amount: number) => {
     return '₹' + amount.toLocaleString('en-IN');
@@ -26,12 +31,59 @@ export default function ReceiptScreen() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadPDF = () => {
-    Alert.alert(
-      "Receipt Downloaded",
-      `Branded receipt PDF for ${formatMoney(amount)} has been successfully saved to your downloads.`,
-      [{ text: "OK" }]
-    );
+  const receiptHtml = `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+          body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 40px; color: #0C0C0D; }
+          .brand { color: #EC2028; font-weight: 800; font-size: 22px; margin-bottom: 4px; }
+          .title { font-size: 16px; color: #7A756E; margin-bottom: 32px; }
+          .amount { font-size: 40px; font-weight: 800; margin-bottom: 28px; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 12px 0; border-bottom: 1px solid #EEEBE7; font-size: 14px; }
+          td.label { color: #7A756E; }
+          td.value { text-align: right; font-weight: 600; }
+          .footer { margin-top: 40px; font-size: 12px; color: #B0ADA8; }
+        </style>
+      </head>
+      <body>
+        <div class="brand">Kiranam</div>
+        <div class="title">Payment Receipt</div>
+        <div class="amount">${formatMoney(amount)}</div>
+        <table>
+          <tr><td class="label">Paid by</td><td class="value">${userName || '-'}</td></tr>
+          <tr><td class="label">For</td><td class="value">${label}</td></tr>
+          <tr><td class="label">Date &amp; Time</td><td class="value">${dateStr}</td></tr>
+          <tr><td class="label">Transaction ID</td><td class="value">${txnId}</td></tr>
+        </table>
+        <div class="footer">This is a computer-generated receipt for your contribution to Kiranam.</div>
+      </body>
+    </html>
+  `;
+
+  const handleDownloadReceipt = async () => {
+    setDownloading(true);
+    try {
+      const { uri, base64 } = await Print.printToFileAsync({ html: receiptHtml, base64: true });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: 'Save Receipt' });
+      } else {
+        Alert.alert('Receipt ready', `Saved to ${uri}`);
+      }
+
+      if (isEmailVerified && base64) {
+        emailReceipt({ txnId, amount, label, dateStr, pdfBase64: base64 }).catch(() => {
+          // Best-effort — downloading the PDF already succeeded, so a failed
+          // email send shouldn't block or alarm the user.
+        });
+      }
+    } catch {
+      Alert.alert('Could not create receipt', 'Please try again.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -63,7 +115,7 @@ export default function ReceiptScreen() {
             <Text style={styles.detailValue}>{dateStr}</Text>
           </View>
 
-          <View style={styles.detailRow}>
+          <View style={[styles.detailRow, styles.noBorder]}>
             <Text style={styles.detailLabel}>Transaction ID</Text>
             <TouchableOpacity style={styles.copyRow} onPress={handleCopyTxn} activeOpacity={0.7}>
               <Text style={styles.txnText}>{txnId}</Text>
@@ -71,42 +123,22 @@ export default function ReceiptScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.detailRow, styles.noBorder]}>
-            <Text style={styles.detailLabel}>Payment Method</Text>
-            <Text style={styles.detailValue}>UPI</Text>
-          </View>
-
           {copied && (
             <Text style={styles.copiedFeedback}>Copied to clipboard!</Text>
           )}
         </View>
 
-        {/* Delivery Status chips */}
-        <View style={styles.deliveryStatusRow}>
-          <View style={styles.statusChip}>
-            <View style={styles.smallCheck}>
-              <Check size={10} color="#22A559" strokeWidth={3} />
-            </View>
-            <Text style={styles.statusChipText}>WhatsApp: Sent</Text>
-          </View>
-          <View style={styles.statusChip}>
-            <View style={styles.smallCheck}>
-              <Check size={10} color="#22A559" strokeWidth={3} />
-            </View>
-            <Text style={styles.statusChipText}>Email: Sent</Text>
-          </View>
-        </View>
-
         {/* Action Buttons */}
         <View style={styles.buttonContainer}>
           <Button
-            title="Download Receipt (PDF)"
-            onPress={handleDownloadPDF}
+            title={downloading ? 'Preparing…' : 'Download Receipt'}
+            onPress={handleDownloadReceipt}
+            loading={downloading}
             style={styles.downloadButton}
           />
           <Button
             title="Back to Home"
-            onPress={() => router.replace('/(tabs)/home')}
+            onPress={() => router.replace(isVolunteer ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home')}
             variant="outline"
           />
         </View>
@@ -166,7 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F8F6',
     borderRadius: 22,
     padding: 18,
-    marginBottom: 16,
+    marginBottom: 32,
   },
   amountDisplay: {
     textAlign: 'center',
@@ -219,42 +251,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
   },
-  deliveryStatusRow: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-    marginBottom: 36,
-  },
-  statusChip: {
-    flex: 1,
-    backgroundColor: '#F9F8F6',
-    borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  smallCheck: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#EAF7EF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusChipText: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#0C0C0D',
-  },
   buttonContainer: {
     width: '100%',
     gap: 12,
   },
   downloadButton: {
     marginBottom: 4,
+    // The primary button's red drop shadow (offset 8 / radius 15) otherwise
+    // bleeds down onto the outline button's top border right below it,
+    // making that edge look faded/tinted instead of a clean grey line.
+    shadowOpacity: 0,
+    elevation: 0,
   },
 });

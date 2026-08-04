@@ -12,11 +12,13 @@ export default function VolunteerProfileScreen() {
   const {
     userName,
     phone,
+    userEmail,
     userAvatarUrl,
     myReferralCode,
     signOut,
     deleteAccount,
     updateName,
+    updateEmail,
     updateProfilePhoto,
     hasCommitment,
     commitmentAmount,
@@ -26,6 +28,11 @@ export default function VolunteerProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
 
+  const applyAutopayChange = async (val: boolean) => {
+    const { error } = await setAutopayEnabled(val);
+    if (error) Alert.alert('Could not update autopay', error);
+  };
+
   const handlePause = () => {
     if (isAutopayEnabled) {
       Alert.alert(
@@ -33,11 +40,11 @@ export default function VolunteerProfileScreen() {
         'Are you sure you want to pause your monthly commitments? This turns off auto-pay — you can resume anytime.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Yes, Pause', style: 'destructive', onPress: () => setAutopayEnabled(false) },
+          { text: 'Yes, Pause', style: 'destructive', onPress: () => applyAutopayChange(false) },
         ]
       );
     } else {
-      setAutopayEnabled(true);
+      applyAutopayChange(true);
     }
   };
 
@@ -162,8 +169,10 @@ export default function VolunteerProfileScreen() {
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}
         currentName={userName}
+        currentEmail={userEmail}
         currentAvatarUrl={userAvatarUrl}
         onSaveName={updateName}
+        onSaveEmail={updateEmail}
         onSavePhoto={updateProfilePhoto}
       />
     </SafeAreaView>

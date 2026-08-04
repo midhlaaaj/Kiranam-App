@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TextInput, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TextInput, StatusBar, Keyboard, InputAccessoryView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
@@ -12,9 +12,12 @@ export default function ChooseAmountScreen() {
   const params = useLocalSearchParams();
   const { commitmentAmount, setCommitmentAmount, campaigns } = useApp();
 
+  const customAmountAccessoryId = 'customAmountAccessory';
+
   const campaignId = params.campaignId as string | undefined;
   const campaignTitle = params.campaignTitle as string | undefined;
   const isCommitmentMode = !campaignId;
+  const isOnboarding = params.onboarding === '1';
 
   const campaign = campaignId ? campaigns.find((c) => c.id === campaignId) : undefined;
   // Cap donations at what's actually left to fill the campaign, so a person
@@ -74,9 +77,24 @@ export default function ChooseAmountScreen() {
   const handleSave = async () => {
     if (!currentFinalAmount || currentFinalAmount <= 0) return;
     setSaveState('saving');
-    await setCommitmentAmount(currentFinalAmount);
+    const { error } = await setCommitmentAmount(currentFinalAmount);
+    if (error) {
+      setSaveState('idle');
+      Alert.alert('Could not save', error);
+      return;
+    }
     setSaveState('saved');
-    setTimeout(() => router.back(), 900);
+    setTimeout(() => {
+      if (isOnboarding) {
+        router.replace('/(tabs)/home');
+      } else {
+        router.back();
+      }
+    }, 900);
+  };
+
+  const handleSkip = () => {
+    router.replace('/(tabs)/home');
   };
 
   return (
@@ -88,10 +106,17 @@ export default function ChooseAmountScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* Back button */}
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <ArrowLeft size={20} color="#0C0C0D" />
-          </TouchableOpacity>
+          {/* Back button (or Skip, when reached as part of onboarding — there's
+              nothing meaningful to go "back" to in that case) */}
+          {isOnboarding ? (
+            <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+              <Text style={styles.skipButtonText}>Skip for now</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <ArrowLeft size={20} color="#0C0C0D" />
+            </TouchableOpacity>
+          )}
 
           {/* Titles */}
           <Text style={styles.title}>
@@ -153,9 +178,12 @@ export default function ChooseAmountScreen() {
                     placeholder="Enter amount"
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     keyboardType="number-pad"
+                    returnKeyType="done"
+                    onSubmitEditing={() => Keyboard.dismiss()}
                     value={customAmount}
                     onChangeText={handleCustomAmountChange}
                     autoFocus
+                    inputAccessoryViewID={Platform.OS === 'ios' ? customAmountAccessoryId : undefined}
                   />
                 </View>
               </View>
@@ -182,6 +210,15 @@ export default function ChooseAmountScreen() {
             )}
           </View>
         </ScrollView>
+        {Platform.OS === 'ios' && (
+          <InputAccessoryView nativeID={customAmountAccessoryId}>
+            <View style={styles.accessoryBar}>
+              <TouchableOpacity onPress={() => Keyboard.dismiss()} hitSlop={8}>
+                <Text style={styles.accessoryDoneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </InputAccessoryView>
+        )}
       </SafeAreaView>
     </KeyboardAvoidingView>
   );
@@ -209,6 +246,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F9F8F6',
     marginBottom: 20,
+  },
+  skipButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    marginBottom: 20,
+  },
+  skipButtonText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7A756E',
   },
   title: {
     fontFamily: 'Inter',
@@ -347,5 +396,20 @@ const styles = StyleSheet.create({
   buttonContainer: {
     marginTop: 'auto',
     width: '100%',
+  },
+  accessoryBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F9F8F6',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#DCD9D3',
+  },
+  accessoryDoneText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 16,
+    color: '#EC2028',
   },
 });

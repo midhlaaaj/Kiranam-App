@@ -7,28 +7,51 @@ interface EditProfileModalProps {
   visible: boolean;
   onClose: () => void;
   currentName: string;
+  currentEmail: string;
   currentAvatarUrl: string;
   onSaveName: (name: string) => Promise<{ error: string | null }>;
+  onSaveEmail: (email: string) => Promise<{ error: string | null }>;
   onSavePhoto: (localUri: string) => Promise<{ error: string | null; url?: string }>;
 }
 
-export function EditProfileModal({ visible, onClose, currentName, currentAvatarUrl, onSaveName, onSavePhoto }: EditProfileModalProps) {
+export function EditProfileModal({ visible, onClose, currentName, currentEmail, currentAvatarUrl, onSaveName, onSaveEmail, onSavePhoto }: EditProfileModalProps) {
   const [name, setName] = useState(currentName);
+  const [email, setEmail] = useState(currentEmail);
   const [previewUri, setPreviewUri] = useState('');
   const [saving, setSaving] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setName(currentName);
+      setEmail(currentEmail);
       setPreviewUri('');
     }
-  }, [visible, currentName]);
+  }, [visible, currentName, currentEmail]);
 
   const getInitials = (value: string) =>
     value.split(' ').filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2);
 
-  const handlePickPhoto = async () => {
+  const stagePickedPhoto = (result: ImagePicker.ImagePickerResult) => {
+    if (result.canceled || !result.assets[0]) return;
+    setPreviewUri(result.assets[0].uri);
+  };
+
+  const handleTakePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Allow camera access to take a profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    stagePickedPhoto(result);
+  };
+
+  const handleChooseFromLibrary = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('Permission needed', 'Allow photo library access to change your profile picture.');
@@ -40,33 +63,59 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
       aspect: [1, 1],
       quality: 0.7,
     });
-    if (result.canceled || !result.assets[0]) return;
+    stagePickedPhoto(result);
+  };
 
-    const uri = result.assets[0].uri;
-    setPreviewUri(uri);
-    setUploadingPhoto(true);
-    const { error } = await onSavePhoto(uri);
-    setUploadingPhoto(false);
-    if (error) {
-      Alert.alert('Could not update photo', error);
-      setPreviewUri('');
-    }
+  const handlePickPhoto = () => {
+    Alert.alert('Change Profile Photo', undefined, [
+      { text: 'Take Photo', onPress: handleTakePhoto },
+      { text: 'Choose from Library', onPress: handleChooseFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handleSave = async () => {
-    const trimmed = name.trim();
-    if (!trimmed) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
     setSaving(true);
-    const { error } = await onSaveName(trimmed);
+
+    if (previewUri) {
+      const { error: photoError } = await onSavePhoto(previewUri);
+      if (photoError) {
+        setSaving(false);
+        Alert.alert('Could not update photo', photoError);
+        return;
+      }
+    }
+
+    const emailChanged = trimmedEmail && trimmedEmail.toLowerCase() !== currentEmail.trim().toLowerCase();
+    if (emailChanged) {
+      const { error: emailError } = await onSaveEmail(trimmedEmail);
+      if (emailError) {
+        setSaving(false);
+        Alert.alert('Could not update email', emailError);
+        return;
+      }
+    }
+
+    const { error } = await onSaveName(trimmedName);
     setSaving(false);
     if (error) {
       Alert.alert('Could not save changes', error);
       return;
     }
     onClose();
+    if (emailChanged) {
+      Alert.alert('Check your inbox', `We sent a confirmation link to ${trimmedEmail}. Your email updates once you confirm it.`);
+    }
   };
 
   const displayUri = previewUri || currentAvatarUrl;
@@ -96,7 +145,7 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
                   <Camera size={14} color="#FFFFFF" />
                 </View>
               </TouchableOpacity>
-              <Text style={styles.avatarHint}>{uploadingPhoto ? 'Uploading…' : 'Tap to change photo'}</Text>
+              <Text style={styles.avatarHint}>{previewUri ? 'Tap Save Changes to apply' : 'Tap to change photo'}</Text>
             </View>
 
             <Text style={styles.label}>Name</Text>
@@ -106,6 +155,18 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
               onChangeText={setName}
               placeholder="Your name"
               placeholderTextColor="#B0ADA8"
+            />
+
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor="#B0ADA8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
             />
 
             <TouchableOpacity

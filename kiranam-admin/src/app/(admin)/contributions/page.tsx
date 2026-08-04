@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Pagination } from '@/components/Pagination';
 import { ContributionsChart } from '@/components/charts/ContributionsChart';
 import { ContributionsPeriodFilter } from '@/components/ContributionsPeriodFilter';
+import { ManualContributionButton } from './ManualContributionButton';
 import { SkeletonChart, SkeletonTable } from '@/components/Skeleton';
 import { bucketKey, bucketLabel, type Granularity } from '@/lib/timeBuckets';
 import {
@@ -45,6 +46,17 @@ export default async function ContributionsPage({
   const { status, from, to, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
+  const supabase = await createClient();
+  const [{ data: rawContributors }, { data: commitments }] = await Promise.all([
+    supabase.from('profiles').select('id, full_name, phone').eq('role', 'contributor').order('full_name', { ascending: true }),
+    supabase.from('commitments').select('contributor_id, monthly_amount'),
+  ]);
+  const monthlyAmountByContributor = new Map((commitments || []).map((c) => [c.contributor_id, Number(c.monthly_amount)]));
+  const contributors = (rawContributors || []).map((c) => ({
+    ...c,
+    monthlyAmount: monthlyAmountByContributor.get(c.id) ?? null,
+  }));
+
   const now = new Date();
   const todayStr = isoDate(now);
   const weekAgo = new Date(now);
@@ -60,7 +72,7 @@ export default async function ContributionsPage({
 
   return (
     <div>
-      <PageHeading title="Contributions" />
+      <PageHeading title="Contributions" action={<ManualContributionButton contributors={contributors} />} />
 
       <div className="mb-6">
         <ContributionsPeriodFilter presets={presets} from={from} to={to} status={status} />

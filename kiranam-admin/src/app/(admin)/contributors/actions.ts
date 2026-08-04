@@ -18,7 +18,6 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const fullName = String(formData.get('full_name') || '').trim();
   const phoneDigits = String(formData.get('phone') || '').replace(/\D/g, '');
   const monthlyAmount = Number(formData.get('monthly_amount') || 0);
-  const autopayEnabled = formData.get('autopay_enabled') === 'on';
 
   if (!fullName) return { error: 'Full name is required.' };
   if (phoneDigits.length !== 10) return { error: 'Enter a valid 10-digit phone number.' };
@@ -37,8 +36,19 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   });
 
   if (createError || !created.user) {
-    const message = createError?.message.includes('already been registered')
-      ? 'A contributor with this phone number is already registered.'
+    // Phone number is the primary identifier — no two users can share one.
+    // Supabase's exact wording/error code for this varies by version, so
+    // check both rather than relying on one exact string match.
+    const isDuplicatePhone =
+      createError?.code === 'phone_exists' ||
+      createError?.code === 'user_already_exists' ||
+      createError?.status === 422 ||
+      /already exists|already been registered|already registered/i.test(createError?.message || '');
+
+    if (createError) console.error('registerContributor: createUser failed:', createError);
+
+    const message = isDuplicatePhone
+      ? `A contributor with the phone number ${phoneE164} already exists.`
       : 'Could not register this contributor. Please try again.';
     return { error: message };
   }
@@ -53,10 +63,13 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     .eq('id', contributorId);
   if (profileError) return { error: 'Contributor was created, but saving their name failed. Please edit it manually.' };
 
+  // Autopay defaults off — a manually-registered contributor has no payment
+  // method on file yet, so autopay can't actually run for them until they
+  // (or an admin) sets one up.
   const { error: commitmentError } = await supabaseAdmin.from('commitments').insert({
     contributor_id: contributorId,
     monthly_amount: monthlyAmount,
-    autopay_enabled: autopayEnabled,
+    autopay_enabled: false,
   });
   if (commitmentError) {
     return { error: 'Contributor was created, but saving their commitment failed. Please add it manually.' };
@@ -100,5 +113,6 @@ export async function addOfflinePayment(
 
   await logAction(admin.id, 'add_offline_payment', 'contributions', contributorId, { amount, note });
   revalidatePath(`/contributors/${contributorId}`);
+  revalidatePath('/contributions');
   return { message: 'Offline payment recorded.' };
 }

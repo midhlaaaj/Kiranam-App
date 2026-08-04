@@ -101,10 +101,10 @@ export default async function CampaignsPage({
 async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
   const supabase = await createClient();
 
-  // Self-heal: a campaign whose end date has passed becomes "completed"
-  // automatically, regardless of whether an admin remembered to flip it.
-  const today = new Date().toISOString().slice(0, 10);
-  await supabase.from('campaigns').update({ status: 'completed' }).lt('end_date', today).neq('status', 'completed');
+  // Self-heal: a campaign whose end date has passed, or whose goal has been
+  // reached, becomes "completed" automatically — matching the same two
+  // conditions the mobile app already checks client-side.
+  await supabase.rpc('self_heal_campaign_completion');
 
   let query = supabase.from('campaigns').select('*').order('created_at', { ascending: false });
   if (q) query = query.ilike('title', `%${q}%`);

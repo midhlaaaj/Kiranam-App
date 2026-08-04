@@ -32,18 +32,24 @@ export default function SplashScreen() {
         return;
       }
 
-      if (profile.role === 'volunteer') {
-        const { data: application } = await supabase
-          .from('volunteer_applications')
-          .select('status')
-          .eq('profile_id', uid)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (!cancelled) {
-          router.replace(application?.status === 'approved' ? '/(volunteer-tabs)/dashboard' : '/pending');
-        }
-      } else if (!cancelled) {
+      // profiles.role only ever becomes 'volunteer' once an admin approves
+      // the application — a pending/rejected/no-application account still
+      // has role 'contributor', so routing must check application status,
+      // not just role, to land a pending applicant on /pending correctly.
+      const { data: application } = await supabase
+        .from('volunteer_applications')
+        .select('status')
+        .eq('profile_id', uid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+
+      if (profile.role === 'volunteer' && application?.status === 'approved') {
+        router.replace('/(volunteer-tabs)/dashboard');
+      } else if (profile.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved') {
+        router.replace('/pending');
+      } else {
         router.replace('/(tabs)/home');
       }
     })();

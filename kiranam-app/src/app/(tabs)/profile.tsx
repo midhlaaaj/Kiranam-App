@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, StatusBar, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { ChevronRight, Pencil } from 'lucide-react-native';
@@ -14,6 +14,7 @@ export default function ProfileScreen() {
     phone,
     userEmail,
     userAvatarUrl,
+    isEmailVerified,
     hasCommitment,
     commitmentAmount,
     isAutopayEnabled,
@@ -21,20 +22,30 @@ export default function ProfileScreen() {
     signOut,
     deleteAccount,
     updateName,
+    updateEmail,
     updateProfilePhoto,
   } = useApp();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
 
+  const applyAutopayChange = async (val: boolean) => {
+    const { error } = await setAutopayEnabled(val);
+    if (error) Alert.alert('Could not update autopay', error);
+  };
+
   const handlePause = () => {
-    Alert.alert(
-      "Pause Contributions",
-      "Are you sure you want to pause your monthly commitments? You can resume anytime.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Yes, Pause", style: "destructive" }
-      ]
-    );
+    if (isAutopayEnabled) {
+      Alert.alert(
+        'Pause Contributions',
+        'Are you sure you want to pause your monthly commitments? This turns off auto-pay — you can resume anytime.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Yes, Pause', style: 'destructive', onPress: () => applyAutopayChange(false) },
+        ]
+      );
+    } else {
+      applyAutopayChange(true);
+    }
   };
 
   const handleLogout = async () => {
@@ -100,21 +111,8 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.profileRow}>
-            <View style={styles.rowInfo}>
-              <Text style={styles.rowTitle}>Auto-pay</Text>
-              <Text style={styles.rowSubtitle}>Turn this off anytime</Text>
-            </View>
-            <Switch
-              value={isAutopayEnabled}
-              onValueChange={setAutopayEnabled}
-              trackColor={{ false: '#E4E1DC', true: '#EC2028' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
           <TouchableOpacity style={styles.paddingRow} onPress={handlePause} activeOpacity={0.7}>
-            <Text style={styles.actionLink}>Pause my contributions</Text>
+            <Text style={styles.actionLink}>{isAutopayEnabled ? 'Pause my contributions' : 'Resume my contributions'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -130,8 +128,14 @@ export default function ProfileScreen() {
             <Text style={styles.infoFieldValue}>{phone || '+91 98765 43210'}</Text>
           </View>
           <View style={[styles.infoField, styles.noBorder]}>
-            <Text style={styles.infoFieldLabel}>Email <Text style={styles.infoFieldSubText}>(cannot be changed here)</Text></Text>
-            <Text style={styles.infoFieldValueDisabled}>{userEmail}</Text>
+            <Text style={styles.infoFieldLabel}>
+              Email {userEmail && (
+                <Text style={isEmailVerified ? styles.infoFieldVerified : styles.infoFieldUnverified}>
+                  {isEmailVerified ? '· Verified' : '· Pending verification'}
+                </Text>
+              )}
+            </Text>
+            <Text style={styles.infoFieldValue}>{userEmail || 'Not set'}</Text>
           </View>
         </View>
 
@@ -181,8 +185,10 @@ export default function ProfileScreen() {
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}
         currentName={userName}
+        currentEmail={userEmail}
         currentAvatarUrl={userAvatarUrl}
         onSaveName={updateName}
+        onSaveEmail={updateEmail}
         onSavePhoto={updateProfilePhoto}
       />
     </SafeAreaView>
@@ -335,17 +341,19 @@ const styles = StyleSheet.create({
   infoFieldSubText: {
     textTransform: 'none',
   },
+  infoFieldVerified: {
+    textTransform: 'none',
+    color: '#22A559',
+  },
+  infoFieldUnverified: {
+    textTransform: 'none',
+    color: '#B0ADA8',
+  },
   infoFieldValue: {
     fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '600',
     color: '#0C0C0D',
-  },
-  infoFieldValueDisabled: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#C7C3BD',
   },
   actionRow: {
     flexDirection: 'row',

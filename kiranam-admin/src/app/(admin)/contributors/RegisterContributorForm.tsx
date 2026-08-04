@@ -10,7 +10,7 @@ const initialState: RegisterState = {};
 // For a contributor who made an offline commitment (e.g. signed up at an
 // event) but has never opened the app. Pre-creates their login so they can
 // later "claim" it by simply signing in with the same phone number.
-export function RegisterContributorForm() {
+export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
   const [state, formAction, pending] = useActionState(registerContributor, initialState);
   const lastState = useRef<RegisterState>(initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -22,8 +22,9 @@ export function RegisterContributorForm() {
     if (state.message) {
       toast.success(state.message);
       formRef.current?.reset();
+      onDone?.();
     }
-  }, [state]);
+  }, [state, onDone]);
 
   return (
     <form ref={formRef} action={formAction} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
@@ -51,11 +52,6 @@ export function RegisterContributorForm() {
         required
         className={inputClass}
       />
-      <label className="flex items-center gap-2 text-sm text-kiranam-ink">
-        <input name="autopay_enabled" type="checkbox" defaultChecked className="h-4 w-4 rounded border-kiranam-border-strong" />
-        Autopay enabled
-      </label>
-
       {state?.error && (
         <p className="text-sm text-kiranam-danger sm:col-span-2" role="alert">
           {state.error}

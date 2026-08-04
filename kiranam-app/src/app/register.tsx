@@ -47,7 +47,9 @@ export default function RegisterScreen() {
     if (role === 'volunteer') {
       router.push('/volunteer-application');
     } else {
-      router.replace('/(tabs)/home');
+      // New contributors land on the amount picker first, not Home directly —
+      // otherwise most people never set up a monthly commitment at all.
+      router.replace({ pathname: '/choose-amount', params: { onboarding: '1' } });
     }
   };
 

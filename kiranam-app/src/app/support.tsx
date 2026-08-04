@@ -27,24 +27,27 @@ export default function SupportScreen() {
     setOpenFaqId(openFaqId === id ? null : id);
   };
 
+  const WHATSAPP_NUMBER = '919876543210'; // TODO: replace with the real support WhatsApp number before submission
+  const SUPPORT_EMAIL = 'support@kiranam.org';
+
   const handleWhatsApp = () => {
-    const url = 'https://wa.me/919876543210';
+    const url = `https://wa.me/${WHATSAPP_NUMBER}`;
     Linking.canOpenURL(url).then(supported => {
       if (supported) {
         Linking.openURL(url);
       } else {
-        Alert.alert("WhatsApp Chat", "Opening chat window with Kiranam support team...");
+        Alert.alert('WhatsApp not installed', `Message us on WhatsApp at +${WHATSAPP_NUMBER}, or use email support instead.`);
       }
     });
   };
 
   const handleEmail = () => {
-    const email = 'mailto:support@kiranam.org';
+    const email = `mailto:${SUPPORT_EMAIL}`;
     Linking.canOpenURL(email).then(supported => {
       if (supported) {
         Linking.openURL(email);
       } else {
-        Alert.alert("Email Support", "Sending query email to support@kiranam.org...");
+        Alert.alert('No email app found', `Reach us directly at ${SUPPORT_EMAIL}.`);
       }
     });
   };
