@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { ChevronRight, Pencil } from 'lucide-react-native';
@@ -18,9 +18,28 @@ export default function VolunteerProfileScreen() {
     deleteAccount,
     updateName,
     updateProfilePhoto,
+    hasCommitment,
+    commitmentAmount,
+    isAutopayEnabled,
+    setAutopayEnabled,
   } = useApp();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+
+  const handlePause = () => {
+    if (isAutopayEnabled) {
+      Alert.alert(
+        'Pause Contributions',
+        'Are you sure you want to pause your monthly commitments? This turns off auto-pay — you can resume anytime.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Yes, Pause', style: 'destructive', onPress: () => setAutopayEnabled(false) },
+        ]
+      );
+    } else {
+      setAutopayEnabled(true);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -34,6 +53,8 @@ export default function VolunteerProfileScreen() {
 
   const getInitials = (name: string) =>
     name.split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2);
+
+  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -63,6 +84,25 @@ export default function VolunteerProfileScreen() {
           <View style={styles.volunteerBadge}>
             <Text style={styles.volunteerBadgeText}>Volunteer · {myReferralCode}</Text>
           </View>
+        </View>
+
+        {/* Contribution Settings — the commitment amount editor, matching
+            the contributor profile's layout so it's consistent across roles */}
+        <Text style={styles.sectionHeader}>Contribution Settings</Text>
+        <View style={styles.sectionCard}>
+          <View style={styles.profileRow}>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowSubtitle}>Monthly commitment</Text>
+              <Text style={styles.rowValue}>{hasCommitment ? formatMoney(commitmentAmount) : 'Not set'}</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/choose-amount')} activeOpacity={0.7}>
+              <Text style={styles.actionLink}>{hasCommitment ? 'Update' : 'Set up'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.paddingRow} onPress={handlePause} activeOpacity={0.7}>
+            <Text style={styles.actionLink}>{isAutopayEnabled ? 'Pause my contributions' : 'Resume my contributions'}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionCard}>
@@ -234,6 +274,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.02,
     shadowRadius: 5,
     elevation: 1,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EEEA',
+  },
+  paddingRow: {
+    paddingVertical: 16,
+  },
+  rowInfo: {
+    flex: 1,
+  },
+  rowSubtitle: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: '#7A756E',
+    marginBottom: 3,
+  },
+  rowValue: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 19,
+    color: '#0C0C0D',
+  },
+  actionLink: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#EC2028',
   },
   actionRow: {
     flexDirection: 'row',
