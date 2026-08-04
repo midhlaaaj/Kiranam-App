@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, 
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { useApp } from '@/context/AppContext';
-import { Card } from '@/components/Card';
 import { statusMeta } from '@/utils/volunteerStatus';
 import {
   Users,
@@ -14,6 +13,7 @@ import {
   ChevronRight,
   BellRing,
   Bell,
+  Gift,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -57,27 +57,8 @@ export default function VolunteerDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Referral Code Card */}
-        <Card variant="dark" style={styles.referralCard}>
-          <View style={styles.glowOverlay} />
-          <Text style={styles.referralLabel}>Your Referral Code</Text>
-          <Text style={styles.referralCode}>{myReferralCode}</Text>
-          <Text style={styles.referralHint}>
-            New members who use this code are added to your network below.
-          </Text>
-          <View style={styles.referralActionsRow}>
-            <TouchableOpacity style={styles.referralActionButton} onPress={handleCopy} activeOpacity={0.8}>
-              <Copy size={16} color="#FFFFFF" />
-              <Text style={styles.referralActionText}>{copied ? 'Copied!' : 'Copy'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.referralActionButton} onPress={handleShare} activeOpacity={0.8}>
-              <Share2 size={16} color="#FFFFFF" />
-              <Text style={styles.referralActionText}>Share</Text>
-            </TouchableOpacity>
-          </View>
-        </Card>
-
-        {/* KPI Row */}
+        {/* Contribution stats — moved to the top so volunteers see their
+            pending/overdue workload first thing */}
         <FlatList
           data={[
             { key: 'assigned', label: 'Assigned Contributors', value: volunteerMembers.length.toString(), Icon: Users },
@@ -98,6 +79,30 @@ export default function VolunteerDashboardScreen() {
             </View>
           )}
         />
+
+        {/* Referral Code — compact ticket-style card, redesigned away from
+            the previous full dark hero card, sitting right above Quick Actions */}
+        <View style={styles.referralCompactCard}>
+          <View style={styles.referralCompactIconBox}>
+            <Gift size={20} color="#EC2028" />
+          </View>
+          <View style={styles.referralCompactInfo}>
+            <Text style={styles.referralCompactLabel}>Your Referral Code</Text>
+            <Text style={styles.referralCompactCode}>{myReferralCode}</Text>
+          </View>
+          <View style={styles.referralCompactActions}>
+            <TouchableOpacity style={styles.referralCompactIconButton} onPress={handleCopy} activeOpacity={0.7}>
+              {copied ? (
+                <Text style={styles.referralCompactCopiedText}>✓</Text>
+              ) : (
+                <Copy size={16} color="#0C0C0D" />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.referralCompactIconButton} onPress={handleShare} activeOpacity={0.7}>
+              <Share2 size={16} color="#0C0C0D" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -224,69 +229,63 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
-  referralCard: {
-    position: 'relative',
-    overflow: 'hidden',
-    padding: 22,
-    marginBottom: 24,
-  },
-  glowOverlay: {
-    position: 'absolute',
-    top: -100,
-    right: -50,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: '#EC2028',
-    opacity: 0.15,
-  },
-  referralLabel: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.55)',
-    textTransform: 'uppercase',
-    letterSpacing: 0.04,
-    marginBottom: 8,
-    zIndex: 1,
-  },
-  referralCode: {
-    fontFamily: 'Inter',
-    fontWeight: '800',
-    fontSize: 32,
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-    marginBottom: 10,
-    zIndex: 1,
-  },
-  referralHint: {
-    fontFamily: 'Inter',
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: 'rgba(255,255,255,0.55)',
-    marginBottom: 18,
-    zIndex: 1,
-  },
-  referralActionsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    zIndex: 1,
-  },
-  referralActionButton: {
-    flex: 1,
+  referralCompactCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 24,
-    paddingVertical: 13,
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#EFC9CA',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 24,
   },
-  referralActionText: {
+  referralCompactIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FBEAEA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  referralCompactInfo: {
+    flex: 1,
+  },
+  referralCompactLabel: {
+    fontFamily: 'Inter',
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#B0ADA8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.06,
+    marginBottom: 3,
+  },
+  referralCompactCode: {
+    fontFamily: 'Inter',
+    fontWeight: '800',
+    fontSize: 18,
+    color: '#0C0C0D',
+    letterSpacing: 0.4,
+  },
+  referralCompactActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  referralCompactIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F9F8F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  referralCompactCopiedText: {
     fontFamily: 'Inter',
     fontWeight: '700',
-    fontSize: 13.5,
-    color: '#FFFFFF',
+    fontSize: 14,
+    color: '#22A559',
   },
   kpiListContainer: {
     paddingRight: 20,
