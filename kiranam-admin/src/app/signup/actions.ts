@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export interface SignupState {
   error?: string;
@@ -23,11 +24,19 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
     return { error: "This email hasn't been invited as an admin." };
   }
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  // Invited admins are trusted (the invite itself is the verification
+  // step), so create the user pre-confirmed rather than sending a
+  // confirmation email via the normal signUp flow.
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
   if (error) return { error: error.message };
 
   if (data.user && fullName) {
-    await supabase.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
+    await admin.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
   }
 
   redirect('/login');
