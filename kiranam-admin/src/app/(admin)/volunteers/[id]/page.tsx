@@ -142,8 +142,8 @@ export default async function VolunteerDetailPage({
             const commitment = commitmentByContributor.get(c.id);
             const status = deriveContributorStatus(commitment);
             return (
-              <div key={c.id} className="flex items-center justify-between px-5 py-3">
-                <div>
+              <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
                   <p className="font-semibold text-kiranam-ink">{c.full_name || 'Unnamed'}</p>
                   <p className="text-sm text-kiranam-muted">{c.phone}</p>
                 </div>

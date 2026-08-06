@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
+import { GalleryLightbox } from '@/components/GalleryLightbox';
 import { ArrowLeft, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,13 +10,12 @@ export default function EventDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { events } = useApp();
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const eventId = params.id as string | undefined;
   const event = events.find(e => e.id === eventId) || events[0];
 
   if (!event) return null;
-
-  const galleryItems = [1, 2, 3];
 
   const handleShare = () => {
     Share.share({
@@ -29,18 +29,27 @@ export default function EventDetailScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Cover Image Header */}
-        <View style={styles.coverImageArea}>
+        <TouchableOpacity
+          style={styles.coverImageArea}
+          activeOpacity={event.coverImageUrl ? 0.9 : 1}
+          disabled={!event.coverImageUrl}
+          onPress={() => setLightboxIndex(0)}
+        >
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <ArrowLeft size={20} color="#0C0C0D" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.shareButtonIcon} onPress={handleShare} activeOpacity={0.8}>
             <Share2 size={18} color="#0C0C0D" />
           </TouchableOpacity>
-          <View style={styles.coverPlaceholderContent}>
-            <ImageIcon size={26} color="#C7C3BD" strokeWidth={1.5} />
-            <Text style={styles.coverPlaceholderText}>event cover image</Text>
-          </View>
-        </View>
+          {event.coverImageUrl ? (
+            <Image source={{ uri: event.coverImageUrl }} style={styles.coverImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.coverPlaceholderContent}>
+              <ImageIcon size={26} color="#C7C3BD" strokeWidth={1.5} />
+              <Text style={styles.coverPlaceholderText}>event cover image</Text>
+            </View>
+          )}
+        </TouchableOpacity>
 
         {/* Content Details Block */}
         <View style={styles.detailsContainer}>
@@ -74,17 +83,31 @@ export default function EventDetailScreen() {
           <Text style={styles.descText}>{event.desc}</Text>
 
           {/* Highlights Section */}
-          <Text style={styles.galleryTitle}>Highlights</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryList}>
-            {galleryItems.map((item) => (
-              <View key={item} style={styles.galleryCard}>
-                <ImageIcon size={18} color="#B0ADA8" />
-                <Text style={styles.galleryCardText}>photo {item}</Text>
-              </View>
-            ))}
-          </ScrollView>
+          {event.galleryUrls.length > 0 && (
+            <>
+              <Text style={styles.galleryTitle}>Highlights</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.galleryList}>
+                {event.galleryUrls.map((url, i) => (
+                  <TouchableOpacity
+                    key={url}
+                    activeOpacity={0.85}
+                    onPress={() => setLightboxIndex(event.coverImageUrl ? i + 1 : i)}
+                  >
+                    <Image source={{ uri: url }} style={styles.galleryCard} resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
+          )}
         </View>
       </ScrollView>
+
+      <GalleryLightbox
+        visible={lightboxIndex !== null}
+        images={event.coverImageUrl ? [event.coverImageUrl, ...event.galleryUrls] : event.galleryUrls}
+        initialIndex={lightboxIndex ?? 0}
+        onClose={() => setLightboxIndex(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -102,6 +125,10 @@ const styles = StyleSheet.create({
     height: 236,
     backgroundColor: '#F4F1EE',
     position: 'relative',
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
   },
   backButton: {
     position: 'absolute',
@@ -224,13 +251,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 18,
     backgroundColor: '#F4F1EE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  galleryCardText: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    color: '#B0ADA8',
+    overflow: 'hidden',
   },
 });

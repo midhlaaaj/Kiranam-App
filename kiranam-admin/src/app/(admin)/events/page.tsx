@@ -2,7 +2,8 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { CalendarDays, Pencil, Search, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { createEvent, deleteEvent } from './actions';
+import { deleteEvent } from './actions';
+import { CreateEventForm } from './CreateEventForm';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
@@ -10,7 +11,6 @@ import { SkeletonTable } from '@/components/Skeleton';
 import {
   badgeClass,
   buttonPrimary,
-  cardClass,
   inputClass,
   pillTabClass,
   pillTabItemClass,
@@ -33,6 +33,7 @@ export default async function EventsPage({
       <AddNewPanel
         title="Events"
         label="Add new event"
+        modal
         filters={
           <div className={pillTabClass}>
             <Link href={`/events${q ? `?q=${encodeURIComponent(q)}` : ''}`} className={pillTabItemClass(!status)}>
@@ -71,20 +72,7 @@ export default async function EventsPage({
           </form>
         }
       >
-        <form action={createEvent} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
-          <input name="title" placeholder="Title" required className={`${inputClass} sm:col-span-2`} />
-          <textarea name="description" placeholder="Description" className={`${inputClass} sm:col-span-2`} />
-          <input name="event_date" type="date" required className={inputClass} />
-          <input name="time_label" placeholder="Time (e.g. 9:00 AM – 1:00 PM)" className={inputClass} />
-          <input name="location" placeholder="Location" required className={`${inputClass} sm:col-span-2`} />
-          <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image (optional)</label>
-            <input name="cover" type="file" accept="image/*" className={`${inputClass} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`} />
-          </div>
-          <button type="submit" className={`${buttonPrimary} sm:col-span-2`}>
-            Create Event
-          </button>
-        </form>
+        <CreateEventForm />
       </AddNewPanel>
 
       <Suspense fallback={<SkeletonTable rows={5} cols={5} />}>

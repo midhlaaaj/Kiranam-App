@@ -27,7 +27,7 @@ export default async function ContributorDetailPage({
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', id).single();
   if (!profile) notFound();
 
-  const [{ data: commitment }, { data: contributions }, { data: assignment }] = await Promise.all([
+  const [{ data: commitment }, { data: contributions }, { data: assignment }, { data: activeCampaigns }] = await Promise.all([
     supabase.from('commitments').select('*').eq('contributor_id', id).maybeSingle(),
     supabase
       .from('contributions')
@@ -39,7 +39,14 @@ export default async function ContributorDetailPage({
       .select('volunteer_id')
       .eq('contributor_id', id)
       .maybeSingle(),
+    supabase.from('campaigns').select('id, title').eq('status', 'active').order('title', { ascending: true }),
   ]);
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const paidThisMonth = (contributions || []).some(
+    (c) => c.status === 'success' && new Date(c.created_at) >= monthStart
+  );
 
   let volunteer: { id: string; full_name: string } | null = null;
   if (assignment?.volunteer_id) {
@@ -92,7 +99,7 @@ export default async function ContributorDetailPage({
         <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Contribution History</h2>
       </div>
       <div className="mt-3">
-        <OfflinePaymentForm contributorId={id} />
+        <OfflinePaymentForm contributorId={id} campaigns={activeCampaigns || []} paidThisMonth={paidThisMonth} contributorName={profile.full_name} />
       </div>
       <div className={`mt-4 ${tableWrapClass}`}>
         {(!contributions || contributions.length === 0) ? (

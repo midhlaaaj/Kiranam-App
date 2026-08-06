@@ -14,18 +14,26 @@ export default function PendingScreen() {
     setNotYetApproved(false);
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
-    const { data: application } = uid
-      ? await supabase
-          .from('volunteer_applications')
-          .select('status')
-          .eq('profile_id', uid)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      : { data: null };
+    const [{ data: profile }, { data: application }] = uid
+      ? await Promise.all([
+          supabase.from('profiles').select('role').eq('id', uid).single(),
+          supabase
+            .from('volunteer_applications')
+            .select('status')
+            .eq('profile_id', uid)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ])
+      : [{ data: null }, { data: null }];
     setChecking(false);
 
-    if (application?.status === 'approved') {
+    // Match otp.tsx's gate exactly: role only ever becomes 'volunteer' once
+    // an admin approves the application, so both must agree before granting
+    // dashboard access — checking application status alone let an account
+    // through with a stale 'contributor' role if the approval write had
+    // ever partially failed.
+    if (profile?.role === 'volunteer' && application?.status === 'approved') {
       router.replace('/(volunteer-tabs)/dashboard');
     } else {
       setNotYetApproved(true);

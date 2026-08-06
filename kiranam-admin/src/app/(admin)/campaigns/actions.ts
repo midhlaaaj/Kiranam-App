@@ -7,23 +7,36 @@ import { createClient } from '@/lib/supabase/server';
 import { logAction } from '@/lib/audit';
 import { uploadPublicImage } from '@/lib/storage';
 
-export async function createCampaign(formData: FormData) {
+export interface CreateCampaignState {
+  message?: string;
+  error?: string;
+}
+
+export async function createCampaign(
+  _prevState: CreateCampaignState,
+  formData: FormData
+): Promise<CreateCampaignState> {
   const admin = await verifyAdmin();
   const supabase = await createClient();
+
+  const title = String(formData.get('title') || '').trim();
+  const goal = Number(formData.get('goal') || 0);
+  if (!title) return { error: 'Title is required.' };
+  if (!(goal > 0)) return { error: 'Goal must be greater than zero.' };
 
   const { data: campaign, error } = await supabase
     .from('campaigns')
     .insert({
-      title: String(formData.get('title') || ''),
+      title,
       description: String(formData.get('description') || ''),
-      goal: Number(formData.get('goal') || 0),
+      goal,
       raised: Number(formData.get('raised') || 0),
       end_date: String(formData.get('end_date') || '') || null,
       status: 'active',
     })
     .select('id')
     .single();
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   const cover = formData.get('cover');
   if (cover instanceof File && cover.size > 0) {
@@ -33,6 +46,7 @@ export async function createCampaign(formData: FormData) {
 
   await logAction(admin.id, 'create_campaign', 'campaigns', campaign.id);
   revalidatePath('/campaigns');
+  return { message: `"${title}" created.` };
 }
 
 export async function updateCampaign(id: string, formData: FormData) {

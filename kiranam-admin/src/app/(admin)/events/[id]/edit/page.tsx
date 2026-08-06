@@ -73,7 +73,7 @@ export default async function EditEventPage({
       {(images || []).length > 0 && (
         <>
           <h2 className="mt-8 text-lg font-bold tracking-tight text-kiranam-ink">Gallery</h2>
-          <div className="mt-3 grid max-w-xl grid-cols-3 gap-3">
+          <div className="mt-3 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-3">
             {(images || []).map((img) => (
               <div key={img.id} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

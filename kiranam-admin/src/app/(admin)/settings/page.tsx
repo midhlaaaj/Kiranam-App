@@ -43,8 +43,8 @@ export default async function SettingsPage() {
           }
           label="Invite Admin"
         >
-          <form action={createInvite} className={`flex max-w-md gap-2 ${cardClass} p-4`}>
-            <input name="email" type="email" placeholder="new-admin@email.com" required className={inputClass} />
+          <form action={createInvite} className={`flex max-w-md flex-col gap-2 sm:flex-row ${cardClass} p-4`}>
+            <input name="email" type="email" placeholder="new-admin@email.com" required className={`${inputClass} min-w-0 flex-1`} />
             <button type="submit" className={buttonPrimary}>
               Invite
             </button>

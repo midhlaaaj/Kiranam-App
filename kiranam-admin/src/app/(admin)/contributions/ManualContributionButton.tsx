@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { recordManualContribution, type OfflinePaymentState } from './actions';
 import { Modal } from '@/components/Modal';
@@ -14,6 +14,12 @@ interface ContributorOption {
   full_name: string | null;
   phone: string | null;
   monthlyAmount: number | null;
+  paidThisMonth: boolean;
+}
+
+interface CampaignOption {
+  id: string;
+  title: string;
 }
 
 function formatMoney(amount: number) {
@@ -24,7 +30,13 @@ function formatMoney(amount: number) {
  * Contributions list — same underlying action as a contributor's own
  * "Record Offline Payment" form, just with a contributor picker up front
  * since this page isn't scoped to one contributor. */
-export function ManualContributionButton({ contributors }: { contributors: ContributorOption[] }) {
+export function ManualContributionButton({
+  contributors,
+  campaigns,
+}: {
+  contributors: ContributorOption[];
+  campaigns: CampaignOption[];
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<ContributorOption | null>(null);
@@ -87,7 +99,16 @@ export function ManualContributionButton({ contributors }: { contributors: Contr
                 Monthly commitment: {selected.monthlyAmount ? formatMoney(selected.monthlyAmount) : 'Not set'}
               </p>
             </div>
-          ) : (
+          ) : null}
+
+          {selected?.paidThisMonth && (
+            <div className="flex items-start gap-2 rounded-lg border border-kiranam-warning/40 bg-kiranam-warning-soft px-3.5 py-2.5 text-sm text-kiranam-warning">
+              <AlertTriangle size={16} strokeWidth={2} className="mt-0.5 shrink-0" />
+              <p>{selected.full_name || 'This contributor'} already has a successful contribution recorded this month. Recording another will add a second one.</p>
+            </div>
+          )}
+
+          {!selected && (
             <div className="relative">
               <input
                 type="text"
@@ -120,6 +141,16 @@ export function ManualContributionButton({ contributors }: { contributors: Contr
 
           <input name="amount" type="number" min="1" step="1" placeholder="Amount (₹)" required className={inputClass} />
           <input name="date" type="date" className={inputClass} />
+          {campaigns.length > 0 && (
+            <select name="campaign_id" defaultValue="" className={inputClass}>
+              <option value="">General / monthly commitment</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>
+                  Campaign: {c.title}
+                </option>
+              ))}
+            </select>
+          )}
           <input name="note" placeholder="Note (optional)" className={inputClass} />
 
           {state?.error && (

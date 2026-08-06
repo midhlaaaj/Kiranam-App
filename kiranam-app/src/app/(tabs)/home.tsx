@@ -170,11 +170,9 @@ export default function HomeScreen() {
         {/* Active Campaigns Slider */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Active Campaigns</Text>
-          {activeCampaigns.length > 0 && (
-            <TouchableOpacity onPress={() => router.push('/(tabs)/campaigns')} activeOpacity={0.7}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={() => router.push('/(tabs)/campaigns')} activeOpacity={0.7}>
+            <Text style={styles.seeAllText}>See all</Text>
+          </TouchableOpacity>
         </View>
 
         {activeCampaigns.length === 0 ? (
@@ -217,11 +215,9 @@ export default function HomeScreen() {
         {/* Upcoming Events list */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Upcoming Events</Text>
-          {upcomingEvents.length > 0 && (
-            <TouchableOpacity onPress={() => router.push('/(tabs)/events')} activeOpacity={0.7}>
-              <Text style={styles.seeAllText}>See all</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity onPress={() => router.push('/(tabs)/events')} activeOpacity={0.7}>
+            <Text style={styles.seeAllText}>See all</Text>
+          </TouchableOpacity>
         </View>
 
         {upcomingEvents.length === 0 ? (
@@ -599,9 +595,12 @@ const styles = StyleSheet.create({
   campaignsEmptyStateCard: {
     height: 176,
   },
-  // Matches a single eventRow's rendered height (padding + icon box).
+  // Matches the filled state's rendered height when showing the max of 2
+  // upcoming events (2 eventRows at 76px each + the 10px gap between them) —
+  // matching only 1 row's height left a visible jump whenever 2 events were
+  // actually shown.
   eventsEmptyStateCard: {
-    height: 76,
+    height: 76 * 2 + 10,
   },
   emptyStateIconBox: {
     width: 44,

@@ -47,17 +47,22 @@ export default async function ContributionsPage({
   const page = Math.max(1, Number(pageParam) || 1);
 
   const supabase = await createClient();
-  const [{ data: rawContributors }, { data: commitments }] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const [{ data: rawContributors }, { data: commitments }, { data: activeCampaigns }, { data: paidThisMonthRows }] = await Promise.all([
     supabase.from('profiles').select('id, full_name, phone').eq('role', 'contributor').order('full_name', { ascending: true }),
     supabase.from('commitments').select('contributor_id, monthly_amount'),
+    supabase.from('campaigns').select('id, title').eq('status', 'active').order('title', { ascending: true }),
+    supabase.from('contributions').select('contributor_id').eq('status', 'success').gte('created_at', monthStart),
   ]);
   const monthlyAmountByContributor = new Map((commitments || []).map((c) => [c.contributor_id, Number(c.monthly_amount)]));
+  const paidThisMonthIds = new Set((paidThisMonthRows || []).map((r) => r.contributor_id));
   const contributors = (rawContributors || []).map((c) => ({
     ...c,
     monthlyAmount: monthlyAmountByContributor.get(c.id) ?? null,
+    paidThisMonth: paidThisMonthIds.has(c.id),
   }));
 
-  const now = new Date();
   const todayStr = isoDate(now);
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 6);
@@ -72,7 +77,7 @@ export default async function ContributionsPage({
 
   return (
     <div>
-      <PageHeading title="Contributions" action={<ManualContributionButton contributors={contributors} />} />
+      <PageHeading title="Contributions" action={<ManualContributionButton contributors={contributors} campaigns={activeCampaigns || []} />} />
 
       <div className="mb-6">
         <ContributionsPeriodFilter presets={presets} from={from} to={to} status={status} />

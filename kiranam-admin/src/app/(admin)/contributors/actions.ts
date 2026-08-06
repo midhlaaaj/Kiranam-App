@@ -95,14 +95,27 @@ export async function addOfflinePayment(
   const amount = Number(formData.get('amount') || 0);
   const date = String(formData.get('date') || '').trim();
   const note = String(formData.get('note') || '').trim();
+  const campaignId = String(formData.get('campaign_id') || '').trim() || null;
 
   if (!(amount > 0)) return { error: 'Amount must be greater than zero.' };
 
   const supabase = await createClient();
+
+  let campaignTitle: string | null = null;
+  if (campaignId) {
+    const { data: campaign } = await supabase.from('campaigns').select('title').eq('id', campaignId).maybeSingle();
+    if (!campaign) return { error: 'Selected campaign could not be found.' };
+    campaignTitle = campaign.title;
+  }
+
+  // A campaign-linked contribution auto-bumps campaigns.raised via the
+  // on_contribution_bump_campaign trigger — same as a real donation through
+  // the app — so the label reflects the campaign rather than a generic note.
   const { error } = await supabase.from('contributions').insert({
     contributor_id: contributorId,
+    campaign_id: campaignId,
     amount,
-    label: note || 'Offline payment',
+    label: campaignTitle ? `Campaign: ${campaignTitle}` : (note || 'Offline payment'),
     status: 'success',
     is_offline: true,
     collected_by: admin.id,
@@ -111,8 +124,9 @@ export async function addOfflinePayment(
   });
   if (error) return { error: friendlyErrorMessage(error.message) };
 
-  await logAction(admin.id, 'add_offline_payment', 'contributions', contributorId, { amount, note });
+  await logAction(admin.id, 'add_offline_payment', 'contributions', contributorId, { amount, note, campaignId });
   revalidatePath(`/contributors/${contributorId}`);
   revalidatePath('/contributions');
-  return { message: 'Offline payment recorded.' };
+  revalidatePath('/campaigns');
+  return { message: campaignTitle ? `Contribution to "${campaignTitle}" recorded.` : 'Offline payment recorded.' };
 }

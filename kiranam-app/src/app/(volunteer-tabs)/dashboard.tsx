@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
+import { EditReferralCodeModal } from '@/components/EditReferralCodeModal';
 import { statusMeta } from '@/utils/volunteerStatus';
 import {
   Users,
@@ -12,6 +13,7 @@ import {
   AlertCircle,
   Copy,
   Share2,
+  Pencil,
   ChevronRight,
   BellRing,
   Bell,
@@ -25,6 +27,7 @@ export default function VolunteerDashboardScreen() {
   const {
     userName,
     myReferralCode,
+    updateReferralCode,
     volunteerMembers,
     notifications,
     profileLoading,
@@ -34,6 +37,7 @@ export default function VolunteerDashboardScreen() {
     isPaidThisCycle,
   } = useApp();
   const [copied, setCopied] = useState(false);
+  const [editCodeVisible, setEditCodeVisible] = useState(false);
 
   const firstName = userName.split(' ')[0];
   const pendingCount = volunteerMembers.filter((m) => m.status === 'due').length;
@@ -174,6 +178,13 @@ export default function VolunteerDashboardScreen() {
             <TouchableOpacity style={styles.referralCompactIconButton} onPress={handleShare} activeOpacity={0.7}>
               <Share2 size={16} color="#0C0C0D" />
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.referralCompactIconButton}
+              onPress={() => setEditCodeVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Pencil size={16} color="#0C0C0D" />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -246,6 +257,13 @@ export default function VolunteerDashboardScreen() {
           })}
         </View>
       </ScrollView>
+
+      <EditReferralCodeModal
+        visible={editCodeVisible}
+        onClose={() => setEditCodeVisible(false)}
+        currentCode={myReferralCode}
+        onSave={updateReferralCode}
+      />
     </SafeAreaView>
   );
 }

@@ -2,7 +2,8 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { Megaphone, Pencil, Search, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { createCampaign, deleteCampaign } from './actions';
+import { deleteCampaign } from './actions';
+import { CreateCampaignForm } from './CreateCampaignForm';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
@@ -10,7 +11,6 @@ import { SkeletonTable } from '@/components/Skeleton';
 import {
   badgeClass,
   buttonPrimary,
-  cardClass,
   formatMoney,
   inputClass,
   pillTabClass,
@@ -34,6 +34,7 @@ export default async function CampaignsPage({
       <AddNewPanel
         title="Campaigns"
         label="Add new campaign"
+        modal
         filters={
           <div className={pillTabClass}>
             <Link href={`/campaigns${q ? `?q=${encodeURIComponent(q)}` : ''}`} className={pillTabItemClass(!status)}>
@@ -72,23 +73,7 @@ export default async function CampaignsPage({
           </form>
         }
       >
-        <form action={createCampaign} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
-          <input name="title" placeholder="Title" required className={`${inputClass} sm:col-span-2`} />
-          <textarea name="description" placeholder="Description" className={`${inputClass} sm:col-span-2`} />
-          <input name="goal" type="number" placeholder="Goal (₹)" required className={inputClass} />
-          <input name="raised" type="number" placeholder="Already raised (₹, optional)" className={inputClass} />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">End date (optional)</label>
-            <input name="end_date" type="date" className={inputClass} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image (optional)</label>
-            <input name="cover" type="file" accept="image/*" className={`${inputClass} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`} />
-          </div>
-          <button type="submit" className={`${buttonPrimary} sm:col-span-2`}>
-            Create Campaign
-          </button>
-        </form>
+        <CreateCampaignForm />
       </AddNewPanel>
 
       <Suspense fallback={<SkeletonTable rows={5} cols={4} />}>

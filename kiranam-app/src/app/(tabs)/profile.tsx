@@ -161,15 +161,14 @@ export default function ProfileScreen() {
             <ChevronRight size={16} color="#D8D5D0" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={handleLogout}>
-            <Text style={styles.actionRowText}>Log Out</Text>
-            <ChevronRight size={16} color="#D8D5D0" />
-          </TouchableOpacity>
-
           <TouchableOpacity style={[styles.actionRow, styles.noBorder]} onPress={() => setDeleteModalVisible(true)} activeOpacity={0.7}>
             <Text style={styles.logoutText}>Delete Account</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
 
       </ScrollView>
 
@@ -377,5 +376,18 @@ const styles = StyleSheet.create({
   },
   noBorder: {
     borderBottomWidth: 0,
+  },
+  logoutButton: {
+    backgroundColor: '#EC2028',
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutButtonText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 14,
+    color: '#FFFFFF',
   },
 });

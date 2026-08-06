@@ -14,6 +14,9 @@ export interface Campaign {
   goal: number;
   raisedFmt: string;
   goalFmt: string;
+  description: string;
+  coverImageUrl: string | null;
+  galleryUrls: string[];
 }
 
 export interface PaymentRecord {
@@ -48,6 +51,8 @@ export interface EventRecord {
   location: string;
   isPast: boolean;
   desc: string;
+  coverImageUrl: string | null;
+  galleryUrls: string[];
 }
 
 export interface ContributorNote {
@@ -81,6 +86,7 @@ interface AppContextType {
   isLoggedIn: boolean;
   isVolunteer: boolean;
   myReferralCode: string;
+  updateReferralCode: (code: string) => Promise<{ error: string | null }>;
 
   // Auth actions (backed by Supabase)
   signInWithPhone: (phoneE164: string) => Promise<{ error: string | null }>;
@@ -181,23 +187,33 @@ const ensureReferralCode = async (uid: string, fullName: string): Promise<string
 
   const firstName = (fullName.split(' ')[0] || 'VOL').toUpperCase().replace(/[^A-Z]/g, '') || 'VOL';
   const year = new Date().getFullYear();
-  const code = `${firstName}${year}`;
+  const baseCode = `${firstName}${year}`;
 
-  const { data: inserted, error } = await supabase
+  // referrals.referral_code has a UNIQUE constraint, so two volunteers with
+  // the same first name colliding on the base code is expected — retry with
+  // a random suffix until an insert succeeds (or we give up after a few
+  // tries, which would mean extraordinarily bad luck on the random space).
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const candidate = attempt === 0 ? baseCode : `${baseCode}${Math.floor(10 + Math.random() * 90)}`;
+    const { data: inserted, error } = await supabase
+      .from('referrals')
+      .insert({ volunteer_id: uid, referral_code: candidate })
+      .select('referral_code')
+      .single();
+    if (!error && inserted) return inserted.referral_code;
+    // Anything other than a unique-constraint violation isn't worth retrying.
+    if (error && error.code !== '23505') break;
+  }
+
+  // Every attempt collided (or a non-collision error occurred) — fall back
+  // to a fully random suffix that's astronomically unlikely to collide.
+  const desperateCode = `${baseCode}${Math.floor(1000 + Math.random() * 9000)}`;
+  const { data: last } = await supabase
     .from('referrals')
-    .insert({ volunteer_id: uid, referral_code: code })
+    .insert({ volunteer_id: uid, referral_code: desperateCode })
     .select('referral_code')
     .single();
-  if (!error && inserted) return inserted.referral_code;
-
-  // Referral code collided with an existing volunteer's code — retry once with a random suffix.
-  const fallbackCode = `${code}${Math.floor(10 + Math.random() * 90)}`;
-  const { data: retry } = await supabase
-    .from('referrals')
-    .insert({ volunteer_id: uid, referral_code: fallbackCode })
-    .select('referral_code')
-    .single();
-  return retry?.referral_code ?? fallbackCode;
+  return last?.referral_code ?? desperateCode;
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -286,6 +302,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshCampaigns = useCallback(async () => {
     const { data } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
     if (!data) return;
+    const ids = data.map((c) => c.id);
+    const { data: images } = ids.length
+      ? await supabase.from('campaign_images').select('campaign_id, image_url').in('campaign_id', ids).order('created_at', { ascending: true })
+      : { data: [] };
+    const galleryByCampaign = new Map<string, string[]>();
+    (images || []).forEach((img) => {
+      const list = galleryByCampaign.get(img.campaign_id) || [];
+      list.push(img.image_url);
+      galleryByCampaign.set(img.campaign_id, list);
+    });
+
     const today = new Date().toISOString().slice(0, 10);
     setCampaigns(data.map((c) => {
       const pct = c.goal > 0 ? Math.min(100, Math.round((Number(c.raised) / Number(c.goal)) * 100)) : 0;
@@ -302,6 +329,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         goal: Number(c.goal),
         raisedFmt: Number(c.raised).toLocaleString('en-IN'),
         goalFmt: Number(c.goal).toLocaleString('en-IN'),
+        description: c.description || '',
+        coverImageUrl: c.cover_image_url || null,
+        galleryUrls: galleryByCampaign.get(c.id) || [],
       };
     }));
   }, []);
@@ -309,6 +339,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshEvents = useCallback(async () => {
     const { data } = await supabase.from('events').select('*').order('event_date', { ascending: true });
     if (!data) return;
+    const ids = data.map((e) => e.id);
+    const { data: images } = ids.length
+      ? await supabase.from('event_images').select('event_id, image_url').in('event_id', ids).order('created_at', { ascending: true })
+      : { data: [] };
+    const galleryByEvent = new Map<string, string[]>();
+    (images || []).forEach((img) => {
+      const list = galleryByEvent.get(img.event_id) || [];
+      list.push(img.image_url);
+      galleryByEvent.set(img.event_id, list);
+    });
+
     const today = new Date().toISOString().slice(0, 10);
     setEvents(data.map((e) => ({
       id: e.id,
@@ -320,6 +361,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       location: e.location || '',
       isPast: e.is_past || (e.event_date && e.event_date < today),
       desc: e.description || '',
+      coverImageUrl: e.cover_image_url || null,
+      galleryUrls: galleryByEvent.get(e.id) || [],
     })));
   }, []);
 
@@ -589,6 +632,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { error: null };
   };
 
+  // Lets a volunteer pick their own referral code instead of the
+  // auto-generated FIRSTNAME+YEAR one. referrals.referral_code has a UNIQUE
+  // constraint, so a collision surfaces as a Postgres 23505 error — that's
+  // translated into a friendly "already in use" message rather than a raw
+  // constraint-violation string.
+  const updateReferralCode = async (code: string) => {
+    if (!session) return { error: 'Not signed in' };
+    const normalized = code.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (normalized.length < 4) return { error: 'Referral code must be at least 4 characters.' };
+    if (normalized.length > 20) return { error: 'Referral code must be 20 characters or fewer.' };
+
+    const { error } = await supabase
+      .from('referrals')
+      .update({ referral_code: normalized })
+      .eq('volunteer_id', session.user.id);
+    if (error) {
+      if (error.code === '23505') return { error: 'That referral code is already in use — try a different one.' };
+      return { error: error.message };
+    }
+    setMyReferralCode(normalized);
+    return { error: null };
+  };
+
   // Changing email requires confirming the new address via a link Supabase emails
   // to it, so this only kicks off that flow — profiles.email is updated separately,
   // once the change is confirmed (see the reconciliation effect below).
@@ -803,7 +869,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     if (orderError || !orderData) throw orderError || new Error('Could not create payment order');
 
-    const RazorpayCheckout = require('react-native-razorpay').default;
+    // TEMP: react-native-razorpay is a native module and isn't available in Expo Go.
+    // Re-enable this require once we rebuild a dev client with Razorpay linked back in.
+    let RazorpayCheckout: any;
+    try {
+      RazorpayCheckout = require('react-native-razorpay').default;
+    } catch {
+      throw new Error('Razorpay payments are disabled in this Expo Go test build.');
+    }
     const checkoutResult = await RazorpayCheckout.open({
       key: orderData.keyId,
       amount: orderData.amount,
@@ -960,6 +1033,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isLoggedIn: !!session,
       isVolunteer,
       myReferralCode,
+      updateReferralCode,
       signInWithPhone,
       verifyOtpCode,
       signOut,

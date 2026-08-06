@@ -3,13 +3,15 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar 
 import * as Clipboard from 'expo-clipboard';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/Card';
+import { EditReferralCodeModal } from '@/components/EditReferralCodeModal';
 import { statusMeta } from '@/utils/volunteerStatus';
-import { Copy, Share2, Users, UserCheck, Wallet } from 'lucide-react-native';
+import { Copy, Share2, Pencil, Users, UserCheck, Wallet } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReferralsScreen() {
-  const { myReferralCode, volunteerMembers } = useApp();
+  const { myReferralCode, updateReferralCode, volunteerMembers } = useApp();
   const [copied, setCopied] = useState(false);
+  const [editCodeVisible, setEditCodeVisible] = useState(false);
 
   const activeMembers = volunteerMembers.filter((m) => m.status === 'active');
   const monthlyTotal = activeMembers.reduce((acc, m) => acc + m.monthlyAmount, 0);
@@ -51,6 +53,14 @@ export default function ReferralsScreen() {
             <TouchableOpacity style={styles.referralActionButton} onPress={handleShare} activeOpacity={0.8}>
               <Share2 size={16} color="#FFFFFF" />
               <Text style={styles.referralActionText}>Share</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.referralActionButton}
+              onPress={() => setEditCodeVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Pencil size={16} color="#FFFFFF" />
+              <Text style={styles.referralActionText}>Edit</Text>
             </TouchableOpacity>
           </View>
         </Card>
@@ -104,6 +114,13 @@ export default function ReferralsScreen() {
           })}
         </View>
       </ScrollView>
+
+      <EditReferralCodeModal
+        visible={editCodeVisible}
+        onClose={() => setEditCodeVisible(false)}
+        currentCode={myReferralCode}
+        onSave={updateReferralCode}
+      />
     </SafeAreaView>
   );
 }

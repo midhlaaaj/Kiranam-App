@@ -7,23 +7,36 @@ import { createClient } from '@/lib/supabase/server';
 import { logAction } from '@/lib/audit';
 import { uploadPublicImage } from '@/lib/storage';
 
-export async function createEvent(formData: FormData) {
+export interface CreateEventState {
+  message?: string;
+  error?: string;
+}
+
+export async function createEvent(
+  _prevState: CreateEventState,
+  formData: FormData
+): Promise<CreateEventState> {
   const admin = await verifyAdmin();
   const supabase = await createClient();
+
+  const title = String(formData.get('title') || '').trim();
+  const location = String(formData.get('location') || '').trim();
+  if (!title) return { error: 'Title is required.' };
+  if (!location) return { error: 'Location is required.' };
 
   const { data: event, error } = await supabase
     .from('events')
     .insert({
-      title: String(formData.get('title') || ''),
+      title,
       description: String(formData.get('description') || ''),
       event_date: String(formData.get('event_date') || '') || null,
       time_label: String(formData.get('time_label') || ''),
-      location: String(formData.get('location') || ''),
+      location,
       is_past: false,
     })
     .select('id')
     .single();
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   const cover = formData.get('cover');
   if (cover instanceof File && cover.size > 0) {
@@ -33,6 +46,7 @@ export async function createEvent(formData: FormData) {
 
   await logAction(admin.id, 'create_event', 'events', event.id);
   revalidatePath('/events');
+  return { message: `"${title}" created.` };
 }
 
 export async function updateEvent(id: string, formData: FormData) {

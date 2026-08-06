@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar } 
 import { useRouter } from 'expo-router';
 import { useApp, EventRecord } from '@/context/AppContext';
 import { Card } from '@/components/Card';
+import { SegmentedToggle } from '@/components/SegmentedToggle';
 import { Bell, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -38,22 +39,14 @@ export default function EventsScreen() {
       </View>
 
       {/* Toggle Tab */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, selectedTab === 'upcoming' ? styles.activeTabButton : null]}
-          onPress={() => setSelectedTab('upcoming')}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.tabText, selectedTab === 'upcoming' ? styles.activeTabText : null]}>Upcoming</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, selectedTab === 'past' ? styles.activeTabButton : null]}
-          onPress={() => setSelectedTab('past')}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.tabText, selectedTab === 'past' ? styles.activeTabText : null]}>Past</Text>
-        </TouchableOpacity>
-      </View>
+      <SegmentedToggle
+        options={[
+          { value: 'upcoming', label: 'Upcoming' },
+          { value: 'past', label: 'Past' },
+        ]}
+        value={selectedTab}
+        onChange={setSelectedTab}
+      />
 
       {/* Events List */}
       <FlatList
@@ -157,32 +150,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EC2028',
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F4F2EF',
-    borderRadius: 24,
-    padding: 3,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 21,
-  },
-  activeTabButton: {
-    backgroundColor: '#0C0C0D',
-  },
-  tabText: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7A756E',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
   },
   listContent: {
     paddingHorizontal: 20,

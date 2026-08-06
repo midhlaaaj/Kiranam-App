@@ -35,22 +35,19 @@ export async function unassignContributor(volunteerId: string, contributorId: st
 }
 
 export async function approveApplication(applicationId: string, profileId: string) {
-  const admin = await verifyAdmin();
+  await verifyAdmin();
   const supabase = await createClient();
 
-  const { error: appError } = await supabase
-    .from('volunteer_applications')
-    .update({ status: 'approved', reviewed_by: admin.id, reviewed_at: new Date().toISOString() })
-    .eq('id', applicationId);
-  if (appError) throw new Error(appError.message);
+  // Single RPC so the application-status update, the role promotion, and
+  // the audit log insert all commit atomically — a partial failure here
+  // previously left applications stuck "approved" with the profile's role
+  // never flipped to 'volunteer'.
+  const { error } = await supabase.rpc('approve_volunteer_application', {
+    p_application_id: applicationId,
+    p_profile_id: profileId,
+  });
+  if (error) throw new Error(error.message);
 
-  const { error: profileError } = await supabase
-    .from('profiles')
-    .update({ role: 'volunteer' })
-    .eq('id', profileId);
-  if (profileError) throw new Error(profileError.message);
-
-  await logAction(admin.id, 'approve_volunteer_application', 'volunteer_applications', applicationId, { profileId });
   revalidatePath(`/volunteers/${profileId}`);
   revalidatePath('/volunteers');
 }

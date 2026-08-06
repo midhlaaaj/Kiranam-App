@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar } 
 import { useRouter } from 'expo-router';
 import { useApp, Campaign } from '@/context/AppContext';
 import { Card } from '@/components/Card';
+import { SegmentedToggle } from '@/components/SegmentedToggle';
 import { Bell, Heart, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -42,22 +43,14 @@ export default function CampaignsScreen() {
       </View>
 
       {/* Segmented Tab Filter */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, selectedTab === 'active' ? styles.activeTabButton : null]}
-          onPress={() => setSelectedTab('active')}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.tabText, selectedTab === 'active' ? styles.activeTabText : null]}>Active</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, selectedTab === 'completed' ? styles.activeTabButton : null]}
-          onPress={() => setSelectedTab('completed')}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.tabText, selectedTab === 'completed' ? styles.activeTabText : null]}>Completed</Text>
-        </TouchableOpacity>
-      </View>
+      <SegmentedToggle
+        options={[
+          { value: 'active', label: 'Active' },
+          { value: 'completed', label: 'Completed' },
+        ]}
+        value={selectedTab}
+        onChange={setSelectedTab}
+      />
 
       {/* Vertical Campaign Cards list */}
       <FlatList
@@ -144,32 +137,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EC2028',
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F4F2EF',
-    borderRadius: 24,
-    padding: 3,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 21,
-  },
-  activeTabButton: {
-    backgroundColor: '#0C0C0D',
-  },
-  tabText: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7A756E',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
   },
   listContent: {
     paddingHorizontal: 20,
