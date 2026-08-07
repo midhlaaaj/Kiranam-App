@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useApp, EventRecord } from '@/context/AppContext';
 import { Card } from '@/components/Card';
@@ -60,18 +62,42 @@ export default function EventsScreen() {
             onPress={() => router.push({ pathname: '/event-detail', params: { id: item.id } })}
           >
             <Card style={styles.eventCard}>
-              <View style={styles.eventImagePlaceholder}>
-                <ImageIcon size={22} color="#C7C3BD" strokeWidth={1.5} />
-                <Text style={styles.eventImageText}>event photo</Text>
-                <TouchableOpacity
-                  style={styles.shareIconButton}
-                  onPress={() => handleShare(item.title)}
-                  activeOpacity={0.8}
-                  hitSlop={8}
+              {item.coverImageUrl ? (
+                <View style={styles.eventImagePlaceholder}>
+                  <Image
+                    source={{ uri: item.coverImageUrl }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                  <TouchableOpacity
+                    style={styles.shareIconButton}
+                    onPress={() => handleShare(item.title)}
+                    activeOpacity={0.8}
+                    hitSlop={8}
+                  >
+                    <Share2 size={15} color="#0C0C0D" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
+                  locations={[0, 0.3, 0.65, 1]}
+                  start={{ x: 0.29, y: 0.05 }}
+                  end={{ x: 0.71, y: 0.95 }}
+                  style={styles.eventImagePlaceholder}
                 >
-                  <Share2 size={15} color="#0C0C0D" />
-                </TouchableOpacity>
-              </View>
+                  <ImageIcon size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
+                  <TouchableOpacity
+                    style={styles.shareIconButton}
+                    onPress={() => handleShare(item.title)}
+                    activeOpacity={0.8}
+                    hitSlop={8}
+                  >
+                    <Share2 size={15} color="#0C0C0D" />
+                  </TouchableOpacity>
+                </LinearGradient>
+              )}
 
               {item.isPast && (
                 <View style={styles.pastBadge}>
@@ -173,12 +199,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginBottom: 12,
-  },
-  eventImageText: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    color: '#B0ADA8',
-    textTransform: 'uppercase',
+    overflow: 'hidden',
   },
   shareIconButton: {
     position: 'absolute',

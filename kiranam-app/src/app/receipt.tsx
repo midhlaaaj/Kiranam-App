@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Check, Clipboard as CopyIcon } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
+import { formatMoney } from '@/utils/format';
 
 export default function ReceiptScreen() {
   const router = useRouter();
@@ -20,10 +21,6 @@ export default function ReceiptScreen() {
 
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-
-  const formatMoney = (amount: number) => {
-    return '₹' + amount.toLocaleString('en-IN');
-  };
 
   const handleCopyTxn = () => {
     Clipboard.setString(txnId);

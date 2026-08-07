@@ -21,6 +21,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function VolunteerDashboardScreen() {
   const router = useRouter();
@@ -45,7 +46,6 @@ export default function VolunteerDashboardScreen() {
   const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
   const topMembers = volunteerMembers.slice(0, 3);
 
-  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(myReferralCode);

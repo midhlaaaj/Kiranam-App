@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
+import { validateReferralCode } from '@/utils/validators';
 
 interface EditReferralCodeModalProps {
   visible: boolean;
@@ -29,8 +30,9 @@ export function EditReferralCodeModal({ visible, onClose, currentCode, onSave }:
   };
 
   const handleSave = async () => {
-    if (code.length < 4) {
-      setError('Referral code must be at least 4 characters.');
+    const codeError = validateReferralCode(code, { required: true });
+    if (codeError) {
+      setError(codeError);
       return;
     }
     if (code === currentCode) {

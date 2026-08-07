@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
+import { formatMoney, formatDate, getDeviceLocale } from '@/utils/format';
 
 // Interfaces for our app types
 export interface Campaign {
@@ -150,14 +151,12 @@ export const useApp = () => {
 };
 
 const formatJoinedLabel = (isoDate: string) => {
-  const d = new Date(isoDate);
-  return `Joined ${d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+  return `Joined ${formatDate(isoDate, { month: 'short', year: 'numeric' })}`;
 };
 
 const formatDueDateLabel = (isoDate: string | null) => {
   if (!isoDate) return '';
-  const d = new Date(isoDate);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatDate(isoDate, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 const deriveMemberStatus = (commitment?: {
@@ -327,8 +326,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         pct,
         raised: Number(c.raised),
         goal: Number(c.goal),
-        raisedFmt: Number(c.raised).toLocaleString('en-IN'),
-        goalFmt: Number(c.goal).toLocaleString('en-IN'),
+        raisedFmt: Number(c.raised).toLocaleString(getDeviceLocale()),
+        goalFmt: Number(c.goal).toLocaleString(getDeviceLocale()),
         description: c.description || '',
         coverImageUrl: c.cover_image_url || null,
         galleryUrls: galleryByCampaign.get(c.id) || [],
@@ -355,7 +354,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: e.id,
       title: e.title,
       dateStr: e.event_date
-        ? new Date(e.event_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+        ? formatDate(e.event_date, { weekday: 'short', month: 'short', day: 'numeric' })
         : '',
       timeStr: e.time_label || '',
       location: e.location || '',
@@ -494,7 +493,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!cancelled && contributions) {
         setPayments(contributions.map((c) => ({
           id: c.transaction_ref || c.id,
-          date: new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          date: formatDate(c.created_at),
           label: c.label,
           amount: Number(c.amount),
           ok: c.status === 'success',
@@ -515,7 +514,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           isSystem: n.category === 'system',
           title: n.title,
           desc: n.body || '',
-          time: new Date(n.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          time: formatDate(n.created_at, { month: 'short', day: 'numeric' }),
           unread: !n.is_read,
           cat: n.category,
           deepLink: n.deep_link || null,
@@ -779,7 +778,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) throw new Error('Not signed in');
     const uid = session.user.id;
 
-    const dateStr = new Date(inserted.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const dateStr = formatDate(inserted.created_at);
     const newRecord: PaymentRecord = {
       id: inserted.transaction_ref || inserted.id,
       date: dateStr,
@@ -795,7 +794,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (c.id !== campaignId) return c;
         const newRaised = c.raised + amount;
         const newPct = c.goal > 0 ? Math.min(100, Math.round((newRaised / c.goal) * 100)) : 0;
-        return { ...c, raised: newRaised, pct: newPct, raisedFmt: newRaised.toLocaleString('en-IN') };
+        return { ...c, raised: newRaised, pct: newPct, raisedFmt: newRaised.toLocaleString(getDeviceLocale()) };
       }));
     }
 
@@ -823,7 +822,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { data: notifRow } = await supabase.from('notifications').insert({
       profile_id: uid,
       title: 'Payment Successful',
-      body: `Your ₹${amount.toLocaleString('en-IN')} payment for "${label}" was successful.`,
+      body: `Your ${formatMoney(amount)} payment for "${label}" was successful.`,
       category: label === 'Monthly Contribution' ? 'contribution' : 'campaign',
       is_read: false,
       deep_link: receiptLink,
@@ -936,7 +935,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (c.id !== campaignId) return c;
         const newRaised = c.raised + amount;
         const newPct = c.goal > 0 ? Math.min(100, Math.round((newRaised / c.goal) * 100)) : 0;
-        return { ...c, raised: newRaised, pct: newPct, raisedFmt: newRaised.toLocaleString('en-IN') };
+        return { ...c, raised: newRaised, pct: newPct, raisedFmt: newRaised.toLocaleString(getDeviceLocale()) };
       }));
     }
 
@@ -954,7 +953,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: (data || []).map((row) => ({
         id: row.id,
         body: row.body,
-        createdAt: new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        createdAt: formatDate(row.created_at),
       })),
       error: null,
     };

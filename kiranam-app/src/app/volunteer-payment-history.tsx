@@ -4,12 +4,11 @@ import { useRouter } from 'expo-router';
 import { useApp, PaymentRecord } from '@/context/AppContext';
 import { ArrowLeft, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function VolunteerPaymentHistoryScreen() {
   const router = useRouter();
   const { payments } = useApp();
-
-  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
 
   const handleRowPress = (item: PaymentRecord) => {
     if (item.ok) {

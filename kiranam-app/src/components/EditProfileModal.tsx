@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { validateRequired, validateEmail } from '@/utils/validators';
 import { X, Camera } from 'lucide-react-native';
 
 interface EditProfileModalProps {
@@ -76,13 +77,15 @@ export function EditProfileModal({ visible, onClose, currentName, currentEmail, 
 
   const handleSave = async () => {
     const trimmedName = name.trim();
-    if (!trimmedName) {
+    const nameError = validateRequired(name, 'Name');
+    if (nameError) {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
     const trimmedEmail = email.trim();
-    if (trimmedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      Alert.alert('Invalid email', 'Please enter a valid email address.');
+    const emailError = validateEmail(email);
+    if (emailError) {
+      Alert.alert('Invalid email', emailError);
       return;
     }
     setSaving(true);

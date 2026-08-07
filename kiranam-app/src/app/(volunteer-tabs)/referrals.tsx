@@ -7,6 +7,7 @@ import { EditReferralCodeModal } from '@/components/EditReferralCodeModal';
 import { statusMeta } from '@/utils/volunteerStatus';
 import { Copy, Share2, Pencil, Users, UserCheck, Wallet } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function ReferralsScreen() {
   const { myReferralCode, updateReferralCode, volunteerMembers } = useApp();
@@ -15,7 +16,6 @@ export default function ReferralsScreen() {
 
   const activeMembers = volunteerMembers.filter((m) => m.status === 'active');
   const monthlyTotal = activeMembers.reduce((acc, m) => acc + m.monthlyAmount, 0);
-  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(myReferralCode);

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
 import type { Campaign } from '@/context/AppContext';
+import { validateAmount } from '@/utils/validators';
 
 interface RecordContributionModalProps {
   visible: boolean;
@@ -38,8 +39,9 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
 
   const handleSave = async () => {
     const numericAmount = parseInt(amount, 10);
-    if (!numericAmount || numericAmount <= 0) {
-      Alert.alert('Amount required', 'Enter an amount greater than zero.');
+    const amountError = validateAmount(amount);
+    if (amountError) {
+      Alert.alert('Amount required', amountError);
       return;
     }
     if (type === 'campaign' && !selectedCampaignId) {

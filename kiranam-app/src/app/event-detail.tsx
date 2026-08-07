@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { GalleryLightbox } from '@/components/GalleryLightbox';
@@ -42,7 +43,7 @@ export default function EventDetailScreen() {
             <Share2 size={18} color="#0C0C0D" />
           </TouchableOpacity>
           {event.coverImageUrl ? (
-            <Image source={{ uri: event.coverImageUrl }} style={styles.coverImage} resizeMode="cover" />
+            <Image source={{ uri: event.coverImageUrl }} style={styles.coverImage} contentFit="cover" transition={200} />
           ) : (
             <View style={styles.coverPlaceholderContent}>
               <ImageIcon size={26} color="#C7C3BD" strokeWidth={1.5} />
@@ -93,7 +94,7 @@ export default function EventDetailScreen() {
                     activeOpacity={0.85}
                     onPress={() => setLightboxIndex(event.coverImageUrl ? i + 1 : i)}
                   >
-                    <Image source={{ uri: url }} style={styles.galleryCard} resizeMode="cover" />
+                    <Image source={{ uri: url }} style={styles.galleryCard} contentFit="cover" transition={200} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>

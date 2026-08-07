@@ -6,6 +6,7 @@ import { ChevronRight, Pencil } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeleteAccountModal } from '@/components/DeleteAccountModal';
 import { EditProfileModal } from '@/components/EditProfileModal';
+import { formatMoney } from '@/utils/format';
 
 export default function VolunteerProfileScreen() {
   const router = useRouter();
@@ -60,8 +61,6 @@ export default function VolunteerProfileScreen() {
 
   const getInitials = (name: string) =>
     name.split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2);
-
-  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

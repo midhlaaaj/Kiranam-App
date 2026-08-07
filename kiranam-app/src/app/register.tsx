@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { validateRequired, validateEmail, validateReferralCode } from '@/utils/validators';
 import { ArrowLeft, Check } from 'lucide-react-native';
 
 export default function RegisterScreen() {
@@ -16,12 +17,15 @@ export default function RegisterScreen() {
   const [refCode, setRefCode] = useState('');
   const [whatsappConsent, setWhatsappConsent] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; terms?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; refCode?: string; terms?: string }>({});
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreateAccount = async () => {
-    if (!name.trim()) {
-      setErrors({ name: 'Full Name is required' });
+    const nameError = validateRequired(name, 'Full Name');
+    const emailError = validateEmail(email);
+    const refCodeError = validateReferralCode(refCode);
+    if (nameError || emailError || refCodeError) {
+      setErrors({ name: nameError || undefined, email: emailError || undefined, refCode: refCodeError || undefined });
       return;
     }
     if (!agreedToTerms) {
@@ -76,7 +80,7 @@ export default function RegisterScreen() {
           value={name}
           onChangeText={(text) => {
             setName(text);
-            setErrors({});
+            setErrors((prev) => ({ ...prev, name: undefined }));
           }}
           placeholder="Enter your full name"
           error={errors.name}
@@ -87,10 +91,14 @@ export default function RegisterScreen() {
           variant="underline"
           label="Email (optional)"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text);
+            setErrors((prev) => ({ ...prev, email: undefined }));
+          }}
           placeholder="you@example.com"
           keyboardType="email-address"
           autoCapitalize="none"
+          error={errors.email}
         />
 
         {/* Referral Code Field — contributors only; volunteers generate their own code */}
@@ -99,9 +107,13 @@ export default function RegisterScreen() {
             variant="underline"
             label="Referral Code (optional)"
             value={refCode}
-            onChangeText={setRefCode}
+            onChangeText={(text) => {
+              setRefCode(text);
+              setErrors((prev) => ({ ...prev, refCode: undefined }));
+            }}
             placeholder="Enter referral code"
             autoCapitalize="characters"
+            error={errors.refCode}
           />
         )}
 

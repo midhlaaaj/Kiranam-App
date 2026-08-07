@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar } from 'react-native';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useApp, Campaign } from '@/context/AppContext';
 import { Card } from '@/components/Card';
 import { SegmentedToggle } from '@/components/SegmentedToggle';
 import { Bell, Heart, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function CampaignsScreen() {
   const router = useRouter();
@@ -15,9 +18,6 @@ export default function CampaignsScreen() {
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
   const filteredCampaigns = campaigns.filter(c => c.status === selectedTab);
 
-  const formatMoney = (amount: number) => {
-    return '₹' + amount.toLocaleString('en-IN');
-  };
 
   const handleShare = (title: string) => {
     Share.share({
@@ -64,18 +64,42 @@ export default function CampaignsScreen() {
             onPress={() => router.push({ pathname: '/campaign-detail', params: { id: item.id } })}
           >
             <Card style={styles.campaignCard}>
-              <View style={styles.campaignImageArea}>
-                <Heart size={22} color="#D8A8A8" strokeWidth={1.5} />
-                <Text style={styles.campaignImageText}>campaign photo</Text>
-                <TouchableOpacity
-                  style={styles.shareIconButton}
-                  onPress={() => handleShare(item.title)}
-                  activeOpacity={0.8}
-                  hitSlop={8}
+              {item.coverImageUrl ? (
+                <View style={styles.campaignImageArea}>
+                  <Image
+                    source={{ uri: item.coverImageUrl }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                  <TouchableOpacity
+                    style={styles.shareIconButton}
+                    onPress={() => handleShare(item.title)}
+                    activeOpacity={0.8}
+                    hitSlop={8}
+                  >
+                    <Share2 size={15} color="#0C0C0D" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
+                  locations={[0, 0.3, 0.65, 1]}
+                  start={{ x: 0.29, y: 0.05 }}
+                  end={{ x: 0.71, y: 0.95 }}
+                  style={styles.campaignImageArea}
                 >
-                  <Share2 size={15} color="#0C0C0D" />
-                </TouchableOpacity>
-              </View>
+                  <Heart size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
+                  <TouchableOpacity
+                    style={styles.shareIconButton}
+                    onPress={() => handleShare(item.title)}
+                    activeOpacity={0.8}
+                    hitSlop={8}
+                  >
+                    <Share2 size={15} color="#0C0C0D" />
+                  </TouchableOpacity>
+                </LinearGradient>
+              )}
               <Text style={styles.campaignTitle}>{item.title}</Text>
               
               <View style={styles.progressBarBg}>
@@ -161,6 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     marginBottom: 12,
+    overflow: 'hidden',
   },
   shareIconButton: {
     position: 'absolute',
@@ -177,12 +202,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
-  },
-  campaignImageText: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    color: '#B0ADA8',
-    textTransform: 'uppercase',
   },
   campaignTitle: {
     fontFamily: 'Inter',

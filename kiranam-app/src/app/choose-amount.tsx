@@ -4,8 +4,12 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { validateAmount } from '@/utils/validators';
+import { formatMoney } from '@/utils/format';
 import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const MIN_AMOUNT = 30;
 
 export default function ChooseAmountScreen() {
   const router = useRouter();
@@ -27,15 +31,16 @@ export default function ChooseAmountScreen() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(campaignId ? 100 : commitmentAmount);
   const [customAmount, setCustomAmount] = useState('');
   const [isCustomOpen, setIsCustomOpen] = useState(false);
+  const [amountError, setAmountError] = useState('');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const amountOptions = [
-    { value: 30, label: '₹30', sub: 'Minimum' },
-    { value: 50, label: '₹50', sub: null },
-    { value: 100, label: '₹100', sub: 'Recommended' },
-    { value: 250, label: '₹250', sub: null },
-    { value: 500, label: '₹500', sub: null },
-    { value: 1000, label: '₹1,000', sub: null },
+    { value: 30, label: formatMoney(30), sub: 'Minimum' },
+    { value: 50, label: formatMoney(50), sub: null },
+    { value: 100, label: formatMoney(100), sub: 'Recommended' },
+    { value: 250, label: formatMoney(250), sub: null },
+    { value: 500, label: formatMoney(500), sub: null },
+    { value: 1000, label: formatMoney(1000), sub: null },
   ];
 
   const handleSelectOption = (value: number) => {
@@ -48,6 +53,7 @@ export default function ChooseAmountScreen() {
   const handleCustomBoxPress = () => {
     setIsCustomOpen(true);
     setSelectedAmount(null);
+    setAmountError('');
   };
 
   const handleCustomAmountChange = (text: string) => {
@@ -55,13 +61,23 @@ export default function ChooseAmountScreen() {
     const capped = remaining !== null && numeric ? Math.min(parseInt(numeric, 10), remaining).toString() : numeric;
     setCustomAmount(capped);
     setSelectedAmount(capped ? parseInt(capped, 10) : null);
+    setAmountError('');
   };
 
   const currentFinalAmount = selectedAmount;
 
+  const validateCurrentAmount = () => {
+    const err = validateAmount(currentFinalAmount ?? '', {
+      min: MIN_AMOUNT,
+      max: remaining ?? undefined,
+      label: 'a contribution amount',
+    });
+    setAmountError(err || '');
+    return !err;
+  };
+
   const handleContinue = () => {
-    if (!currentFinalAmount || currentFinalAmount <= 0) return;
-    if (remaining !== null && currentFinalAmount > remaining) return;
+    if (!validateCurrentAmount() || !currentFinalAmount) return;
 
     // Route to secure payment
     router.push({
@@ -75,7 +91,7 @@ export default function ChooseAmountScreen() {
   };
 
   const handleSave = async () => {
-    if (!currentFinalAmount || currentFinalAmount <= 0) return;
+    if (!validateCurrentAmount() || !currentFinalAmount) return;
     setSaveState('saving');
     const { error } = await setCommitmentAmount(currentFinalAmount);
     if (error) {
@@ -132,7 +148,7 @@ export default function ChooseAmountScreen() {
 
           {remaining !== null && (
             <Text style={styles.remainingHint}>
-              Only ₹{remaining.toLocaleString('en-IN')} left to fully fund this campaign
+              Only {formatMoney(remaining)} left to fully fund this campaign
             </Text>
           )}
 
@@ -191,6 +207,7 @@ export default function ChooseAmountScreen() {
               <Text style={styles.customBoxText}>Custom Amount</Text>
             )}
           </TouchableOpacity>
+          {!!amountError && <Text style={styles.amountErrorText}>{amountError}</Text>}
 
           {/* Continue/Save button at bottom */}
           <View style={styles.buttonContainer}>
@@ -362,6 +379,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 15,
     color: '#0C0C0D',
+  },
+  amountErrorText: {
+    fontFamily: 'Inter',
+    fontSize: 12.5,
+    color: '#BA1A1A',
+    marginTop: -20,
+    marginBottom: 16,
   },
   customBoxActiveInner: {
     width: '100%',

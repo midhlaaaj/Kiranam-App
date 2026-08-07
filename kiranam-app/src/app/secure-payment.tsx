@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { ArrowLeft, Lock } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function SecurePaymentScreen() {
   const router = useRouter();
@@ -16,10 +17,6 @@ export default function SecurePaymentScreen() {
   const campaignId = params.campaignId as string | undefined;
 
   const [loading, setLoading] = useState(false);
-
-  const formatMoney = (amount: number) => {
-    return '₹' + amount.toLocaleString('en-IN');
-  };
 
   const handlePayNow = async () => {
     setLoading(true);

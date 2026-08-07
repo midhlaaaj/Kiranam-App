@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { GalleryLightbox } from '@/components/GalleryLightbox';
 import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function CampaignDetailScreen() {
   const router = useRouter();
@@ -17,10 +19,6 @@ export default function CampaignDetailScreen() {
   const campaign = campaigns.find(c => c.id === campaignId) || campaigns[0];
 
   if (!campaign) return null;
-
-  const formatMoney = (amount: number) => {
-    return '₹' + amount.toLocaleString('en-IN');
-  };
 
   const handleShare = () => {
     Share.share({
@@ -47,7 +45,7 @@ export default function CampaignDetailScreen() {
             <Share2 size={18} color="#0C0C0D" />
           </TouchableOpacity>
           {campaign.coverImageUrl ? (
-            <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} resizeMode="cover" />
+            <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} contentFit="cover" transition={200} />
           ) : (
             <View style={styles.coverPlaceholderContent}>
               <Heart size={26} color="#D8A8A8" strokeWidth={1.5} />
@@ -87,7 +85,7 @@ export default function CampaignDetailScreen() {
                     activeOpacity={0.85}
                     onPress={() => setLightboxIndex(campaign.coverImageUrl ? i + 1 : i)}
                   >
-                    <Image source={{ uri: url }} style={styles.galleryCard} resizeMode="cover" />
+                    <Image source={{ uri: url }} style={styles.galleryCard} contentFit="cover" transition={200} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>

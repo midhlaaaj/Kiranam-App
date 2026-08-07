@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/Card';
 import { Bell, Heart, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function VolunteerExploreScreen() {
   const router = useRouter();
@@ -14,8 +15,6 @@ export default function VolunteerExploreScreen() {
   const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
   const activeCampaigns = campaigns.filter((c) => c.status === 'active');
   const upcomingEvents = events.filter((e) => !e.isPast);
-
-  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
 
   const handleShareCampaign = (title: string) => {
     Share.share({

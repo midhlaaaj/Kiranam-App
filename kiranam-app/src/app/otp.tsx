@@ -16,7 +16,19 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/Button';
-import { ArrowLeft, Pencil, Check, X } from 'lucide-react-native';
+import { CountryCodePicker } from '@/components/CountryCodePicker';
+import { COUNTRIES, getCountryByIso2 } from '@/utils/countries';
+import { validatePhoneNumber } from '@/utils/validators';
+import { ArrowLeft, Pencil, Check, X, ChevronDown } from 'lucide-react-native';
+
+// Longest dial codes first, so e.g. "971" matches before "97" would.
+const SORTED_DIAL_CODES = [...COUNTRIES].sort((a, b) => b.dialCode.length - a.dialCode.length);
+
+function countryFromE164(phoneE164: string) {
+  const digits = phoneE164.replace('+', '');
+  const match = SORTED_DIAL_CODES.find((c) => digits.startsWith(c.dialCode));
+  return match || getCountryByIso2('IN')!;
+}
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -30,7 +42,9 @@ export default function OtpScreen() {
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [resendSeconds, setResendSeconds] = useState(30);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const [draftPhone, setDraftPhone] = useState(phone.replace('+91', ''));
+  const [draftCountry, setDraftCountry] = useState(() => countryFromE164(phone));
+  const [draftPhone, setDraftPhone] = useState(() => phone.replace('+' + draftCountry.dialCode, ''));
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
 
@@ -96,20 +110,27 @@ export default function OtpScreen() {
 
   const handleStartEditPhone = () => {
     animateLayout();
-    setDraftPhone(phone.replace('+91', ''));
+    const c = countryFromE164(phone);
+    setDraftCountry(c);
+    setDraftPhone(phone.replace('+' + c.dialCode, ''));
+    setError('');
     setIsEditingPhone(true);
   };
 
   const handleCancelEditPhone = () => {
     animateLayout();
+    setError('');
     setIsEditingPhone(false);
   };
 
   const handleSavePhone = () => {
-    const cleaned = draftPhone.replace(/\s+/g, '');
-    if (cleaned.length < 10) return;
+    const phoneErr = validatePhoneNumber(draftPhone, draftCountry.iso2 as any);
+    if (phoneErr) {
+      setError(phoneErr);
+      return;
+    }
     animateLayout();
-    const phoneE164 = '+91' + cleaned;
+    const phoneE164 = '+' + draftCountry.dialCode + draftPhone.replace(/\D/g, '');
     setPhone(phoneE164);
     setIsEditingPhone(false);
     handleResend(phoneE164);
@@ -188,27 +209,40 @@ export default function OtpScreen() {
         <Text style={styles.title}>Enter the code sent to</Text>
 
         {isEditingPhone ? (
-          <View style={styles.phoneEditPill}>
-            <Text style={styles.phonePillPrefix}>+91</Text>
-            <TextInput
-              style={styles.phoneEditInput}
-              placeholder="98765 43210"
-              placeholderTextColor="#B0ADA8"
-              keyboardType="number-pad"
-              textContentType="telephoneNumber"
-              autoComplete="tel"
-              maxLength={10}
-              value={draftPhone}
-              autoFocus
-              onChangeText={(text) => setDraftPhone(text.replace(/[^0-9]/g, ''))}
-            />
-            <TouchableOpacity style={styles.cancelPhoneButton} onPress={handleCancelEditPhone} hitSlop={8}>
-              <X size={17} color="#7A756E" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmPhoneButton} onPress={handleSavePhone} activeOpacity={0.8}>
-              <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
+          <>
+            <View style={styles.phoneEditPill}>
+              <TouchableOpacity
+                style={styles.phonePillPrefixButton}
+                onPress={() => setPickerVisible(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.phonePillPrefix}>{draftCountry.flag} +{draftCountry.dialCode}</Text>
+                <ChevronDown size={12} color="#7A756E" />
+              </TouchableOpacity>
+              <TextInput
+                style={styles.phoneEditInput}
+                placeholder="Phone number"
+                placeholderTextColor="#B0ADA8"
+                keyboardType="number-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
+                maxLength={15}
+                value={draftPhone}
+                autoFocus
+                onChangeText={(text) => {
+                  setError('');
+                  setDraftPhone(text.replace(/[^0-9]/g, ''));
+                }}
+              />
+              <TouchableOpacity style={styles.cancelPhoneButton} onPress={handleCancelEditPhone} hitSlop={8}>
+                <X size={17} color="#7A756E" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmPhoneButton} onPress={handleSavePhone} activeOpacity={0.8}>
+                <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
+              </TouchableOpacity>
+            </View>
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
+          </>
         ) : (
           <TouchableOpacity style={styles.phoneViewPill} onPress={handleStartEditPhone} activeOpacity={0.7}>
             <Text style={styles.phonePillText}>{phone || '+91 98765 43210'}</Text>
@@ -217,6 +251,16 @@ export default function OtpScreen() {
             </View>
           </TouchableOpacity>
         )}
+
+        <CountryCodePicker
+          visible={pickerVisible}
+          selectedIso2={draftCountry.iso2}
+          onSelect={(c) => {
+            setDraftCountry(c);
+            setError('');
+          }}
+          onClose={() => setPickerVisible(false)}
+        />
 
         <Text style={styles.subtitle}>A 6-digit code was sent via WhatsApp.</Text>
 
@@ -336,6 +380,11 @@ const styles = StyleSheet.create({
     height: 48,
     gap: 8,
     marginBottom: 16,
+  },
+  phonePillPrefixButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   phonePillPrefix: {
     fontFamily: 'Inter',

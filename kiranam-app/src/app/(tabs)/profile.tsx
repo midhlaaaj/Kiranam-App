@@ -6,6 +6,7 @@ import { ChevronRight, Pencil } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeleteAccountModal } from '@/components/DeleteAccountModal';
 import { EditProfileModal } from '@/components/EditProfileModal';
+import { formatMoney } from '@/utils/format';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -56,10 +57,6 @@ export default function ProfileScreen() {
   const handleAccountDeleted = () => {
     setDeleteModalVisible(false);
     router.replace('/');
-  };
-
-  const formatMoney = (amount: number) => {
-    return '₹' + amount.toLocaleString('en-IN');
   };
 
   const getInitials = (name: string) => {

@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList, StatusBar, Platform, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Platform, Animated, Easing } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '@/components/Button';
 import { Bell, Heart, Calendar, ArrowRight, ShieldCheck, ChevronRight, Check, Circle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 function SkeletonBlock({ style }: { style: any }) {
   const opacity = useRef(new Animated.Value(0.35)).current;
@@ -54,10 +56,6 @@ export default function HomeScreen() {
     { key: 'email', label: 'Add your email', done: !!userEmail, onPress: () => router.push('/(tabs)/profile') },
   ];
   const showSetupCard = !profileLoading && setupSteps.some((s) => !s.done);
-
-  const formatMoney = (amount: number) => {
-    return '₹' + amount.toLocaleString('en-IN');
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -196,9 +194,24 @@ export default function HomeScreen() {
                 activeOpacity={0.9}
                 onPress={() => router.push({ pathname: '/campaign-detail', params: { id: item.id } })}
               >
-                <View style={styles.campaignImagePlaceholder}>
-                  <Heart size={20} color="#D8A8A8" strokeWidth={1.5} />
-                </View>
+                {item.coverImageUrl ? (
+                  <Image
+                    source={{ uri: item.coverImageUrl }}
+                    style={styles.campaignImagePlaceholder}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                ) : (
+                  <LinearGradient
+                    colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
+                    locations={[0, 0.3, 0.65, 1]}
+                    start={{ x: 0.29, y: 0.05 }}
+                    end={{ x: 0.71, y: 0.95 }}
+                    style={styles.campaignImagePlaceholder}
+                  >
+                    <Heart size={20} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
+                  </LinearGradient>
+                )}
                 <Text style={styles.campaignCardTitle} numberOfLines={2}>{item.title}</Text>
 
                 <View style={styles.progressRow}>

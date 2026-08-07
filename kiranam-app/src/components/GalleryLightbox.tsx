@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, Image, StyleSheet, TouchableOpacity, FlatList, Dimensions, Text } from 'react-native';
+import { Modal, View, StyleSheet, TouchableOpacity, FlatList, Dimensions, Text } from 'react-native';
+import { Image } from 'expo-image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -53,7 +54,7 @@ export function GalleryLightbox({ visible, images, initialIndex, onClose }: Gall
           }}
           renderItem={({ item }) => (
             <View style={styles.slide}>
-              <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
+              <Image source={{ uri: item }} style={styles.image} contentFit="contain" />
             </View>
           )}
         />

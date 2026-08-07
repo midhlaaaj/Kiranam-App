@@ -4,29 +4,30 @@ import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { ArrowLeft } from 'lucide-react-native';
+import { CountryCodePicker } from '@/components/CountryCodePicker';
+import { getCountryByIso2 } from '@/utils/countries';
+import { validatePhoneNumber } from '@/utils/validators';
+import { ArrowLeft, ChevronDown } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { setPhone, signInWithPhone } = useApp();
   const [mode, setMode] = useState<'contributor' | 'volunteer'>('contributor');
+  const [country, setCountry] = useState(getCountryByIso2('IN')!);
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const validatePhone = () => {
-    const cleaned = phoneNumber.replace(/\s+/g, '');
-    if (cleaned.length < 10) {
-      setError('Please enter a valid 10-digit phone number');
-      return false;
-    }
-    setError('');
-    return true;
+    const err = validatePhoneNumber(phoneNumber, country.iso2 as any);
+    setError(err || '');
+    return !err;
   };
 
   const handleContinue = async () => {
     if (!validatePhone()) return;
-    const phoneE164 = '+91' + phoneNumber;
+    const phoneE164 = '+' + country.dialCode + phoneNumber.replace(/\D/g, '');
     setSubmitting(true);
     const { error: otpError } = await signInWithPhone(phoneE164);
     setSubmitting(false);
@@ -69,16 +70,21 @@ export default function LoginScreen() {
         {/* Custom Phone Number Input Row */}
         <Text style={styles.inputLabel}>Phone Number</Text>
         <View style={styles.phoneInputRow}>
-          <View style={styles.countryCodeBox}>
-            <Text style={styles.countryCodeText}>+91</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.countryCodeBox}
+            onPress={() => setPickerVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.countryCodeText}>{country.flag} +{country.dialCode}</Text>
+            <ChevronDown size={14} color="#7A756E" />
+          </TouchableOpacity>
           <View style={styles.numberInputContainer}>
             <Input
-              placeholder="98765 43210"
+              placeholder="Phone number"
               keyboardType="number-pad"
               textContentType="telephoneNumber"
               autoComplete="tel"
-              maxLength={10}
+              maxLength={15}
               value={phoneNumber}
               onChangeText={(text) => {
                 setError('');
@@ -92,6 +98,16 @@ export default function LoginScreen() {
             />
           </View>
         </View>
+
+        <CountryCodePicker
+          visible={pickerVisible}
+          selectedIso2={country.iso2}
+          onSelect={(c) => {
+            setCountry(c);
+            setError('');
+          }}
+          onClose={() => setPickerVisible(false)}
+        />
 
         {/* Continue CTA */}
         <Button
@@ -175,14 +191,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   countryCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
     borderWidth: 1.5,
     borderColor: '#E4E1DC',
     height: 56,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     justifyContent: 'center',
-    alignItems: 'center',
     // Subtle shadow
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },

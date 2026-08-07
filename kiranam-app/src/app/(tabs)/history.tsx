@@ -5,16 +5,13 @@ import { useApp, PaymentRecord } from '@/context/AppContext';
 import { Card } from '@/components/Card';
 import { Bell, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney } from '@/utils/format';
 
 export default function HistoryScreen() {
   const router = useRouter();
   const { payments, notifications } = useApp();
 
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
-
-  const formatMoney = (amount: number) => {
-    return '₹' + amount.toLocaleString('en-IN');
-  };
 
   const handleRowPress = (item: PaymentRecord) => {
     if (item.ok) {

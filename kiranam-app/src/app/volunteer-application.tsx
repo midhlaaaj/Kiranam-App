@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { validateRequired } from '@/utils/validators';
 import { ArrowLeft, HeartHandshake, Check } from 'lucide-react-native';
 
 export default function VolunteerApplicationScreen() {
@@ -15,7 +16,8 @@ export default function VolunteerApplicationScreen() {
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!motivation.trim()) {
+    const motivationError = validateRequired(motivation, 'Motivation');
+    if (motivationError) {
       setError('Tell us a little about why you want to volunteer');
       return;
     }

@@ -7,6 +7,7 @@ import { statusMeta } from '@/utils/volunteerStatus';
 import { RecordContributionModal } from '@/components/RecordContributionModal';
 import { ArrowLeft, Phone, MessageCircle, Send, Plus, IndianRupee } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatMoney, formatDate } from '@/utils/format';
 
 interface HistoryRow {
   date: string;
@@ -59,11 +60,7 @@ export default function VolunteerContributorDetailScreen() {
         if (cancelled) return;
         setHistory(
           (data || []).map((row) => ({
-            date: new Date(row.created_at).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            }),
+            date: formatDate(row.created_at),
             amount: Number(row.amount),
             ok: row.status === 'success',
           }))
@@ -96,7 +93,6 @@ export default function VolunteerContributorDetailScreen() {
   }
 
   const meta = statusMeta(member.status);
-  const formatMoney = (amount: number) => '₹' + amount.toLocaleString('en-IN');
   const digitsOnly = member.phone.replace(/\s+/g, '');
 
   const handleCall = () => Linking.openURL(`tel:${digitsOnly}`);
