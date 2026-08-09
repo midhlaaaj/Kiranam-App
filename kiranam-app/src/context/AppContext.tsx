@@ -868,14 +868,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     if (orderError || !orderData) throw orderError || new Error('Could not create payment order');
 
-    // TEMP: react-native-razorpay is a native module and isn't available in Expo Go.
-    // Re-enable this require once we rebuild a dev client with Razorpay linked back in.
-    let RazorpayCheckout: any;
-    try {
-      RazorpayCheckout = require('react-native-razorpay').default;
-    } catch {
-      throw new Error('Razorpay payments are disabled in this Expo Go test build.');
-    }
+    const RazorpayCheckout = require('react-native-razorpay').default;
     const checkoutResult = await RazorpayCheckout.open({
       key: orderData.keyId,
       amount: orderData.amount,
