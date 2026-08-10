@@ -18,9 +18,8 @@ export default function CampaignDetailScreen() {
   const campaignId = params.id as string | undefined;
   const campaign = campaigns.find(c => c.id === campaignId) || campaigns[0];
 
-  if (!campaign) return null;
-
   const handleShare = () => {
+    if (!campaign) return;
     Share.share({
       message: `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.org`,
     });
@@ -28,10 +27,14 @@ export default function CampaignDetailScreen() {
 
   // Landed here from the "close to goal" push notification (?share=1) —
   // open the share sheet immediately instead of making them find the icon.
+  // Runs before the `!campaign` early return below so this hook is always
+  // called on every render, not just when a campaign happens to be loaded.
   useEffect(() => {
     if (params.share === '1') handleShare();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.share]);
+
+  if (!campaign) return null;
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
