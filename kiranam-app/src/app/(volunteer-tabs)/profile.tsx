@@ -19,7 +19,6 @@ export default function VolunteerProfileScreen() {
     signOut,
     deleteAccount,
     updateName,
-    updateEmail,
     updateProfilePhoto,
     hasCommitment,
     commitmentAmount,
@@ -167,10 +166,8 @@ export default function VolunteerProfileScreen() {
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}
         currentName={userName}
-        currentEmail={userEmail}
         currentAvatarUrl={userAvatarUrl}
         onSaveName={updateName}
-        onSaveEmail={updateEmail}
         onSavePhoto={updateProfilePhoto}
       />
     </SafeAreaView>

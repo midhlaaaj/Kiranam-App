@@ -85,16 +85,15 @@ interface AppContextType {
   isEmailVerified: boolean;
   emailReceipt: (receipt: { txnId: string; amount: number; label: string; dateStr: string; pdfBase64: string }) => Promise<{ error: string | null }>;
   userAvatarUrl: string;
-  referralCode: string;
-  setReferralCode: (code: string) => void;
   isLoggedIn: boolean;
   isVolunteer: boolean;
   myReferralCode: string;
   updateReferralCode: (code: string) => Promise<{ error: string | null }>;
 
   // Auth actions (backed by Supabase)
-  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
-  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUpWithEmail: (email: string, password: string, role: 'contributor' | 'volunteer') => Promise<{ error: string | null }>;
+  resendSignupVerification: (email: string, role: 'contributor' | 'volunteer') => Promise<{ error: string | null }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null; code?: string }>;
   requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: string | null }>;
@@ -103,6 +102,7 @@ interface AppContextType {
     phone: string;
     role: 'contributor' | 'volunteer';
     whatsappConsent?: boolean;
+    referralCode?: string;
   }) => Promise<{ error: string | null }>;
   updateName: (fullName: string) => Promise<{ error: string | null }>;
   updateEmail: (email: string) => Promise<{ error: string | null }>;
@@ -144,6 +144,13 @@ interface AppContextType {
   markAllNotificationsAsRead: () => void;
   deleteAllNotifications: () => Promise<void>;
   addCampaign: (campaign: Omit<Campaign, 'id' | 'raisedFmt' | 'goalFmt' | 'pct'>) => void;
+
+  // Manual refresh (pull-to-refresh) — data also auto-syncs via realtime
+  // subscriptions and foreground/interval polling, see AppProvider.
+  refreshCampaigns: () => Promise<void>;
+  refreshEvents: () => Promise<void>;
+  refreshUserData: () => Promise<void>;
+  refreshAll: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -255,7 +262,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userAvatarUrl, setUserAvatarUrl] = useState('');
-  const [referralCode, setReferralCode] = useState('');
   const [isVolunteer, setIsVolunteer] = useState(false);
   const [myReferralCode, setMyReferralCode] = useState('');
 
@@ -282,6 +288,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   userNameRef.current = userName;
   const userEmailRef = useRef(userEmail);
   userEmailRef.current = userEmail;
+  // Lets refreshUserData stay referentially stable across token refreshes
+  // (which replace `session`) instead of re-subscribing every realtime
+  // channel that depends on it.
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
 
   // Track auth session
   useEffect(() => {
@@ -405,11 +416,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Any contribution (in-app payment, or a volunteer/admin recording one
     // offline) bumps campaigns.raised via a DB trigger. Subscribing to that
     // table's changes pushes the new progress to every viewer instantly,
-    // instead of waiting on the poll/foreground refresh below.
+    // instead of waiting on the poll/foreground refresh below. Events change
+    // far less often but are cheap to piggyback on the same channel.
     const campaignsChannel = supabase
-      .channel('campaigns-progress')
+      .channel('public-content')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'campaigns' }, () => {
         refreshCampaigns();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        refreshEvents();
       })
       .subscribe();
 
@@ -436,6 +451,131 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [refreshCampaigns, refreshEvents]);
 
+  // Fetches every table scoped to one signed-in user (profile, volunteer
+  // status/network, contributions, notifications, commitment) and writes it
+  // straight into state. Shared by the initial load-on-session-change effect
+  // below, manual pull-to-refresh, and the realtime/foreground refresh effect
+  // further down — kept dependency-free so all three stay referentially stable.
+  const loadUserData = useCallback(async (uid: string) => {
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', uid).single();
+    if (profile) {
+      setUserName(profile.full_name || '');
+      setUserEmail(profile.email || '');
+      setUserAvatarUrl(profile.avatar_url || '');
+      setPhone(profile.phone ? normalizePhone(profile.phone) : '');
+    }
+
+    const { data: application } = await supabase
+      .from('volunteer_applications')
+      .select('status')
+      .eq('profile_id', uid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const volunteerEligible = profile?.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved';
+    setIsVolunteer(!!volunteerEligible);
+
+    if (volunteerEligible) {
+      const code = await ensureReferralCode(uid, profile?.full_name || userNameRef.current);
+      setMyReferralCode(code);
+
+      const { data: assignments } = await supabase
+        .from('contributor_assignments')
+        .select('contributor_id')
+        .eq('volunteer_id', uid);
+      const contributorIds = (assignments || []).map((a) => a.contributor_id);
+
+      if (contributorIds.length > 0) {
+        const [{ data: memberProfiles }, { data: memberCommitments }] = await Promise.all([
+          supabase.from('profiles').select('id, full_name, phone, created_at').in('id', contributorIds),
+          supabase.from('commitments').select('contributor_id, monthly_amount, autopay_enabled, next_due_date').in('contributor_id', contributorIds),
+        ]);
+        const commitmentByContributor = new Map((memberCommitments || []).map((c) => [c.contributor_id, c]));
+        setVolunteerMembers((memberProfiles || []).map((p) => {
+          const commitment = commitmentByContributor.get(p.id);
+          return {
+            id: p.id,
+            name: p.full_name || 'Unnamed',
+            phone: p.phone || '',
+            joinedLabel: formatJoinedLabel(p.created_at),
+            status: deriveMemberStatus(commitment),
+            monthlyAmount: commitment ? Number(commitment.monthly_amount) : 500,
+          };
+        }));
+      } else {
+        setVolunteerMembers([]);
+      }
+    } else {
+      setMyReferralCode('');
+      setVolunteerMembers([]);
+    }
+
+    const { data: contributions } = await supabase
+      .from('contributions')
+      .select('*')
+      .eq('contributor_id', uid)
+      .order('created_at', { ascending: false });
+    if (contributions) {
+      setPayments(contributions.map((c) => ({
+        id: c.transaction_ref || c.id,
+        date: formatDate(c.created_at),
+        label: c.label,
+        amount: Number(c.amount),
+        ok: c.status === 'success',
+        failed: c.status !== 'success',
+      })));
+    }
+
+    const { data: notifs } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('profile_id', uid)
+      .order('created_at', { ascending: false });
+    if (notifs) {
+      setNotifications(notifs.map((n) => ({
+        id: n.id,
+        isContribution: n.category === 'contribution',
+        isCampaign: n.category === 'campaign',
+        isSystem: n.category === 'system',
+        title: n.title,
+        desc: n.body || '',
+        time: formatDate(n.created_at, { month: 'short', day: 'numeric' }),
+        unread: !n.is_read,
+        cat: n.category,
+        deepLink: n.deep_link || null,
+      })));
+    }
+
+    const { data: commitment } = await supabase
+      .from('commitments')
+      .select('*')
+      .eq('contributor_id', uid)
+      .maybeSingle();
+    if (commitment) {
+      setHasCommitment(true);
+      setCommitmentAmountState(Number(commitment.monthly_amount));
+      setAutopayEnabledState(commitment.autopay_enabled);
+      setNextDueDateState(formatDueDateLabel(commitment.next_due_date));
+      setNextDueDateIso(commitment.next_due_date);
+    } else {
+      setHasCommitment(false);
+      setCommitmentAmountState(500);
+      setAutopayEnabledState(true);
+      setNextDueDateState('');
+      setNextDueDateIso(null);
+    }
+  }, []);
+
+  // Manual/realtime/foreground refresh entry point — always targets whoever
+  // is currently signed in, read from a ref so this stays stable across
+  // token refreshes (see sessionRef above).
+  const refreshUserData = useCallback(async () => {
+    const current = sessionRef.current;
+    if (!current) return;
+    await loadUserData(current.user.id);
+  }, [loadUserData]);
+
   // Load everything scoped to the signed-in user whenever the session changes
   useEffect(() => {
     if (!session) {
@@ -460,123 +600,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let cancelled = false;
     setProfileLoading(true);
     registerPushToken(uid);
-
-    (async () => {
-      const { data: profile } = await supabase.from('profiles').select('*').eq('id', uid).single();
-      if (cancelled) return;
-      if (profile) {
-        setUserName(profile.full_name || '');
-        setUserEmail(profile.email || '');
-        setUserAvatarUrl(profile.avatar_url || '');
-        setPhone(profile.phone ? normalizePhone(profile.phone) : '');
-      }
-
-      const { data: application } = await supabase
-        .from('volunteer_applications')
-        .select('status')
-        .eq('profile_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const volunteerEligible = profile?.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved';
-      setIsVolunteer(!!volunteerEligible);
-
-      if (volunteerEligible) {
-        const code = await ensureReferralCode(uid, profile?.full_name || userNameRef.current);
-        if (!cancelled) setMyReferralCode(code);
-
-        const { data: assignments } = await supabase
-          .from('contributor_assignments')
-          .select('contributor_id')
-          .eq('volunteer_id', uid);
-        const contributorIds = (assignments || []).map((a) => a.contributor_id);
-
-        if (contributorIds.length > 0) {
-          const [{ data: memberProfiles }, { data: memberCommitments }] = await Promise.all([
-            supabase.from('profiles').select('id, full_name, phone, created_at').in('id', contributorIds),
-            supabase.from('commitments').select('contributor_id, monthly_amount, autopay_enabled, next_due_date').in('contributor_id', contributorIds),
-          ]);
-          if (!cancelled) {
-            const commitmentByContributor = new Map((memberCommitments || []).map((c) => [c.contributor_id, c]));
-            setVolunteerMembers((memberProfiles || []).map((p) => {
-              const commitment = commitmentByContributor.get(p.id);
-              return {
-                id: p.id,
-                name: p.full_name || 'Unnamed',
-                phone: p.phone || '',
-                joinedLabel: formatJoinedLabel(p.created_at),
-                status: deriveMemberStatus(commitment),
-                monthlyAmount: commitment ? Number(commitment.monthly_amount) : 500,
-              };
-            }));
-          }
-        } else if (!cancelled) {
-          setVolunteerMembers([]);
-        }
-      } else {
-        setMyReferralCode('');
-        setVolunteerMembers([]);
-      }
-
-      const { data: contributions } = await supabase
-        .from('contributions')
-        .select('*')
-        .eq('contributor_id', uid)
-        .order('created_at', { ascending: false });
-      if (!cancelled && contributions) {
-        setPayments(contributions.map((c) => ({
-          id: c.transaction_ref || c.id,
-          date: formatDate(c.created_at),
-          label: c.label,
-          amount: Number(c.amount),
-          ok: c.status === 'success',
-          failed: c.status !== 'success',
-        })));
-      }
-
-      const { data: notifs } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('profile_id', uid)
-        .order('created_at', { ascending: false });
-      if (!cancelled && notifs) {
-        setNotifications(notifs.map((n) => ({
-          id: n.id,
-          isContribution: n.category === 'contribution',
-          isCampaign: n.category === 'campaign',
-          isSystem: n.category === 'system',
-          title: n.title,
-          desc: n.body || '',
-          time: formatDate(n.created_at, { month: 'short', day: 'numeric' }),
-          unread: !n.is_read,
-          cat: n.category,
-          deepLink: n.deep_link || null,
-        })));
-      }
-
-      const { data: commitment } = await supabase
-        .from('commitments')
-        .select('*')
-        .eq('contributor_id', uid)
-        .maybeSingle();
-      if (!cancelled) {
-        if (commitment) {
-          setHasCommitment(true);
-          setCommitmentAmountState(Number(commitment.monthly_amount));
-          setAutopayEnabledState(commitment.autopay_enabled);
-          setNextDueDateState(formatDueDateLabel(commitment.next_due_date));
-          setNextDueDateIso(commitment.next_due_date);
-        } else {
-          setHasCommitment(false);
-          setCommitmentAmountState(500);
-          setAutopayEnabledState(true);
-          setNextDueDateState('');
-          setNextDueDateIso(null);
-        }
-      }
+    loadUserData(uid).finally(() => {
       if (!cancelled) setProfileLoading(false);
-    })();
+    });
 
     return () => {
       cancelled = true;
@@ -585,7 +611,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // trigger a full reload — a session reference change for the same user
   // (token refresh, the email-reconciliation effect above, etc.) shouldn't
   // flash every card on the screen back to its loading skeleton.
-  }, [session?.user?.id]);
+  }, [session?.user?.id, loadUserData]);
+
+  // Any contribution, notification, or commitment change for this user (an
+  // admin/volunteer recording an offline payment, autopay toggling, a new
+  // notification landing) pushes instantly via realtime, with the same
+  // foreground/poll fallback pattern as the public campaigns/events channel.
+  useEffect(() => {
+    if (!session) return;
+    const uid = session.user.id;
+
+    const userChannel = supabase
+      .channel(`user-data-${uid}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contributions', filter: `contributor_id=eq.${uid}` }, () => {
+        refreshUserData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `profile_id=eq.${uid}` }, () => {
+        refreshUserData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'commitments', filter: `contributor_id=eq.${uid}` }, () => {
+        refreshUserData();
+      })
+      .subscribe();
+
+    const subscription = AppState.addEventListener('change', (next) => {
+      if (next === 'active') refreshUserData();
+    });
+    const interval = setInterval(() => {
+      if (AppState.currentState === 'active') refreshUserData();
+    }, 60000);
+
+    return () => {
+      supabase.removeChannel(userChannel);
+      subscription.remove();
+      clearInterval(interval);
+    };
+  }, [session?.user?.id, refreshUserData]);
 
   // Recalculate giving totals when payments list updates
   useEffect(() => {
@@ -598,14 +659,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCampaignGiving(campaignTotal);
   }, [payments]);
 
-  const signUpWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+  // Email confirmation is mandatory before the account is usable — saveProfile
+  // (below) requires a session, and Supabase withholds one until the link in
+  // this email is clicked. The link routes through kiranam-admin's shared
+  // /auth/confirm (see requestPasswordReset below), carrying `role` along so
+  // the app knows to land back on /register once verified.
+  const signUpWithEmail = async (email: string, password: string, role: 'contributor' | 'volunteer') => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `kiranamapp://email-verified?role=${role}` },
+    });
+    return { error: error?.message ?? null };
+  };
+
+  const resendSignupVerification = async (email: string, role: 'contributor' | 'volunteer') => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `kiranamapp://email-verified?role=${role}` },
+    });
     return { error: error?.message ?? null };
   };
 
   const signInWithEmail = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    // `code` (e.g. 'email_not_confirmed') lets callers branch on *why* sign-in
+    // failed, not just show the raw message — see password.tsx, which routes
+    // an unconfirmed account back to verify-email instead of dead-ending on
+    // an error the user has no obvious next step for.
+    return { error: error?.message ?? null, code: error?.code };
   };
 
   const requestPasswordReset = async (email: string) => {
@@ -643,6 +726,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     phone: string;
     role: 'contributor' | 'volunteer';
     whatsappConsent?: boolean;
+    referralCode?: string;
   }) => {
     if (!session) return { error: 'Not signed in' };
     // Writing `phone` here (rather than a separate follow-up call) matters:
@@ -663,6 +747,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (error) return { error: error.message };
     setUserName(fields.fullName);
     setPhone(fields.phone);
+
+    // The only place a contributor gets linked to a volunteer: a valid
+    // referral code typed (or auto-read from a referral link) at signup.
+    // redeem_referral_code is SECURITY DEFINER because contributors have no
+    // RLS access to read referrals or write contributor_assignments directly.
+    // A bad/missing code is silently a no-op — it must never block signup.
+    if (fields.role === 'contributor' && fields.referralCode?.trim()) {
+      await supabase.rpc('redeem_referral_code', { code: fields.referralCode.trim() });
+    }
     return { error: null };
   };
 
@@ -715,6 +808,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUserEmail(trimmed);
     return { error: null };
   };
+
 
   const emailReceipt = async (receipt: { txnId: string; amount: number; label: string; dateStr: string; pdfBase64: string }) => {
     if (!session) return { error: 'Not signed in' };
@@ -1055,6 +1149,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const refreshAll = useCallback(async () => {
+    await Promise.all([refreshCampaigns(), refreshEvents(), refreshUserData()]);
+  }, [refreshCampaigns, refreshEvents, refreshUserData]);
+
   const isPaidThisCycle = !!nextDueDateIso && new Date(nextDueDateIso).getTime() > Date.now();
   // Not just "does this session have a confirmed email" — it must be *this*
   // email that's confirmed. Otherwise, right after typing in a new unverified
@@ -1075,12 +1173,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isEmailVerified,
       emailReceipt,
       userAvatarUrl,
-      referralCode, setReferralCode,
       isLoggedIn: !!session,
       isVolunteer,
       myReferralCode,
       updateReferralCode,
       signUpWithEmail,
+      resendSignupVerification,
       signInWithEmail,
       requestPasswordReset,
       signOut,
@@ -1110,7 +1208,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       markNotificationAsRead,
       markAllNotificationsAsRead,
       deleteAllNotifications,
-      addCampaign
+      addCampaign,
+      refreshCampaigns,
+      refreshEvents,
+      refreshUserData,
+      refreshAll,
     }}>
       {children}
     </AppContext.Provider>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/Card';
@@ -10,9 +10,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
 
 export default function ReferralsScreen() {
-  const { myReferralCode, updateReferralCode, volunteerMembers } = useApp();
+  const { myReferralCode, updateReferralCode, volunteerMembers, refreshUserData } = useApp();
   const [copied, setCopied] = useState(false);
   const [editCodeVisible, setEditCodeVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshUserData();
+    setRefreshing(false);
+  }, [refreshUserData]);
 
   const activeMembers = volunteerMembers.filter((m) => m.status === 'active');
   const monthlyTotal = activeMembers.reduce((acc, m) => acc + m.monthlyAmount, 0);
@@ -36,7 +43,11 @@ export default function ReferralsScreen() {
         <Text style={styles.headerTitle}>Referrals</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
+      >
         {/* Referral Code Card */}
         <Card variant="dark" style={styles.referralCard}>
           <View style={styles.glowOverlay} />

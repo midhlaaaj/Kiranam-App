@@ -38,5 +38,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL('/login?error=reset_link_invalid', request.url));
+  // A neutral, unbranded-to-admin page — not /login. A contributor or
+  // volunteer whose link expired should never land on the admin sign-in
+  // screen; this route is shared across all three Kiranam apps, and most
+  // of the people clicking these links aren't admins at all.
+  return NextResponse.redirect(new URL('/auth/error', request.url));
 }

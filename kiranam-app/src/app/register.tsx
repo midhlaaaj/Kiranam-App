@@ -5,9 +5,11 @@ import * as Localization from 'expo-localization';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { Toast } from '@/components/Toast';
 import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { getCountryByIso2 } from '@/utils/countries';
 import { validateRequired, validatePhoneNumber, validateReferralCode } from '@/utils/validators';
+import { friendlyError } from '@/utils/errors';
 import { ArrowLeft, Check, ChevronDown } from 'lucide-react-native';
 
 // Default the country picker to the device's own region instead of always
@@ -21,7 +23,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string }>();
   const role = params.role === 'volunteer' ? 'volunteer' : 'contributor';
-  const { saveProfile, setReferralCode } = useApp();
+  const { saveProfile } = useApp();
   const [name, setName] = useState('');
   const [country, setCountry] = useState(deviceDefaultCountry);
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -32,6 +34,7 @@ export default function RegisterScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; phone?: string; refCode?: string; terms?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const handleCreateAccount = async () => {
     const nameError = validateRequired(name, 'Full Name');
@@ -54,13 +57,22 @@ export default function RegisterScreen() {
     // here early let people get full volunteer-tab access — or get stuck
     // in a half-registered state with no reviewable application — just by
     // abandoning the next screen before actually applying.
-    const { error } = await saveProfile({ fullName: name, phone: phoneE164, role: 'contributor', whatsappConsent });
+    const { error } = await saveProfile({ fullName: name, phone: phoneE164, role: 'contributor', whatsappConsent, referralCode: refCode });
     setSubmitting(false);
     if (error) {
-      setErrors({ name: error });
+      // Network/server failures aren't about anything the person typed, so
+      // they don't belong pinned to the Full Name field — that previously
+      // left the raw `TypeError: Network request failed` message sitting
+      // under an unrelated input (or invisible, depending on the OS's
+      // default uncaught-error toast). Route those to a proper banner with
+      // a human-readable message instead; keep field-shaped errors inline.
+      if (/network request failed/i.test(error)) {
+        setToastMessage(friendlyError(error));
+      } else {
+        setErrors({ name: error });
+      }
       return;
     }
-    setReferralCode(refCode);
 
     if (role === 'volunteer') {
       router.push('/volunteer-application');
@@ -218,6 +230,7 @@ export default function RegisterScreen() {
           />
         </View>
       </ScrollView>
+      <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
     </KeyboardAvoidingView>
   );
 }

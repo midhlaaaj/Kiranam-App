@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert, Linking, StatusBar } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert, Linking, StatusBar, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp, VolunteerMember } from '@/context/AppContext';
 import { Input } from '@/components/Input';
@@ -12,12 +12,19 @@ type FilterTab = 'all' | 'active' | 'due' | 'overdue' | 'inactive';
 export default function ContributorsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { volunteerMembers } = useApp();
+  const { volunteerMembers, refreshUserData } = useApp();
   const initialFilter = (params.filter as FilterTab) || 'all';
   const [selectedTab, setSelectedTab] = useState<FilterTab>(
     ['all', 'active', 'due', 'overdue', 'inactive'].includes(initialFilter) ? initialFilter : 'all'
   );
   const [query, setQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshUserData();
+    setRefreshing(false);
+  }, [refreshUserData]);
 
   const filteredMembers = volunteerMembers.filter((m) => {
     const matchesTab = selectedTab === 'all' ? true : m.status === selectedTab;
@@ -101,6 +108,7 @@ export default function ContributorsScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => {
           const meta = statusMeta(item.status);
           return (

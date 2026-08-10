@@ -20,7 +20,7 @@ export default function EventDetailScreen() {
 
   const handleShare = () => {
     Share.share({
-      message: `Join "${event.title}" — a Kiranam event. See details and RSVP: https://kiranam.org`,
+      message: `Join "${event.title}" — a Kiranam event. See details and RSVP: https://kiranam.online`,
     });
   };
 

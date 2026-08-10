@@ -4,7 +4,9 @@ import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { Toast } from '@/components/Toast';
 import { validateRequired } from '@/utils/validators';
+import { friendlyError } from '@/utils/errors';
 import { ArrowLeft, HeartHandshake, Check } from 'lucide-react-native';
 
 export default function VolunteerApplicationScreen() {
@@ -30,7 +32,7 @@ export default function VolunteerApplicationScreen() {
     const { error: applyError } = await applyForVolunteer(motivation);
     setSubmitting(false);
     if (applyError) {
-      setError(applyError);
+      setError(friendlyError(applyError));
       return;
     }
     router.replace('/pending');
@@ -90,8 +92,6 @@ export default function VolunteerApplicationScreen() {
           </Text>
         </TouchableOpacity>
 
-        {!!error && <Text style={styles.errorText}>{error}</Text>}
-
         {/* Submit CTA */}
         <View style={styles.buttonContainer}>
           <Button
@@ -101,6 +101,7 @@ export default function VolunteerApplicationScreen() {
           />
         </View>
       </ScrollView>
+      <Toast message={error || null} onDismiss={() => setError('')} />
     </KeyboardAvoidingView>
   );
 }
@@ -176,12 +177,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: '#7A756E',
-  },
-  errorText: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    color: '#BA1A1A',
-    marginTop: 10,
   },
   buttonContainer: {
     marginTop: 'auto',

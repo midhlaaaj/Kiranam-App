@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -11,15 +11,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function EventsScreen() {
   const router = useRouter();
-  const { events, notifications } = useApp();
+  const { events, notifications, refreshEvents } = useApp();
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshEvents();
+    setRefreshing(false);
+  }, [refreshEvents]);
 
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
   const filteredEvents = events.filter(e => (selectedTab === 'upcoming' ? !e.isPast : e.isPast));
 
   const handleShare = (title: string) => {
     Share.share({
-      message: `Join "${title}" — a Kiranam event. See details and RSVP: https://kiranam.org`,
+      message: `Join "${title}" — a Kiranam event. See details and RSVP: https://kiranam.online`,
     });
   };
 
@@ -56,8 +63,9 @@ export default function EventsScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => router.push({ pathname: '/event-detail', params: { id: item.id } })}
           >

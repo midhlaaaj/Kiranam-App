@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -12,8 +12,15 @@ import { formatMoney } from '@/utils/format';
 
 export default function CampaignsScreen() {
   const router = useRouter();
-  const { campaigns, notifications } = useApp();
+  const { campaigns, notifications, refreshCampaigns } = useApp();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed'>('active');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshCampaigns();
+    setRefreshing(false);
+  }, [refreshCampaigns]);
 
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
   const filteredCampaigns = campaigns.filter(c => c.status === selectedTab);
@@ -21,7 +28,7 @@ export default function CampaignsScreen() {
 
   const handleShare = (title: string) => {
     Share.share({
-      message: `Help support "${title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.org`,
+      message: `Help support "${title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.online`,
     });
   };
 
@@ -58,8 +65,9 @@ export default function CampaignsScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => (
-          <TouchableOpacity 
+          <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => router.push({ pathname: '/campaign-detail', params: { id: item.id } })}
           >

@@ -75,7 +75,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   // (a single-use recovery token routed through mobile-auth-bridge into the
   // app), so a failed send here doesn't block the registration itself; an
   // admin can still trigger a normal "forgot password" from the app later.
-  const adminSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const authSiteUrl = process.env.NEXT_PUBLIC_AUTH_SITE_URL || 'http://localhost:3000';
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'recovery',
     email,
@@ -83,7 +83,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   if (linkError || !linkData?.properties?.hashed_token) {
     console.error('registerContributor: generateLink failed:', linkError);
   } else {
-    const claimUrl = `${adminSiteUrl}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=recovery&next=${encodeURIComponent('kiranamapp://reset-password')}`;
+    const claimUrl = `${authSiteUrl}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=recovery&next=${encodeURIComponent('kiranamapp://reset-password')}`;
     const { error: emailError } = await sendEmail({
       to: email,
       subject: 'Set your password for Kiranam',
@@ -107,6 +107,47 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   await logAction(admin.id, 'register_contributor', 'profiles', contributorId, { fullName, monthlyAmount });
   revalidatePath('/contributors');
   return { message: `${fullName} has been registered as a contributor.` };
+}
+
+export async function assignVolunteer(contributorId: string, formData: FormData) {
+  const admin = await verifyAdmin();
+  const volunteerId = String(formData.get('volunteerId') || '');
+  if (!volunteerId) return;
+
+  const supabase = await createClient();
+
+  // A contributor has at most one volunteer at a time (mirrors the
+  // volunteer-side assignment UI), so picking a new one replaces the old
+  // assignment rather than adding a second row.
+  const { error: deleteError } = await supabase
+    .from('contributor_assignments')
+    .delete()
+    .eq('contributor_id', contributorId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  const { error } = await supabase
+    .from('contributor_assignments')
+    .insert({ volunteer_id: volunteerId, contributor_id: contributorId });
+  if (error) throw new Error(error.message);
+
+  await logAction(admin.id, 'assign_contributor', 'contributor_assignments', contributorId, { volunteerId });
+  revalidatePath(`/contributors/${contributorId}`);
+  revalidatePath(`/volunteers/${volunteerId}`);
+}
+
+export async function unassignVolunteer(contributorId: string, volunteerId: string) {
+  const admin = await verifyAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('contributor_assignments')
+    .delete()
+    .eq('contributor_id', contributorId)
+    .eq('volunteer_id', volunteerId);
+  if (error) throw new Error(error.message);
+
+  await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', contributorId, { volunteerId });
+  revalidatePath(`/contributors/${contributorId}`);
+  revalidatePath(`/volunteers/${volunteerId}`);
 }
 
 export interface OfflinePaymentState {

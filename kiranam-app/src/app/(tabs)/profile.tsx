@@ -23,7 +23,6 @@ export default function ProfileScreen() {
     signOut,
     deleteAccount,
     updateName,
-    updateEmail,
     updateProfilePhoto,
   } = useApp();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -181,10 +180,8 @@ export default function ProfileScreen() {
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}
         currentName={userName}
-        currentEmail={userEmail}
         currentAvatarUrl={userAvatarUrl}
         onSaveName={updateName}
-        onSaveEmail={updateEmail}
         onSavePhoto={updateProfilePhoto}
       />
     </SafeAreaView>

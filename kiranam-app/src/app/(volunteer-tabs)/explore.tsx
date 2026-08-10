@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/Card';
@@ -9,8 +9,15 @@ import { formatMoney } from '@/utils/format';
 
 export default function VolunteerExploreScreen() {
   const router = useRouter();
-  const { campaigns, events, notifications } = useApp();
+  const { campaigns, events, notifications, refreshCampaigns, refreshEvents } = useApp();
   const [mode, setMode] = useState<'campaigns' | 'events'>('campaigns');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refreshCampaigns(), refreshEvents()]);
+    setRefreshing(false);
+  }, [refreshCampaigns, refreshEvents]);
 
   const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
   const activeCampaigns = campaigns.filter((c) => c.status === 'active');
@@ -18,13 +25,13 @@ export default function VolunteerExploreScreen() {
 
   const handleShareCampaign = (title: string) => {
     Share.share({
-      message: `Help support "${title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.org`,
+      message: `Help support "${title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.online`,
     });
   };
 
   const handleShareEvent = (title: string) => {
     Share.share({
-      message: `Join "${title}" — a Kiranam event. See details and RSVP: https://kiranam.org`,
+      message: `Join "${title}" — a Kiranam event. See details and RSVP: https://kiranam.online`,
     });
   };
 
@@ -63,6 +70,7 @@ export default function VolunteerExploreScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
           renderItem={({ item }) => (
             <Card style={styles.campaignCard}>
               <TouchableOpacity
@@ -103,6 +111,7 @@ export default function VolunteerExploreScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
           renderItem={({ item }) => (
             <TouchableOpacity
               activeOpacity={0.9}

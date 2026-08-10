@@ -28,7 +28,7 @@ export default function SupportScreen() {
   };
 
   const WHATSAPP_NUMBER = '919876543210'; // TODO: replace with the real support WhatsApp number before submission
-  const SUPPORT_EMAIL = 'support@kiranam.org';
+  const SUPPORT_EMAIL = 'support@kiranam.online';
 
   const handleWhatsApp = () => {
     const url = `https://wa.me/${WHATSAPP_NUMBER}`;

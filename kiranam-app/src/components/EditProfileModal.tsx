@@ -1,33 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { validateRequired, validateEmail } from '@/utils/validators';
+import { validateRequired } from '@/utils/validators';
 import { X, Camera } from 'lucide-react-native';
 
 interface EditProfileModalProps {
   visible: boolean;
   onClose: () => void;
   currentName: string;
-  currentEmail: string;
   currentAvatarUrl: string;
   onSaveName: (name: string) => Promise<{ error: string | null }>;
-  onSaveEmail: (email: string) => Promise<{ error: string | null }>;
   onSavePhoto: (localUri: string) => Promise<{ error: string | null; url?: string }>;
 }
 
-export function EditProfileModal({ visible, onClose, currentName, currentEmail, currentAvatarUrl, onSaveName, onSaveEmail, onSavePhoto }: EditProfileModalProps) {
+export function EditProfileModal({ visible, onClose, currentName, currentAvatarUrl, onSaveName, onSavePhoto }: EditProfileModalProps) {
   const [name, setName] = useState(currentName);
-  const [email, setEmail] = useState(currentEmail);
   const [previewUri, setPreviewUri] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setName(currentName);
-      setEmail(currentEmail);
       setPreviewUri('');
     }
-  }, [visible, currentName, currentEmail]);
+  }, [visible, currentName]);
 
   const getInitials = (value: string) =>
     value.split(' ').filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2);
@@ -82,12 +78,6 @@ export function EditProfileModal({ visible, onClose, currentName, currentEmail, 
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
-    const trimmedEmail = email.trim();
-    const emailError = validateEmail(email);
-    if (emailError) {
-      Alert.alert('Invalid email', emailError);
-      return;
-    }
     setSaving(true);
 
     if (previewUri) {
@@ -99,16 +89,6 @@ export function EditProfileModal({ visible, onClose, currentName, currentEmail, 
       }
     }
 
-    const emailChanged = trimmedEmail && trimmedEmail.toLowerCase() !== currentEmail.trim().toLowerCase();
-    if (emailChanged) {
-      const { error: emailError } = await onSaveEmail(trimmedEmail);
-      if (emailError) {
-        setSaving(false);
-        Alert.alert('Could not update email', emailError);
-        return;
-      }
-    }
-
     const { error } = await onSaveName(trimmedName);
     setSaving(false);
     if (error) {
@@ -116,9 +96,6 @@ export function EditProfileModal({ visible, onClose, currentName, currentEmail, 
       return;
     }
     onClose();
-    if (emailChanged) {
-      Alert.alert('Check your inbox', `We sent a confirmation link to ${trimmedEmail}. Your email updates once you confirm it.`);
-    }
   };
 
   const displayUri = previewUri || currentAvatarUrl;
@@ -158,18 +135,6 @@ export function EditProfileModal({ visible, onClose, currentName, currentEmail, 
               onChangeText={setName}
               placeholder="Your name"
               placeholderTextColor="#B0ADA8"
-            />
-
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor="#B0ADA8"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
             />
 
             <TouchableOpacity

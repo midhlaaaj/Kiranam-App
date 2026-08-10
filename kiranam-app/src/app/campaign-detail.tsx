@@ -21,7 +21,7 @@ export default function CampaignDetailScreen() {
   const handleShare = () => {
     if (!campaign) return;
     Share.share({
-      message: `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.org`,
+      message: `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.online`,
     });
   };
 

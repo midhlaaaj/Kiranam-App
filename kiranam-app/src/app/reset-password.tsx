@@ -4,7 +4,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+import { Toast } from '@/components/Toast';
 import { validatePassword } from '@/utils/validators';
+import { friendlyError } from '@/utils/errors';
 import { Eye, EyeOff } from 'lucide-react-native';
 
 // Landed on from the "reset your password" email, via kiranam-admin's
@@ -48,7 +50,7 @@ export default function ResetPasswordScreen() {
     const { error: updateError } = await supabase.auth.updateUser({ password });
     setSubmitting(false);
     if (updateError) {
-      setError(updateError.message);
+      setError(friendlyError(updateError.message));
       return;
     }
 
@@ -94,12 +96,11 @@ export default function ResetPasswordScreen() {
           }}
         />
 
-        {!!error && <Text style={styles.errorText}>{error}</Text>}
-
         <View style={styles.submitButtonContainer}>
           <Button title="Update Password" onPress={handleSubmit} loading={submitting} />
         </View>
       </ScrollView>
+      <Toast message={error || null} onDismiss={() => setError('')} />
     </KeyboardAvoidingView>
   );
 }
@@ -129,13 +130,6 @@ const styles = StyleSheet.create({
     color: '#7A756E',
     lineHeight: 20,
     marginBottom: 28,
-  },
-  errorText: {
-    fontFamily: 'Inter',
-    fontSize: 12.5,
-    color: '#BA1A1A',
-    marginTop: -8,
-    marginBottom: 12,
   },
   submitButtonContainer: {
     marginTop: 8,

@@ -1,12 +1,17 @@
 import Link from 'next/link';
-import { ArrowLeft, Wallet } from 'lucide-react';
+import { ArrowLeft, Trash2, Wallet } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { PersonCombobox } from '@/components/PersonCombobox';
 import { OfflinePaymentForm } from '../OfflinePaymentForm';
+import { assignVolunteer, unassignVolunteer } from '../actions';
 import {
   badgeClass,
+  buttonPrimary,
+  cardClass,
   formatMoney,
   staggerDelay,
   tableCellClass,
@@ -27,7 +32,7 @@ export default async function ContributorDetailPage({
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', id).single();
   if (!profile) notFound();
 
-  const [{ data: commitment }, { data: contributions }, { data: assignment }, { data: activeCampaigns }] = await Promise.all([
+  const [{ data: commitment }, { data: contributions }, { data: assignment }, { data: activeCampaigns }, { data: allVolunteers }] = await Promise.all([
     supabase.from('commitments').select('*').eq('contributor_id', id).maybeSingle(),
     supabase
       .from('contributions')
@@ -40,6 +45,7 @@ export default async function ContributorDetailPage({
       .eq('contributor_id', id)
       .maybeSingle(),
     supabase.from('campaigns').select('id, title').eq('status', 'active').order('title', { ascending: true }),
+    supabase.from('profiles').select('id, full_name, phone').eq('role', 'volunteer').order('full_name'),
   ]);
 
   const now = new Date();
@@ -74,15 +80,6 @@ export default async function ContributorDetailPage({
       <p className="text-sm text-kiranam-muted">
         {profile.phone ? `${profile.phone} · ` : ''}
         {profile.email || 'No email'}
-        {volunteer && (
-          <>
-            {' · '}
-            Assigned Volunteer:{' '}
-            <Link href={`/volunteers/${volunteer.id}`} className="font-semibold text-kiranam-ink hover:underline">
-              {volunteer.full_name || 'Unnamed'}
-            </Link>
-          </>
-        )}
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -94,6 +91,41 @@ export default async function ContributorDetailPage({
           value={commitment?.next_due_date ? new Date(commitment.next_due_date).toLocaleDateString('en-IN') : '—'}
         />
       </div>
+
+      <h2 className="mt-8 text-lg font-bold tracking-tight text-kiranam-ink">Volunteer</h2>
+      <div className={`mt-3 ${cardClass} flex flex-wrap items-center justify-between gap-3 p-4`}>
+        {volunteer ? (
+          <>
+            <Link href={`/volunteers/${volunteer.id}`} className="font-semibold text-kiranam-ink hover:underline">
+              {volunteer.full_name || 'Unnamed'}
+            </Link>
+            <ConfirmSubmitButton
+              action={unassignVolunteer.bind(null, id, volunteer.id)}
+              label={<Trash2 size={16} strokeWidth={2} />}
+              title="Unassign this volunteer?"
+              description={`${volunteer.full_name || 'This volunteer'} will no longer be assigned to ${profile.full_name || 'this contributor'}.`}
+              confirmLabel="Unassign"
+              successMessage="Volunteer unassigned."
+              pendingMessage="Unassigning…"
+              className="cursor-pointer rounded-lg p-2 text-kiranam-danger transition hover:bg-kiranam-danger-soft"
+              aria-label="Unassign volunteer"
+            />
+          </>
+        ) : (
+          <p className="text-sm text-kiranam-muted">No volunteer assigned yet.</p>
+        )}
+      </div>
+      <form action={assignVolunteer.bind(null, id)} className="mt-3 flex flex-wrap items-start gap-2">
+        <PersonCombobox
+          people={(allVolunteers || []).filter((v) => v.id !== volunteer?.id)}
+          name="volunteerId"
+          placeholder="Search volunteers by name or phone…"
+          emptyLabel="No volunteers match."
+        />
+        <button type="submit" className={buttonPrimary}>
+          {volunteer ? 'Reassign' : 'Assign'}
+        </button>
+      </form>
 
       <div className="mt-8 flex items-center justify-between gap-4">
         <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Contribution History</h2>

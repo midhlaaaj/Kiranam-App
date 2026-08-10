@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, StatusBar } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, StatusBar, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp, PaymentRecord } from '@/context/AppContext';
 import { Card } from '@/components/Card';
@@ -9,7 +9,14 @@ import { formatMoney } from '@/utils/format';
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { payments, notifications } = useApp();
+  const { payments, notifications, refreshUserData } = useApp();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshUserData();
+    setRefreshing(false);
+  }, [refreshUserData]);
 
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
 
@@ -64,6 +71,7 @@ export default function HistoryScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => (
           <TouchableOpacity
             activeOpacity={0.8}

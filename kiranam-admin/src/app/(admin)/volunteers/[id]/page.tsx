@@ -7,7 +7,7 @@ import { deriveContributorStatus } from '@/lib/volunteerStats';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
-import { ContributorCombobox } from '@/components/ContributorCombobox';
+import { PersonCombobox } from '@/components/PersonCombobox';
 import { badgeClass, buttonPrimary, buttonSecondary, cardClass, formatMoney } from '@/lib/ui';
 
 export default async function VolunteerDetailPage({
@@ -171,7 +171,12 @@ export default async function VolunteerDetailPage({
 
       <h2 className="mt-8 text-lg font-bold tracking-tight text-kiranam-ink">Assign a Contributor</h2>
       <form action={assignContributor.bind(null, id)} className="mt-3 flex flex-wrap items-start gap-2">
-        <ContributorCombobox contributors={unassignedContributors} name="contributorId" />
+        <PersonCombobox
+          people={unassignedContributors}
+          name="contributorId"
+          placeholder="Search contributors by name or phone…"
+          emptyLabel="No contributors match."
+        />
         <button type="submit" className={buttonPrimary}>
           Assign
         </button>

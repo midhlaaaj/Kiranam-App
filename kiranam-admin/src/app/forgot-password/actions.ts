@@ -17,6 +17,11 @@ export async function requestPasswordReset(
   }
 
   const supabase = await createClient();
+  // Deliberately the MAIN domain, not auth.kiranam.online — this is an
+  // admin resetting their own password, so landing on the admin domain is
+  // expected and correct. The auth subdomain is middleware-restricted to
+  // /auth/* only (see middleware.ts), which would reject the /reset-password
+  // landing page this flow needs.
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
   await supabase.auth.resetPasswordForEmail(email, {

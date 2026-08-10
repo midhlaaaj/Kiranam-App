@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Platform, Animated, Easing } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Platform, Animated, Easing, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
@@ -42,8 +42,16 @@ export default function HomeScreen() {
     events,
     totalContributed,
     campaignGiving,
-    notifications
+    notifications,
+    refreshAll,
   } = useApp();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshAll();
+    setRefreshing(false);
+  }, [refreshAll]);
 
   const activeCampaigns = campaigns.filter(c => c.status === 'active');
   const upcomingEvents = events.filter(e => !e.isPast).slice(0, 2);
@@ -60,8 +68,12 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
+      >
+
         {/* Header greeting and Bell Icon */}
         <View style={styles.header}>
           <View style={styles.headerTextContainer}>

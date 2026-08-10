@@ -81,7 +81,7 @@ export default function TermsScreen() {
         </Section>
 
         <Section title="10. Contact us">
-          Questions about these terms? Reach us at support@kiranam.org.
+          Questions about these terms? Reach us at support@kiranam.online.
         </Section>
       </ScrollView>
     </SafeAreaView>

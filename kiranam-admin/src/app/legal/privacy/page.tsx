@@ -89,8 +89,8 @@ export default function PrivacyPolicyPage() {
 
         <Section title="9. Contact us">
           If you have questions about this policy or your data, contact us at{" "}
-          <a href="mailto:privacy@kiranam.org" className="underline">
-            privacy@kiranam.org
+          <a href="mailto:privacy@kiranam.online" className="underline">
+            privacy@kiranam.online
           </a>
           .
         </Section>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, StatusBar } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, StatusBar, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
@@ -36,9 +36,17 @@ export default function VolunteerDashboardScreen() {
     commitmentAmount,
     nextDueDate,
     isPaidThisCycle,
+    refreshAll,
   } = useApp();
   const [copied, setCopied] = useState(false);
   const [editCodeVisible, setEditCodeVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshAll();
+    setRefreshing(false);
+  }, [refreshAll]);
 
   const firstName = userName.split(' ')[0];
   const pendingCount = volunteerMembers.filter((m) => m.status === 'due').length;
@@ -63,7 +71,11 @@ export default function VolunteerDashboardScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
+      >
         {/* Header greeting and Bell Icon */}
         <View style={styles.header}>
           <View style={styles.headerTextContainer}>

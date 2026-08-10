@@ -73,8 +73,8 @@ export default function TermsPage() {
 
         <Section title="10. Contact us">
           Questions about these terms? Reach us at{" "}
-          <a href="mailto:support@kiranam.org" className="underline">
-            support@kiranam.org
+          <a href="mailto:support@kiranam.online" className="underline">
+            support@kiranam.online
           </a>
           .
         </Section>

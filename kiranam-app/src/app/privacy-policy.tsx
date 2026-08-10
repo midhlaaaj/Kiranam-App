@@ -86,7 +86,7 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="9. Contact us">
           If you have questions about this policy or your data, contact us at
-          privacy@kiranam.org.
+          privacy@kiranam.online.
         </Section>
       </ScrollView>
     </SafeAreaView>

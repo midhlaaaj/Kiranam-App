@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, StatusBar, Modal, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, StatusBar, Modal, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp, NotificationRecord } from '@/context/AppContext';
 import { ArrowLeft, CreditCard, Flag, Info, Check, MoreVertical, Trash2, CheckCheck, ChevronRight } from 'lucide-react-native';
@@ -7,9 +7,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteAllNotifications } = useApp();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, deleteAllNotifications, refreshUserData } = useApp();
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'contribution' | 'campaign' | 'system'>('all');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshUserData();
+    setRefreshing(false);
+  }, [refreshUserData]);
 
   const hasUnread = notifications.some((n) => n.unread);
 
@@ -130,6 +137,7 @@ export default function NotificationsScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => (
           <TouchableOpacity
             activeOpacity={0.8}
