@@ -110,6 +110,17 @@ export async function GET() {
       )
     }
 
+    if (!config.access_token) {
+      return NextResponse.json(
+        {
+          connected: false,
+          reason: 'no_token',
+          message: 'Draft saved. Add your Permanent Access Token to finish connecting and verify with Meta.',
+        },
+        { status: 200 }
+      )
+    }
+
     // Try to decrypt the stored token with the current ENCRYPTION_KEY.
     // If this fails, the key changed (or was never consistent across envs).
     let accessToken: string
@@ -187,12 +198,20 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { phone_number_id, waba_id, access_token, verify_token, pin } = body
 
-    if (!access_token || !phone_number_id) {
+    if (!phone_number_id) {
       return NextResponse.json(
-        { error: 'access_token and phone_number_id are required' },
+        { error: 'phone_number_id is required' },
         { status: 400 }
       )
     }
+
+    // access_token is optional: lets phone_number_id / waba_id / verify_token
+    // be saved as a "pending" draft before the permanent token exists (e.g.
+    // still being generated in Meta Business Suite), added in a later save.
+    // Nothing about Meta verification below is skipped or weakened when a
+    // real token IS provided — this only allows the interim state to exist.
+    const hasNewToken = typeof access_token === 'string' && access_token.trim() !== ''
+    const hasNewVerifyToken = typeof verify_token === 'string' && verify_token.trim() !== ''
 
     if (pin !== undefined && pin !== null && pin !== '') {
       if (typeof pin !== 'string' || !/^\d{6}$/.test(pin)) {
@@ -235,28 +254,42 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify credentials with Meta BEFORE saving
-    let phoneInfo
-    try {
-      phoneInfo = await verifyPhoneNumber({
-        phoneNumberId: phone_number_id,
-        accessToken: access_token,
-      })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown Meta API error'
-      console.error('Meta API verification failed during save:', message)
-      return NextResponse.json(
-        { error: `Meta API error: ${message}` },
-        { status: 400 }
-      )
+    // Look up any pre-existing row for this account first — needed both to
+    // decide whether /register can be skipped, and (when no new token is
+    // supplied this save) to know what to preserve rather than overwrite.
+    const { data: existing } = await supabase
+      .from('whatsapp_config')
+      .select('id, registered_at, phone_number_id, access_token, verify_token, status, connected_at, subscribed_apps_at, last_registration_error')
+      .eq('account_id', accountId)
+      .maybeSingle()
+
+    // Verify credentials with Meta BEFORE saving — only possible/needed
+    // when a token was actually supplied this save.
+    let phoneInfo = null
+    if (hasNewToken) {
+      try {
+        phoneInfo = await verifyPhoneNumber({
+          phoneNumberId: phone_number_id,
+          accessToken: access_token,
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown Meta API error'
+        console.error('Meta API verification failed during save:', message)
+        return NextResponse.json(
+          { error: `Meta API error: ${message}` },
+          { status: 400 }
+        )
+      }
     }
 
-    // Encrypt sensitive tokens before storing
-    let encryptedAccessToken: string
-    let encryptedVerifyToken: string | null
+    // Encrypt sensitive tokens before storing. Only the values actually
+    // supplied this save — an omitted token/verify_token means "leave
+    // whatever's already stored alone," not "clear it."
+    let encryptedAccessToken: string | undefined
+    let encryptedVerifyToken: string | undefined
     try {
-      encryptedAccessToken = encrypt(access_token)
-      encryptedVerifyToken = verify_token ? encrypt(verify_token) : null
+      if (hasNewToken) encryptedAccessToken = encrypt(access_token)
+      if (hasNewVerifyToken) encryptedVerifyToken = encrypt(verify_token)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown encryption error'
       console.error('Encryption failed:', message)
@@ -269,20 +302,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Look up any pre-existing row for this account so we know whether
-    // this number is already registered with Meta — if so we can skip
-    // /register when the user didn't provide a PIN this time around.
-    const { data: existing } = await supabase
-      .from('whatsapp_config')
-      .select('id, registered_at, phone_number_id')
-      .eq('account_id', accountId)
-      .maybeSingle()
-
     const sameNumber =
       existing?.phone_number_id === phone_number_id &&
       existing?.registered_at != null
 
-    // Step 1: register the phone number for inbound webhooks.
+    // Step 1: register the phone number for inbound webhooks. Only
+    // attempted when we actually have a live token to call Meta with.
     //
     // Attempted on first save AND whenever the user supplies a fresh
     // PIN (e.g. they rotated the 2FA PIN in Meta Manager). Skipped
@@ -290,51 +315,53 @@ export async function POST(request: Request) {
     // supplied — re-registering an already-active number with a
     // stale PIN would actually fail and undo the active subscription.
     let registeredAt: string | null = existing?.registered_at ?? null
-    let registrationError: string | null = null
+    let registrationError: string | null = existing?.last_registration_error ?? null
     // True when registration was deliberately skipped because no PIN
     // was supplied (see below). Distinct from registrationError — this
     // is not a failure, just an incomplete-but-valid save.
     let registrationSkipped = false
 
-    const needsRegistration = !sameNumber || (typeof pin === 'string' && pin.length > 0)
-    if (needsRegistration) {
-      if (!pin) {
-        // No PIN provided. Meta TEST numbers (Developer Console) are
-        // pre-registered by Meta and expose no two-step verification
-        // PIN to set, so requiring one made them impossible to connect
-        // (issue #242). The /register + PIN step only matters for
-        // production numbers under a shared WABA (issue #136), so treat
-        // it as best-effort: skip it, save the (already Meta-verified)
-        // credentials as connected, and leave registered_at null. The
-        // UI surfaces a separate "Not registered" banner with a path to
-        // add a PIN later for users who do need inbound webhook routing.
-        registrationSkipped = true
-      } else {
-        try {
-          await registerPhoneNumber({
-            phoneNumberId: phone_number_id,
-            accessToken: access_token,
-            pin,
-          })
-          registeredAt = new Date().toISOString()
-        } catch (err) {
-          registrationError =
-            err instanceof Error ? err.message : 'Unknown Meta API error'
-          console.error('Phone number /register failed:', registrationError)
-          // We deliberately fall through and still save the row so the
-          // user can retry without re-entering everything. The UI
-          // surfaces `last_registration_error` so they see WHY it's
-          // not actually live yet.
+    if (hasNewToken) {
+      const needsRegistration = !sameNumber || (typeof pin === 'string' && pin.length > 0)
+      if (needsRegistration) {
+        if (!pin) {
+          // No PIN provided. Meta TEST numbers (Developer Console) are
+          // pre-registered by Meta and expose no two-step verification
+          // PIN to set, so requiring one made them impossible to connect
+          // (issue #242). The /register + PIN step only matters for
+          // production numbers under a shared WABA (issue #136), so treat
+          // it as best-effort: skip it, save the (already Meta-verified)
+          // credentials as connected, and leave registered_at null. The
+          // UI surfaces a separate "Not registered" banner with a path to
+          // add a PIN later for users who do need inbound webhook routing.
+          registrationSkipped = true
+        } else {
+          try {
+            await registerPhoneNumber({
+              phoneNumberId: phone_number_id,
+              accessToken: access_token,
+              pin,
+            })
+            registeredAt = new Date().toISOString()
+            registrationError = null
+          } catch (err) {
+            registrationError =
+              err instanceof Error ? err.message : 'Unknown Meta API error'
+            console.error('Phone number /register failed:', registrationError)
+            // We deliberately fall through and still save the row so the
+            // user can retry without re-entering everything. The UI
+            // surfaces `last_registration_error` so they see WHY it's
+            // not actually live yet.
+          }
         }
       }
     }
 
     // Step 2: subscribe the WABA to this app. Idempotent on Meta's
-    // side, so we call on every save and persist the timestamp.
-    // Skipped only when there's no waba_id (legacy rows from before
-    // we required it).
-    let subscribedAppsAt: string | null = null
-    if (waba_id) {
+    // side, so we call on every save (when we have a token) and persist
+    // the timestamp. Skipped when there's no waba_id or no token.
+    let subscribedAppsAt: string | null = existing?.subscribed_apps_at ?? null
+    if (hasNewToken && waba_id) {
       try {
         await subscribeWabaToApp({
           wabaId: waba_id,
@@ -353,18 +380,34 @@ export async function POST(request: Request) {
     // Persist everything in one shot. If /register failed we still
     // store the credentials and the error so the UI can guide the
     // user through a retry.
-    const baseRow = {
+    const baseRow: Record<string, unknown> = {
       phone_number_id,
       waba_id: waba_id || null,
-      access_token: encryptedAccessToken,
-      verify_token: encryptedVerifyToken,
-      status: registrationError ? 'disconnected' : 'connected',
-      connected_at: registrationError ? null : new Date().toISOString(),
-      registered_at: registrationError ? null : registeredAt,
-      subscribed_apps_at: subscribedAppsAt ?? null,
-      last_registration_error: registrationError,
       updated_at: new Date().toISOString(),
     }
+    if (hasNewVerifyToken) baseRow.verify_token = encryptedVerifyToken
+
+    if (hasNewToken) {
+      baseRow.access_token = encryptedAccessToken
+      baseRow.status = registrationError ? 'disconnected' : 'connected'
+      baseRow.connected_at = registrationError ? null : new Date().toISOString()
+      baseRow.registered_at = registrationError ? null : registeredAt
+      baseRow.subscribed_apps_at = subscribedAppsAt
+      baseRow.last_registration_error = registrationError
+    } else if (!existing) {
+      // Brand-new draft row: no token yet at all. Nothing to verify or
+      // register with Meta — just persist what we have so far.
+      baseRow.access_token = null
+      baseRow.status = 'pending'
+      baseRow.connected_at = null
+      baseRow.registered_at = null
+      baseRow.subscribed_apps_at = null
+      baseRow.last_registration_error = null
+    }
+    // else: existing row, no new token this save — access_token, status,
+    // connected_at, registered_at, subscribed_apps_at, and
+    // last_registration_error are all omitted so the update leaves them
+    // untouched rather than wiping a working connection.
 
     if (existing) {
       const { error: updateError } = await supabase
@@ -423,6 +466,10 @@ export async function POST(request: Request) {
       // Meta test number). The UI shows the "Not registered" banner
       // rather than claiming the number is fully live.
       registration_skipped: registrationSkipped,
+      // Saved as a draft — no access token has ever been provided, so
+      // nothing was verified with Meta yet. The UI should point at
+      // adding the token next rather than claiming a connection.
+      pending_token: !hasNewToken && !existing?.access_token,
       phone_info: phoneInfo,
     })
   } catch (error) {

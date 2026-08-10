@@ -187,10 +187,6 @@ export function WhatsAppConfig() {
       toast.error('Phone Number ID is required');
       return;
     }
-    if (!config && (!accessToken.trim() || !tokenEdited)) {
-      toast.error('Access Token is required for initial setup');
-      return;
-    }
 
     try {
       setSaving(true);
@@ -199,26 +195,27 @@ export function WhatsAppConfig() {
       // the access_token server-side with ENCRYPTION_KEY. Skipping this
       // and writing direct to Supabase stores the token in plaintext,
       // which then fails decryption on every subsequent health check.
+      //
+      // access_token and verify_token are both optional here: the server
+      // treats an omitted key as "leave whatever's already stored alone,"
+      // not "clear it" — so phone_number_id / waba_id can be saved as a
+      // draft before the access token exists, and the webhook token from
+      // an earlier save survives a later save that only adds the token.
       const payload: Record<string, unknown> = {
         phone_number_id: phoneNumberId.trim(),
         waba_id: wabaId.trim() || null,
-        verify_token: verifyToken.trim() || null,
         // Optional — only sent when the user filled it in. The server
         // requires it on first save or when changing numbers; for a
         // simple token rotation, leaving it blank skips re-register.
         pin: pin.trim() || null,
       };
 
+      if (verifyToken.trim()) {
+        payload.verify_token = verifyToken.trim();
+      }
+
       if (tokenEdited && accessToken !== MASKED_TOKEN && accessToken.trim()) {
         payload.access_token = accessToken.trim();
-      } else if (config) {
-        // Existing config — reuse stored encrypted token by decrypting on the
-        // server. But our POST handler requires an access_token to verify
-        // with Meta. If the user didn't change the token, we need to signal
-        // that. Simplest: require token re-entry if they're updating.
-        toast.error('Please re-enter the Access Token to save changes');
-        setSaving(false);
-        return;
       }
 
       const res = await fetch('/api/whatsapp/whatsapp/config', {
@@ -241,7 +238,16 @@ export function WhatsAppConfig() {
       //                         failed; UI shows the specific error
       //                         and a retry path. registration_error
       //                         is human-readable from Meta.
-      if (data.registered === false && data.registration_error) {
+      if (data.pending_token) {
+        // Draft save — phone_number_id / waba_id / verify_token are
+        // stored, but no access token has been provided yet, so nothing
+        // was verified with Meta. Add the token in a later save to
+        // actually connect.
+        toast.success(
+          'Saved. Add your Permanent Access Token to finish connecting and verify with Meta.',
+          { duration: 10000 },
+        );
+      } else if (data.registered === false && data.registration_error) {
         toast.error(
           `Saved, but Meta couldn't register the number: ${data.registration_error}`,
           { duration: 12000 },
