@@ -2,7 +2,24 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/proxy';
 
+// auth.kiranam.online exists specifically so that password-reset,
+// signup-confirmation, and account-claim email links never expose the
+// admin app (login, contributors, etc.) to the contributors/volunteers
+// who make up most of the people clicking them. Vercel serves this same
+// deployment under any domain pointed at it, so without this check,
+// anything on this host would fall through to the normal admin app —
+// including its "redirect unauthenticated visitors to /login" behavior,
+// exactly the thing this subdomain was built to avoid. Checked first,
+// before touching session cookies, since a redirect away doesn't need them.
+const AUTH_SUBDOMAIN = 'auth.kiranam.online';
+
 export async function proxy(request: NextRequest) {
+  const host = request.headers.get('host') || '';
+  const isAuthSubdomain = host === AUTH_SUBDOMAIN || host.startsWith(`${AUTH_SUBDOMAIN}:`);
+  if (isAuthSubdomain && !request.nextUrl.pathname.startsWith('/auth/')) {
+    return NextResponse.redirect(new URL('/auth/error', request.url));
+  }
+
   const response = await updateSession(request);
 
   // Ported from wacrm's own middleware.ts (now merged in under /whatsapp):
