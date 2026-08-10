@@ -9,6 +9,7 @@ interface InputProps extends TextInputProps {
   error?: string;
   prefix?: string;
   variant?: 'filled' | 'underline';
+  rightElement?: React.ReactNode;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -21,6 +22,7 @@ export const Input: React.FC<InputProps> = ({
   variant = 'filled',
   multiline,
   numberOfLines,
+  rightElement,
   ...props
 }) => {
   const isUnderline = variant === 'underline';
@@ -47,6 +49,7 @@ export const Input: React.FC<InputProps> = ({
           textAlignVertical={multiline ? 'top' : 'center'}
           {...props}
         />
+        {!!rightElement && <View style={styles.rightElementContainer}>{rightElement}</View>}
       </View>
       {!!error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -108,6 +111,11 @@ const styles = StyleSheet.create({
   prefixContainer: {
     marginRight: 8,
     justifyContent: 'center',
+  },
+  rightElementContainer: {
+    marginLeft: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   prefixText: {
     fontFamily: 'Inter',

@@ -28,15 +28,21 @@ export async function sendAnnouncement(_prevState: SendState, formData: FormData
     return { error: 'No matching recipients found.' };
   }
 
-  const { error } = await supabase.from('notifications').insert(
-    ids.map((profileId) => ({
-      profile_id: profileId,
-      title,
-      body,
-      category: 'system' as const,
-    }))
+  // notify() (not a plain bulk insert) so a broadcast also fans out as a
+  // push notification to each recipient's registered devices, via the
+  // shared send-push-notification Edge Function.
+  const results = await Promise.all(
+    ids.map((profileId) =>
+      supabase.rpc('notify', {
+        p_profile_id: profileId,
+        p_title: title,
+        p_body: body,
+        p_category: 'system',
+      })
+    )
   );
-  if (error) return { error: error.message };
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return { error: failed.error.message };
 
   await logAction(admin.id, 'send_announcement', 'notifications', undefined, { audience, count: ids.length, title });
   revalidatePath('/notifications');

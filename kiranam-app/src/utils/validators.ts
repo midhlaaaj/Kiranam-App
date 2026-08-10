@@ -53,3 +53,9 @@ export function validateReferralCode(code: string, opts?: { required?: boolean }
 export function validateMinLength(value: string, min: number, fieldLabel: string): string | null {
   return value.trim().length >= min ? null : `${fieldLabel} must be at least ${min} characters.`;
 }
+
+export function validatePassword(password: string): string | null {
+  if (password.length < 8) return 'Password must be at least 8 characters.';
+  if (!/\d/.test(password)) return 'Password must include at least one number.';
+  return null;
+}

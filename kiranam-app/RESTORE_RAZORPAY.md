@@ -1,7 +1,8 @@
 # Restore Razorpay (after Expo Go testing)
 
-Razorpay and `expo-dev-client` were temporarily removed so the app could run in
-plain **Expo Go** via `npx expo start` (native modules aren't supported in Expo Go).
+Razorpay and `expo-dev-client` were temporarily removed (again, 2026-08-10) so the
+app could run in plain **Expo Go** via `npx expo start` (native modules aren't
+supported in Expo Go).
 
 When you're done testing and want real payments back, paste this prompt to Claude Code:
 

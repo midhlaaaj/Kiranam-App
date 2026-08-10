@@ -1,10 +1,23 @@
 import React, { useEffect } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useColorScheme, StatusBar } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import { AppProvider } from '@/context/AppContext';
+
+// Show an alert even while the app is foregrounded — otherwise a push that
+// arrives while someone's actively using the app is silently swallowed.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 // Font imports from Google Fonts packages
 import {
@@ -19,6 +32,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
 
   const [fontsLoaded, fontError] = useFonts({
     'Inter': Inter_400Regular,
@@ -33,6 +47,19 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
+  // Tapping a push notification (app backgrounded, or cold-launched from
+  // one) navigates to whatever deep_link the notify() call attached —
+  // the same field the in-app notifications list already uses.
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const deepLink = response.notification.request.content.data?.deep_link;
+      if (typeof deepLink === 'string' && deepLink) {
+        router.push(deepLink as any);
+      }
+    });
+    return () => subscription.remove();
+  }, [router]);
+
   if (!fontsLoaded && !fontError) {
     return null;
   }
@@ -44,7 +71,9 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="login" />
-          <Stack.Screen name="otp" />
+          <Stack.Screen name="password" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="reset-password" />
           <Stack.Screen name="register" />
           <Stack.Screen name="pending" />
           <Stack.Screen name="(tabs)" />

@@ -1,11 +1,14 @@
 'use server';
 
+import { randomUUID } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
+import { sendEmail } from '@/lib/email/resend';
+import { claimAccountEmail } from '@/lib/email/templates';
 
 export interface RegisterState {
   message?: string;
@@ -16,30 +19,35 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const admin = await verifyAdmin();
 
   const fullName = String(formData.get('full_name') || '').trim();
+  const email = String(formData.get('email') || '').trim().toLowerCase();
   const phoneDigits = String(formData.get('phone') || '').replace(/\D/g, '');
   const monthlyAmount = Number(formData.get('monthly_amount') || 0);
 
   if (!fullName) return { error: 'Full name is required.' };
+  if (!email) return { error: 'Email is required.' };
   if (phoneDigits.length !== 10) return { error: 'Enter a valid 10-digit phone number.' };
   if (!(monthlyAmount > 0)) return { error: 'Monthly amount must be greater than zero.' };
 
   const phoneE164 = `+91${phoneDigits}`;
   const supabaseAdmin = createAdminClient();
 
-  // No password set — the contributor claims this login later by signing in
-  // with the same phone number via OTP (Supabase matches on phone), exactly
-  // like a normal signup. This just pre-creates the auth identity + profile.
+  // Email is now the auth identity (kiranam-app moved from phone-OTP to
+  // email+password login) — phone is stored as a plain contact field only.
+  // No usable password is set here; the contributor claims their account via
+  // the "set your password" email below (a Supabase recovery link, same
+  // mechanism as a normal forgot-password flow).
   const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password: randomUUID(),
+    email_confirm: true,
     phone: phoneE164,
     phone_confirm: true,
     user_metadata: { full_name: fullName },
   });
 
   if (createError || !created.user) {
-    // Phone number is the primary identifier — no two users can share one.
-    // Supabase's exact wording/error code for this varies by version, so
-    // check both rather than relying on one exact string match.
-    const isDuplicatePhone =
+    const isDuplicate =
+      createError?.code === 'email_exists' ||
       createError?.code === 'phone_exists' ||
       createError?.code === 'user_already_exists' ||
       createError?.status === 422 ||
@@ -47,8 +55,8 @@ export async function registerContributor(_prevState: RegisterState, formData: F
 
     if (createError) console.error('registerContributor: createUser failed:', createError);
 
-    const message = isDuplicatePhone
-      ? `A contributor with the phone number ${phoneE164} already exists.`
+    const message = isDuplicate
+      ? `A contributor with this email or phone number already exists.`
       : 'Could not register this contributor. Please try again.';
     return { error: message };
   }
@@ -62,6 +70,27 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     .update({ full_name: fullName })
     .eq('id', contributorId);
   if (profileError) return { error: 'Contributor was created, but saving their name failed. Please edit it manually.' };
+
+  // Best-effort claim email — same underlying mechanism as forgot-password
+  // (a single-use recovery token routed through mobile-auth-bridge into the
+  // app), so a failed send here doesn't block the registration itself; an
+  // admin can still trigger a normal "forgot password" from the app later.
+  const adminSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+  });
+  if (linkError || !linkData?.properties?.hashed_token) {
+    console.error('registerContributor: generateLink failed:', linkError);
+  } else {
+    const claimUrl = `${adminSiteUrl}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=recovery&next=${encodeURIComponent('kiranamapp://reset-password')}`;
+    const { error: emailError } = await sendEmail({
+      to: email,
+      subject: 'Set your password for Kiranam',
+      html: claimAccountEmail({ claimUrl, fullName }),
+    });
+    if (emailError) console.error('registerContributor: claim email failed:', emailError);
+  }
 
   // Autopay defaults off — a manually-registered contributor has no payment
   // method on file yet, so autopay can't actually run for them until they

@@ -1,7 +1,10 @@
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { formatMoney, formatDate, getDeviceLocale } from '@/utils/format';
 
@@ -90,13 +93,14 @@ interface AppContextType {
   updateReferralCode: (code: string) => Promise<{ error: string | null }>;
 
   // Auth actions (backed by Supabase)
-  signInWithPhone: (phoneE164: string) => Promise<{ error: string | null }>;
-  verifyOtpCode: (phoneE164: string, token: string) => Promise<{ error: string | null }>;
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: string | null }>;
   saveProfile: (fields: {
     fullName: string;
-    email: string;
+    phone: string;
     role: 'contributor' | 'volunteer';
     whatsappConsent?: boolean;
   }) => Promise<{ error: string | null }>;
@@ -175,6 +179,35 @@ const deriveMemberStatus = (commitment?: {
 // Supabase stores auth phone numbers without a leading "+" (e.g. "918086623316"),
 // but the rest of the app treats `phone` as full E.164 with the "+" prefix.
 const normalizePhone = (raw: string) => (raw && !raw.startsWith('+') ? `+${raw}` : raw);
+
+// Best-effort — silently no-ops on a simulator, in Expo Go (remote push
+// isn't supported there as of SDK 53+), or if the user declines the
+// permission prompt. Upserts on `token` (not `profile_id`) so the same
+// physical device switching between accounts doesn't leave stale rows
+// pointed at the wrong profile.
+const registerPushToken = async (profileId: string) => {
+  try {
+    if (!Device.isDevice) return;
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') return;
+
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+    await supabase
+      .from('push_tokens')
+      .upsert(
+        { profile_id: profileId, token: data, platform: Platform.OS === 'ios' ? 'ios' : 'android' },
+        { onConflict: 'token' }
+      );
+  } catch (e) {
+    console.error('Failed to register push token:', e);
+  }
+};
 
 const ensureReferralCode = async (uid: string, fullName: string): Promise<string> => {
   const { data: existing } = await supabase
@@ -426,6 +459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const uid = session.user.id;
     let cancelled = false;
     setProfileLoading(true);
+    registerPushToken(uid);
 
     (async () => {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', uid).single();
@@ -564,21 +598,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCampaignGiving(campaignTotal);
   }, [payments]);
 
-  const signInWithPhone = async (phoneE164: string) => {
-    // Delivery is WhatsApp, not SMS — Supabase Auth is configured with a
-    // custom Send SMS Hook (wacrm's /api/auth-hooks/send-sms) that sends
-    // the code through Kiranam's existing WhatsApp Business number instead
-    // of a paid SMS provider. No `channel` option needed here — the hook
-    // receives every phone-OTP send regardless (that was only relevant for
-    // Twilio's built-in WhatsApp channel, which this doesn't use).
-    // verifyOtpCode's `type: 'sms'` is unaffected either way — Supabase
-    // verifies a phone OTP the same way no matter which channel sent it.
-    const { error } = await supabase.auth.signInWithOtp({ phone: phoneE164 });
+  const signUpWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
     return { error: error?.message ?? null };
   };
 
-  const verifyOtpCode = async (phoneE164: string, token: string) => {
-    const { error } = await supabase.auth.verifyOtp({ phone: phoneE164, token, type: 'sms' });
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  };
+
+  const requestPasswordReset = async (email: string) => {
+    // The recovery email link has to be *clicked* from an email client, which
+    // can't open a custom URL scheme (kiranamapp://) directly and reliably —
+    // so Supabase's "Reset Password" template routes through kiranam-admin's
+    // /auth/confirm first (shared across all three Kiranam apps), which
+    // verifies the one-time token server-side and, recognizing this
+    // kiranamapp:// redirect target, hands the app a real session via query
+    // params instead of a bare redirect. See reset-password.tsx.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'kiranamapp://reset-password',
+    });
     return { error: error?.message ?? null };
   };
 
@@ -600,23 +640,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const saveProfile = async (fields: {
     fullName: string;
-    email: string;
+    phone: string;
     role: 'contributor' | 'volunteer';
     whatsappConsent?: boolean;
   }) => {
     if (!session) return { error: 'Not signed in' };
+    // Writing `phone` here (rather than a separate follow-up call) matters:
+    // under email/password auth, auth.users.phone is never populated, so
+    // this is the only write that lands a number in profiles.phone — and
+    // that's what sync_profile_to_wacrm_contact (fires on updates to
+    // full_name/phone/role) uses to create the WhatsApp comm-center contact.
     const { error } = await supabase.from('profiles').upsert({
       id: session.user.id,
       user_id: session.user.id,
       full_name: fields.fullName,
-      email: fields.email || null,
+      phone: fields.phone,
+      email: session.user.email || null,
       role: fields.role,
       whatsapp_consent: fields.whatsappConsent ?? false,
       terms_accepted_at: new Date().toISOString(),
     });
     if (error) return { error: error.message };
     setUserName(fields.fullName);
-    setUserEmail(fields.email);
+    setPhone(fields.phone);
     return { error: null };
   };
 
@@ -819,14 +865,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const receiptLink = `/receipt?id=${encodeURIComponent(newRecord.id)}&amount=${amount}&date=${encodeURIComponent(newRecord.date)}&label=${encodeURIComponent(label)}`;
-    const { data: notifRow } = await supabase.from('notifications').insert({
-      profile_id: uid,
-      title: 'Payment Successful',
-      body: `Your ${formatMoney(amount)} payment for "${label}" was successful.`,
-      category: label === 'Monthly Contribution' ? 'contribution' : 'campaign',
-      is_read: false,
-      deep_link: receiptLink,
-    }).select('*').single();
+    // notify() (not a plain insert) so this also fans out as a push
+    // notification via the shared send-push-notification Edge Function —
+    // every notification in the app goes through the same RPC for that reason.
+    type NotifyResult = { id: string; category: 'contribution' | 'campaign' | 'system'; title: string; body: string | null; deep_link: string | null };
+    const { data: notifRow } = (await supabase.rpc('notify', {
+      p_profile_id: uid,
+      p_title: 'Payment Successful',
+      p_body: `Your ${formatMoney(amount)} payment for "${label}" was successful.`,
+      p_category: label === 'Monthly Contribution' ? 'contribution' : 'campaign',
+      p_deep_link: receiptLink,
+    }).single()) as { data: NotifyResult | null };
     if (notifRow) {
       setNotifications((prev) => [{
         id: notifRow.id,
@@ -868,7 +917,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     if (orderError || !orderData) throw orderError || new Error('Could not create payment order');
 
-    const RazorpayCheckout = require('react-native-razorpay').default;
+    let RazorpayCheckout: any;
+    try {
+      RazorpayCheckout = require('react-native-razorpay').default;
+    } catch {
+      throw new Error('Razorpay payments are disabled in this Expo Go test build.');
+    }
     const checkoutResult = await RazorpayCheckout.open({
       key: orderData.keyId,
       amount: orderData.amount,
@@ -1026,8 +1080,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isVolunteer,
       myReferralCode,
       updateReferralCode,
-      signInWithPhone,
-      verifyOtpCode,
+      signUpWithEmail,
+      signInWithEmail,
+      requestPasswordReset,
       signOut,
       deleteAccount,
       saveProfile,

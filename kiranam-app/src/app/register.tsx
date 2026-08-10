@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as Localization from 'expo-localization';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
-import { validateRequired, validateEmail, validateReferralCode } from '@/utils/validators';
-import { ArrowLeft, Check } from 'lucide-react-native';
+import { CountryCodePicker } from '@/components/CountryCodePicker';
+import { getCountryByIso2 } from '@/utils/countries';
+import { validateRequired, validatePhoneNumber, validateReferralCode } from '@/utils/validators';
+import { ArrowLeft, Check, ChevronDown } from 'lucide-react-native';
+
+// Default the country picker to the device's own region instead of always
+// showing India — most users then never need to touch it at all.
+const deviceDefaultCountry = () => {
+  const regionCode = Localization.getLocales()[0]?.regionCode;
+  return (regionCode && getCountryByIso2(regionCode)) || getCountryByIso2('IN')!;
+};
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -13,25 +23,29 @@ export default function RegisterScreen() {
   const role = params.role === 'volunteer' ? 'volunteer' : 'contributor';
   const { saveProfile, setReferralCode } = useApp();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [country, setCountry] = useState(deviceDefaultCountry);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [showReferralField, setShowReferralField] = useState(false);
   const [refCode, setRefCode] = useState('');
   const [whatsappConsent, setWhatsappConsent] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string; refCode?: string; terms?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; refCode?: string; terms?: string }>({});
   const [submitting, setSubmitting] = useState(false);
 
   const handleCreateAccount = async () => {
     const nameError = validateRequired(name, 'Full Name');
-    const emailError = validateEmail(email);
-    const refCodeError = validateReferralCode(refCode);
-    if (nameError || emailError || refCodeError) {
-      setErrors({ name: nameError || undefined, email: emailError || undefined, refCode: refCodeError || undefined });
+    const phoneError = validatePhoneNumber(phoneNumber, country.iso2 as any);
+    const refCodeError = showReferralField ? validateReferralCode(refCode) : null;
+    if (nameError || phoneError || refCodeError) {
+      setErrors({ name: nameError || undefined, phone: phoneError || undefined, refCode: refCodeError || undefined });
       return;
     }
     if (!agreedToTerms) {
       setErrors({ terms: 'Please accept the Terms & Conditions and Privacy Policy to continue.' });
       return;
     }
+    const phoneE164 = '+' + country.dialCode + phoneNumber.replace(/\D/g, '');
     setSubmitting(true);
     // Always save as 'contributor' here, even when the person picked
     // "volunteer" — that only reflects their *intent* to apply. The real
@@ -40,7 +54,7 @@ export default function RegisterScreen() {
     // here early let people get full volunteer-tab access — or get stuck
     // in a half-registered state with no reviewable application — just by
     // abandoning the next screen before actually applying.
-    const { error } = await saveProfile({ fullName: name, email, role: 'contributor', whatsappConsent });
+    const { error } = await saveProfile({ fullName: name, phone: phoneE164, role: 'contributor', whatsappConsent });
     setSubmitting(false);
     if (error) {
       setErrors({ name: error });
@@ -86,74 +100,113 @@ export default function RegisterScreen() {
           error={errors.name}
         />
 
-        {/* Email Field */}
-        <Input
-          variant="underline"
-          label="Email (optional)"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setErrors((prev) => ({ ...prev, email: undefined }));
+        {/* Mobile Number Field */}
+        <Text style={styles.inputLabel}>Mobile Number</Text>
+        <View style={styles.phoneInputRow}>
+          <TouchableOpacity
+            style={styles.countryCodeBox}
+            onPress={() => setPickerVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.countryCodeText}>{country.flag} +{country.dialCode}</Text>
+            <ChevronDown size={14} color="#7A756E" />
+          </TouchableOpacity>
+          <View style={styles.numberInputContainer}>
+            <Input
+              variant="underline"
+              placeholder="Phone number"
+              keyboardType="number-pad"
+              textContentType="telephoneNumber"
+              autoComplete="tel"
+              maxLength={15}
+              value={phoneNumber}
+              onChangeText={(text) => {
+                setErrors((prev) => ({ ...prev, phone: undefined }));
+                setPhoneNumber(text.replace(/[^0-9]/g, ''));
+              }}
+              onBlur={() => {
+                const phoneError = phoneNumber ? validatePhoneNumber(phoneNumber, country.iso2 as any) : undefined;
+                setErrors((prev) => ({ ...prev, phone: phoneError || undefined }));
+              }}
+              error={errors.phone}
+              containerStyle={styles.phoneNumberInputContainer}
+              inputStyle={{ fontWeight: '700' }}
+            />
+          </View>
+        </View>
+        <Text style={styles.helperText}>We&apos;ll use this to send you updates over WhatsApp.</Text>
+
+        <CountryCodePicker
+          visible={pickerVisible}
+          selectedIso2={country.iso2}
+          onSelect={(c) => {
+            setCountry(c);
+            setErrors((prev) => ({ ...prev, phone: undefined }));
           }}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          error={errors.email}
+          onClose={() => setPickerVisible(false)}
         />
 
-        {/* Referral Code Field — contributors only; volunteers generate their own code */}
+        {/* Referral Code — collapsed by default, contributors only */}
         {role === 'contributor' && (
-          <Input
-            variant="underline"
-            label="Referral Code (optional)"
-            value={refCode}
-            onChangeText={(text) => {
-              setRefCode(text);
-              setErrors((prev) => ({ ...prev, refCode: undefined }));
-            }}
-            placeholder="Enter referral code"
-            autoCapitalize="characters"
-            error={errors.refCode}
-          />
+          showReferralField ? (
+            <Input
+              variant="underline"
+              label="Referral Code"
+              value={refCode}
+              onChangeText={(text) => {
+                setRefCode(text);
+                setErrors((prev) => ({ ...prev, refCode: undefined }));
+              }}
+              placeholder="Enter referral code"
+              autoCapitalize="characters"
+              error={errors.refCode}
+            />
+          ) : (
+            <TouchableOpacity onPress={() => setShowReferralField(true)} activeOpacity={0.7} style={styles.referralToggle}>
+              <Text style={styles.referralToggleText}>Have a referral code?</Text>
+            </TouchableOpacity>
+          )
         )}
 
         {/* Consent checkboxes */}
-        <TouchableOpacity
-          style={styles.checkboxRow}
-          activeOpacity={0.7}
-          onPress={() => setWhatsappConsent((prev) => !prev)}
-        >
-          <View style={[styles.checkbox, whatsappConsent && styles.checkboxChecked]}>
-            {whatsappConsent && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
-          </View>
-          <Text style={styles.checkboxLabel}>
-            I&apos;d like to receive contribution reminders over WhatsApp.
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.checkboxRow}
-          activeOpacity={0.7}
-          onPress={() => {
-            setAgreedToTerms((prev) => !prev);
-            setErrors((prev) => ({ ...prev, terms: undefined }));
-          }}
-        >
-          <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
-            {agreedToTerms && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
-          </View>
-          <Text style={styles.checkboxLabel}>
-            I agree to the{' '}
-            <Text style={styles.checkboxLink} onPress={() => router.push('/terms')}>
-              Terms &amp; Conditions
-            </Text>{' '}
-            and{' '}
-            <Text style={styles.checkboxLink} onPress={() => router.push('/privacy-policy')}>
-              Privacy Policy
+        <View style={styles.consentGroup}>
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            activeOpacity={0.7}
+            onPress={() => setWhatsappConsent((prev) => !prev)}
+          >
+            <View style={[styles.checkbox, whatsappConsent && styles.checkboxChecked]}>
+              {whatsappConsent && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              I&apos;d like to receive contribution reminders over WhatsApp.
             </Text>
-            .
-          </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.checkboxRow}
+            activeOpacity={0.7}
+            onPress={() => {
+              setAgreedToTerms((prev) => !prev);
+              setErrors((prev) => ({ ...prev, terms: undefined }));
+            }}
+          >
+            <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+              {agreedToTerms && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
+            </View>
+            <Text style={styles.checkboxLabel}>
+              I agree to the{' '}
+              <Text style={styles.checkboxLink} onPress={() => router.push('/terms')}>
+                Terms &amp; Conditions
+              </Text>{' '}
+              and{' '}
+              <Text style={styles.checkboxLink} onPress={() => router.push('/privacy-policy')}>
+                Privacy Policy
+              </Text>
+              .
+            </Text>
+          </TouchableOpacity>
+        </View>
         {errors.terms && <Text style={styles.consentError}>{errors.terms}</Text>}
 
         {/* Continue CTA */}
@@ -202,6 +255,60 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7A756E',
     marginBottom: 28,
+  },
+  inputLabel: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#7A756E',
+    textTransform: 'uppercase',
+    letterSpacing: 0.04,
+    marginBottom: 10,
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  countryCodeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 44,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#E4E1DC',
+  },
+  countryCodeText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
+    fontSize: 15,
+    color: '#0C0C0D',
+  },
+  numberInputContainer: {
+    flex: 1,
+  },
+  phoneNumberInputContainer: {
+    marginBottom: 0,
+  },
+  helperText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: '#B0ADA8',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  referralToggle: {
+    marginBottom: 20,
+  },
+  referralToggleText: {
+    fontFamily: 'Inter',
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#EC2028',
+  },
+  consentGroup: {
+    marginTop: 4,
   },
   checkboxRow: {
     flexDirection: 'row',

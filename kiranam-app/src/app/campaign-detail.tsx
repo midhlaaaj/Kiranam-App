@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -25,6 +25,13 @@ export default function CampaignDetailScreen() {
       message: `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.org`,
     });
   };
+
+  // Landed here from the "close to goal" push notification (?share=1) —
+  // open the share sheet immediately instead of making them find the icon.
+  useEffect(() => {
+    if (params.share === '1') handleShare();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.share]);
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>

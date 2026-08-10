@@ -1,18 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Menu, X, LogOut } from 'lucide-react';
+import Link from 'next/link';
+import { Menu, X, LogOut, Bell } from 'lucide-react';
 import { SidebarNav } from '@/components/SidebarNav';
 
 function SidebarContent({
   initials,
   email,
+  unreadCount,
   onLogout,
   onNavigate,
   onClose,
 }: {
   initials: string;
   email: string;
+  unreadCount: number;
   onLogout: React.ReactNode;
   onNavigate?: () => void;
   onClose?: () => void;
@@ -23,16 +26,31 @@ function SidebarContent({
         <div className="min-w-0">
           <p className="text-3xl leading-none font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
         </div>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close navigation"
-            className="shrink-0 cursor-pointer rounded-lg p-1.5 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink lg:hidden"
+        <div className="flex shrink-0 items-center gap-1">
+          <Link
+            href="/my-notifications"
+            onClick={onNavigate}
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+            className="relative cursor-pointer rounded-lg p-1.5 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
           >
-            <X size={18} />
-          </button>
-        )}
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-kiranam-primary px-1 text-[9px] font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Link>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close navigation"
+              className="shrink-0 cursor-pointer rounded-lg p-1.5 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink lg:hidden"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
       </div>
 
       <SidebarNav onNavigate={onNavigate} />
@@ -51,11 +69,13 @@ function SidebarContent({
 export function AdminShell({
   initials,
   email,
+  unreadCount,
   logoutButton,
   children,
 }: {
   initials: string;
   email: string;
+  unreadCount: number;
   logoutButton: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -78,7 +98,7 @@ export function AdminShell({
     <div className="flex min-h-dvh bg-kiranam-bg">
       {/* Desktop sidebar — pinned, never scrolls */}
       <aside className="hidden h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-kiranam-border bg-kiranam-surface lg:sticky lg:top-0 lg:flex">
-        <SidebarContent initials={initials} email={email} onLogout={logoutButton} />
+        <SidebarContent initials={initials} email={email} unreadCount={unreadCount} onLogout={logoutButton} />
       </aside>
 
       {/* Mobile drawer */}
@@ -100,6 +120,7 @@ export function AdminShell({
         <SidebarContent
           initials={initials}
           email={email}
+          unreadCount={unreadCount}
           onLogout={logoutButton}
           onNavigate={() => setDrawerOpen(false)}
           onClose={() => setDrawerOpen(false)}
