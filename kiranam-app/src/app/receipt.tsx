@@ -8,11 +8,12 @@ import { Check, Clipboard as CopyIcon } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 import { formatMoney } from '@/utils/format';
+import { KIRANAM_LOGO_DATA_URI, HCF_LOGO_DATA_URI, HCF_SEAL_DATA_URI } from '@/constants/receiptAssets';
 
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { userName, isEmailVerified, emailReceipt, isVolunteer } = useApp();
+  const { userName, userEmail, phone, isEmailVerified, emailReceipt, isVolunteer } = useApp();
 
   const txnId = (params.id as string) || 'TXN9284KLM2';
   const amount = params.amount ? parseInt(params.amount as string, 10) : 500;
@@ -31,29 +32,67 @@ export default function ReceiptScreen() {
   const receiptHtml = `
     <html>
       <head>
+        <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <style>
           body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 40px; color: #0C0C0D; }
-          .brand { color: #EC2028; font-weight: 800; font-size: 22px; margin-bottom: 4px; }
-          .title { font-size: 16px; color: #7A756E; margin-bottom: 32px; }
-          .amount { font-size: 40px; font-weight: 800; margin-bottom: 28px; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; }
+          .header-left img.kiranam-logo { height: 48px; display: block; }
+          .header-left .title { text-align: left; font-size: 16px; font-weight: 700; color: #7A756E; margin-top: 10px; }
+          .header-right { text-align: left; }
+          .header-right img.hcf-logo { height: 60px; }
+          .header-right .gov-line { font-size: 11px; color: #7A756E; margin-top: 6px; }
+          .header-right .sra-line { font-size: 11px; color: #7A756E; }
+          .address { text-align: left; font-size: 12px; line-height: 18px; color: #7A756E; margin-top: 10px; }
           table { width: 100%; border-collapse: collapse; }
           td { padding: 12px 0; border-bottom: 1px solid #EEEBE7; font-size: 14px; }
           td.label { color: #7A756E; }
           td.value { text-align: right; font-weight: 600; }
-          .footer { margin-top: 40px; font-size: 12px; color: #B0ADA8; }
+          .amount-row td { font-size: 18px; }
+          .amount-row td.value { color: #EC2028; }
+          .signoff { display: flex; justify-content: flex-end; margin-top: 44px; }
+          .signoff-block { text-align: center; }
+          .signoff-block img.seal { height: 90px; display: block; margin: 0 auto 8px; }
+          .signoff-block .thanks { font-size: 13px; font-weight: 700; color: #0C0C0D; }
+          .footer { margin-top: 40px; font-size: 11px; color: #B0ADA8; text-align: center; }
         </style>
       </head>
       <body>
-        <div class="brand">Kiranam</div>
-        <div class="title">Payment Receipt</div>
-        <div class="amount">${formatMoney(amount)}</div>
-        <table>
-          <tr><td class="label">Paid by</td><td class="value">${userName || '-'}</td></tr>
-          <tr><td class="label">For</td><td class="value">${label}</td></tr>
-          <tr><td class="label">Date &amp; Time</td><td class="value">${dateStr}</td></tr>
+        <div class="header">
+          <div class="header-left">
+            <img class="kiranam-logo" src="${KIRANAM_LOGO_DATA_URI}" />
+            <div class="title">Payment Receipt</div>
+            <div class="address">
+              P.O.Kattippara, Poonoor<br />
+              673573, Kerala, India<br />
+              Ph: +91 8592892020<br />
+              Email: support@kiranam.online<br />
+              www.healthcarefoundation.in
+            </div>
+          </div>
+          <div class="header-right">
+            <img class="hcf-logo" src="${HCF_LOGO_DATA_URI}" />
+            <div class="gov-line">Government of Kerala</div>
+            <div class="sra-line">SRA No. 423/2010</div>
+          </div>
+        </div>
+
+        <table style="margin-top: 32px;">
+          <tr><td class="label">Name</td><td class="value">${userName || '-'}</td></tr>
+          <tr><td class="label">Email</td><td class="value">${userEmail || '-'}</td></tr>
+          <tr><td class="label">Mobile Number</td><td class="value">${phone || '-'}</td></tr>
+          <tr class="amount-row"><td class="label">Amount</td><td class="value">${formatMoney(amount)}</td></tr>
           <tr><td class="label">Transaction ID</td><td class="value">${txnId}</td></tr>
+          <tr><td class="label">Date</td><td class="value">${dateStr}</td></tr>
         </table>
+
+        <div class="signoff">
+          <div class="signoff-block">
+            <img class="seal" src="${HCF_SEAL_DATA_URI}" />
+            <div class="thanks">Thank you for your contribution.</div>
+          </div>
+        </div>
+
         <div class="footer">This is a computer-generated receipt for your contribution to Kiranam.</div>
       </body>
     </html>
