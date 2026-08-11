@@ -26,6 +26,8 @@ export default function PasswordScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const handleStartEditEmail = () => {
@@ -51,13 +53,13 @@ export default function PasswordScreen() {
 
   const handleSubmit = async () => {
     if (isNew) {
-      const passwordError = validatePassword(password);
-      if (passwordError) {
-        setError(passwordError);
+      const passwordValidationError = validatePassword(password);
+      if (passwordValidationError) {
+        setPasswordError(passwordValidationError);
         return;
       }
       if (password !== confirmPassword) {
-        setError('Passwords do not match.');
+        setConfirmPasswordError('Passwords do not match.');
         return;
       }
       setSubmitting(true);
@@ -76,7 +78,7 @@ export default function PasswordScreen() {
     }
 
     if (!password) {
-      setError('Please enter your password.');
+      setPasswordError('Please enter your password.');
       return;
     }
     setSubmitting(true);
@@ -91,7 +93,7 @@ export default function PasswordScreen() {
         router.replace({ pathname: '/verify-email', params: { email, role } });
         return;
       }
-      setError(friendlyError(signInError));
+      setPasswordError(friendlyError(signInError));
       return;
     }
 
@@ -180,8 +182,10 @@ export default function PasswordScreen() {
           textContentType={isNew ? 'newPassword' : 'password'}
           autoComplete={isNew ? 'new-password' : 'password'}
           value={password}
+          error={passwordError}
           onChangeText={(text) => {
-            setError('');
+            setPasswordError('');
+            setConfirmPasswordError('');
             setPassword(text);
           }}
           rightElement={
@@ -200,8 +204,9 @@ export default function PasswordScreen() {
             textContentType="newPassword"
             autoComplete="new-password"
             value={confirmPassword}
+            error={confirmPasswordError}
             onChangeText={(text) => {
-              setError('');
+              setConfirmPasswordError('');
               setConfirmPassword(text);
             }}
             rightElement={

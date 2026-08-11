@@ -61,6 +61,20 @@ export default function VerifyEmailScreen() {
           </Text>
         </TouchableOpacity>
 
+        {/* The link tap normally deep-links straight into email-verified.tsx
+            with a session — this is the fallback for when that hop doesn't
+            land (verified from a different device, or a mail app's in-app
+            browser that blocked the kiranamapp:// redirect). Signing in
+            directly here works either way: password.tsx already routes an
+            unconfirmed account back to this screen, so retrying is safe. */}
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/password', params: { email, mode: role, isNew: '0' } })}
+          activeOpacity={0.7}
+          style={styles.refreshLink}
+        >
+          <Text style={styles.refreshLinkText}>Already verified? Log in</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity onPress={() => router.replace('/')} activeOpacity={0.7} style={styles.backLink}>
           <Text style={styles.backLinkText}>Back to start</Text>
         </TouchableOpacity>
@@ -126,6 +140,15 @@ const styles = StyleSheet.create({
   },
   resendLinkDisabled: {
     color: '#B0ADA8',
+  },
+  refreshLink: {
+    marginBottom: 20,
+  },
+  refreshLinkText: {
+    fontFamily: 'Inter',
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#0C0C0D',
   },
   backLink: {
     paddingVertical: 8,

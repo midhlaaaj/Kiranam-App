@@ -14,6 +14,7 @@ export default function VolunteerProfileScreen() {
     userName,
     phone,
     userEmail,
+    isEmailVerified,
     userAvatarUrl,
     myReferralCode,
     signOut,
@@ -119,6 +120,29 @@ export default function VolunteerProfileScreen() {
             <Text style={styles.actionRowText}>My Contribution History</Text>
             <ChevronRight size={16} color="#D8D5D0" />
           </TouchableOpacity>
+        </View>
+
+        {/* Personal Info */}
+        <Text style={styles.sectionHeader}>Personal Information</Text>
+        <View style={styles.sectionCard}>
+          <View style={styles.infoField}>
+            <Text style={styles.infoFieldLabel}>Name</Text>
+            <Text style={styles.infoFieldValue}>{userName}</Text>
+          </View>
+          <View style={styles.infoField}>
+            <Text style={styles.infoFieldLabel}>Phone</Text>
+            <Text style={styles.infoFieldValue}>{phone || '+91 98765 43210'}</Text>
+          </View>
+          <View style={[styles.infoField, styles.noBorder]}>
+            <Text style={styles.infoFieldLabel}>
+              Email {userEmail && (
+                <Text style={isEmailVerified ? styles.infoFieldVerified : styles.infoFieldUnverified}>
+                  {isEmailVerified ? '· Verified' : '· Pending verification'}
+                </Text>
+              )}
+            </Text>
+            <Text style={styles.infoFieldValue}>{userEmail || 'Not set'}</Text>
+          </View>
         </View>
 
         {/* Account Options */}
@@ -310,6 +334,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#EC2028',
+  },
+  infoField: {
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EEEA',
+  },
+  infoFieldLabel: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: '#7A756E',
+    marginBottom: 4,
+  },
+  infoFieldVerified: {
+    textTransform: 'none',
+    color: '#22A559',
+  },
+  infoFieldUnverified: {
+    textTransform: 'none',
+    color: '#B0ADA8',
+  },
+  infoFieldValue: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0C0C0D',
   },
   actionRow: {
     flexDirection: 'row',

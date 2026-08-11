@@ -2,8 +2,34 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, StatusBar, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
 import { Button } from '@/components/Button';
 import { supabase } from '@/lib/supabase';
+import { extractReferralCodeFromText, stashPendingReferralCode } from '@/utils/referral';
+
+const CLIPBOARD_CHECKED_KEY = 'kiranam.referralClipboardChecked';
+
+// iOS has no install-referrer equivalent — a referral link tapped before
+// the app was installed can't reach the app any other way once the App
+// Store round-trip is done, so kiranam.online/join copies the join URL to
+// the clipboard as a fallback. This reads it back exactly once per install
+// (never again after) so returning users don't get an "Allow Paste"
+// banner every time they open the app.
+async function checkClipboardForReferralCode() {
+  const alreadyChecked = await AsyncStorage.getItem(CLIPBOARD_CHECKED_KEY);
+  if (alreadyChecked) return;
+  await AsyncStorage.setItem(CLIPBOARD_CHECKED_KEY, '1');
+  try {
+    const hasString = await Clipboard.hasStringAsync();
+    if (!hasString) return;
+    const text = await Clipboard.getStringAsync();
+    const code = extractReferralCodeFromText(text);
+    if (code) await stashPendingReferralCode(code);
+  } catch {
+    // No clipboard access — this is a best-effort fallback, not a blocker.
+  }
+}
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -19,6 +45,10 @@ export default function SplashScreen() {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
+        // No account yet on this device is exactly the "fresh install"
+        // case a deferred referral link needs to survive — an existing,
+        // signed-in user already went through this at their own signup.
+        await checkClipboardForReferralCode();
         if (!cancelled) setCheckingSession(false);
         return;
       }
@@ -57,6 +87,10 @@ export default function SplashScreen() {
     return () => {
       cancelled = true;
     };
+    // Deliberately mount-once — re-running on every `router` identity change
+    // would re-check the session and could re-navigate mid-flow. expo-router's
+    // router reference is stable across renders anyway.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const tagline = "Every contribution, big or small, brings a family closer to hope.";

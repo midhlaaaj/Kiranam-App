@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
+import { referralJoinUrl } from '@/utils/links';
 
 export default function VolunteerDashboardScreen() {
   const router = useRouter();
@@ -63,7 +64,7 @@ export default function VolunteerDashboardScreen() {
 
   const handleShare = () => {
     Share.share({
-      message: `Join me on Kiranam and make a difference! Use my referral code ${myReferralCode} when you sign up.`,
+      message: `Join me on Kiranam and make a difference! Use my referral code ${myReferralCode} when you sign up: ${referralJoinUrl(myReferralCode)}`,
     });
   };
 

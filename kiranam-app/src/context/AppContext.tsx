@@ -7,6 +7,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { formatMoney, formatDate, getDeviceLocale } from '@/utils/format';
+import { peekPendingReferralCode, clearPendingReferralCode } from '@/utils/referral';
 
 // Interfaces for our app types
 export interface Campaign {
@@ -339,6 +340,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled = true;
       subscription.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
   // Load public campaign/event data regardless of auth state
@@ -402,7 +404,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : '',
       timeStr: e.time_label || '',
       location: e.location || '',
-      isPast: e.is_past || (e.event_date && e.event_date < today),
+      // event_date is the source of truth when present — is_past is a
+      // stored flag admins can toggle and a nightly sweep can set, but
+      // nothing ever clears it if a date gets edited back into the future,
+      // so a stale `true` must not be able to hide an event that isn't
+      // actually past. Only events without a date fall back to the flag.
+      isPast: e.event_date ? e.event_date < today : !!e.is_past,
       desc: e.description || '',
       coverImageUrl: e.cover_image_url || null,
       galleryUrls: galleryByEvent.get(e.id) || [],
@@ -611,6 +618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // trigger a full reload — a session reference change for the same user
   // (token refresh, the email-reconciliation effect above, etc.) shouldn't
   // flash every card on the screen back to its loading skeleton.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, loadUserData]);
 
   // Any contribution, notification, or commitment change for this user (an
@@ -646,6 +654,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       subscription.remove();
       clearInterval(interval);
     };
+    // Narrowed to the user id for the same reason as the effect above —
+    // a session reference change alone shouldn't tear down and resubscribe
+    // this realtime channel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, refreshUserData]);
 
   // Recalculate giving totals when payments list updates
@@ -753,8 +765,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // redeem_referral_code is SECURITY DEFINER because contributors have no
     // RLS access to read referrals or write contributor_assignments directly.
     // A bad/missing code is silently a no-op — it must never block signup.
-    if (fields.role === 'contributor' && fields.referralCode?.trim()) {
-      await supabase.rpc('redeem_referral_code', { code: fields.referralCode.trim() });
+    //
+    // A code stashed by a /join deep link (or the iOS clipboard fallback)
+    // takes priority over whatever's typed in the field — that's the
+    // "compulsory" auto-read path, and it should win even if the person
+    // also happened to type a different code.
+    if (fields.role === 'contributor') {
+      const pendingCode = await peekPendingReferralCode();
+      const code = pendingCode || fields.referralCode?.trim();
+      if (code) {
+        const { data } = await supabase.rpc('redeem_referral_code', { code });
+        if (data && pendingCode) await clearPendingReferralCode();
+      }
     }
     return { error: null };
   };
@@ -1011,12 +1033,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     if (orderError || !orderData) throw orderError || new Error('Could not create payment order');
 
-    let RazorpayCheckout: any;
-    try {
-      RazorpayCheckout = require('react-native-razorpay').default;
-    } catch {
-      throw new Error('Razorpay payments are disabled in this Expo Go test build.');
-    }
+    // Native module — must stay a require(), not a static import, so it's
+    // only touched inside this payment flow rather than at module scope.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const RazorpayCheckout = require('react-native-razorpay').default;
     const checkoutResult = await RazorpayCheckout.open({
       key: orderData.keyId,
       amount: orderData.amount,
@@ -1083,7 +1103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { error: null };
   };
 
-  const fetchContributorNotes = async (contributorId: string): Promise<{ notes: ContributorNote[]; error: string | null }> => {
+  const fetchContributorNotes = useCallback(async (contributorId: string): Promise<{ notes: ContributorNote[]; error: string | null }> => {
     const { data, error } = await supabase
       .from('contributor_notes')
       .select('id, body, created_at')
@@ -1098,7 +1118,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })),
       error: null,
     };
-  };
+  }, []);
 
   const addContributorNote = async (contributorId: string, body: string): Promise<{ error: string | null }> => {
     if (!session) return { error: 'Not signed in' };

@@ -8,6 +8,7 @@ import { statusMeta } from '@/utils/volunteerStatus';
 import { Copy, Share2, Pencil, Users, UserCheck, Wallet } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
+import { referralJoinUrl } from '@/utils/links';
 
 export default function ReferralsScreen() {
   const { myReferralCode, updateReferralCode, volunteerMembers, refreshUserData } = useApp();
@@ -32,7 +33,7 @@ export default function ReferralsScreen() {
 
   const handleShare = () => {
     Share.share({
-      message: `Join me on Kiranam and make a difference! Use my referral code ${myReferralCode} when you sign up.`,
+      message: `Join me on Kiranam and make a difference! Use my referral code ${myReferralCode} when you sign up: ${referralJoinUrl(myReferralCode)}`,
     });
   };
 

@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingV
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
-import { Input } from '@/components/Input';
 import { validateAmount } from '@/utils/validators';
 import { formatMoney } from '@/utils/format';
 import { ArrowLeft } from 'lucide-react-native';

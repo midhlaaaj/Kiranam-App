@@ -1,11 +1,13 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useApp } from '@/context/AppContext';
+import { useApp, Campaign, EventRecord } from '@/context/AppContext';
 import { Card } from '@/components/Card';
 import { Bell, Heart, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
+import { shareWithCoverImage } from '@/utils/share';
+import { APP_JOIN_URL } from '@/utils/links';
 
 export default function VolunteerExploreScreen() {
   const router = useRouter();
@@ -23,16 +25,18 @@ export default function VolunteerExploreScreen() {
   const activeCampaigns = campaigns.filter((c) => c.status === 'active');
   const upcomingEvents = events.filter((e) => !e.isPast);
 
-  const handleShareCampaign = (title: string) => {
-    Share.share({
-      message: `Help support "${title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.online`,
-    });
+  const handleShareCampaign = (campaign: Campaign) => {
+    shareWithCoverImage(
+      `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: ${APP_JOIN_URL}`,
+      campaign.coverImageUrl
+    );
   };
 
-  const handleShareEvent = (title: string) => {
-    Share.share({
-      message: `Join "${title}" — a Kiranam event. See details and RSVP: https://kiranam.online`,
-    });
+  const handleShareEvent = (event: EventRecord) => {
+    shareWithCoverImage(
+      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      event.coverImageUrl
+    );
   };
 
   return (
@@ -82,7 +86,7 @@ export default function VolunteerExploreScreen() {
                   <Text style={styles.campaignImageText}>campaign photo</Text>
                   <TouchableOpacity
                     style={styles.shareIconButton}
-                    onPress={() => handleShareCampaign(item.title)}
+                    onPress={() => handleShareCampaign(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
                   >
@@ -123,7 +127,7 @@ export default function VolunteerExploreScreen() {
                   <Text style={styles.campaignImageText}>event photo</Text>
                   <TouchableOpacity
                     style={styles.shareIconButton}
-                    onPress={() => handleShareEvent(item.title)}
+                    onPress={() => handleShareEvent(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
                   >

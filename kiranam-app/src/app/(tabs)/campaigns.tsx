@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,8 @@ import { SegmentedToggle } from '@/components/SegmentedToggle';
 import { Bell, Heart, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
+import { shareWithCoverImage } from '@/utils/share';
+import { APP_JOIN_URL } from '@/utils/links';
 
 export default function CampaignsScreen() {
   const router = useRouter();
@@ -26,10 +28,11 @@ export default function CampaignsScreen() {
   const filteredCampaigns = campaigns.filter(c => c.status === selectedTab);
 
 
-  const handleShare = (title: string) => {
-    Share.share({
-      message: `Help support "${title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.online`,
-    });
+  const handleShare = (campaign: Campaign) => {
+    shareWithCoverImage(
+      `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: ${APP_JOIN_URL}`,
+      campaign.coverImageUrl
+    );
   };
 
   return (
@@ -82,7 +85,7 @@ export default function CampaignsScreen() {
                   />
                   <TouchableOpacity
                     style={styles.shareIconButton}
-                    onPress={() => handleShare(item.title)}
+                    onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
                   >
@@ -100,7 +103,7 @@ export default function CampaignsScreen() {
                   <Heart size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
                   <TouchableOpacity
                     style={styles.shareIconButton}
-                    onPress={() => handleShare(item.title)}
+                    onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
                   >

@@ -44,7 +44,7 @@ export default function VolunteerContributorDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [member, notesRefreshKey]);
+  }, [member, notesRefreshKey, fetchContributorNotes]);
 
   useEffect(() => {
     if (!member) return;

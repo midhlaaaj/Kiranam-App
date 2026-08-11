@@ -6,6 +6,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import { AppProvider } from '@/context/AppContext';
+// Font imports from Google Fonts packages
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold
+} from '@expo-google-fonts/inter';
 
 // Show an alert even while the app is foregrounded — otherwise a push that
 // arrives while someone's actively using the app is silently swallowed.
@@ -18,14 +25,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
-// Font imports from Google Fonts packages
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold
-} from '@expo-google-fonts/inter';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -70,6 +69,7 @@ export default function RootLayout() {
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="join" />
           <Stack.Screen name="login" />
           <Stack.Screen name="password" />
           <Stack.Screen name="forgot-password" />

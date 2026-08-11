@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,8 @@ import { Card } from '@/components/Card';
 import { SegmentedToggle } from '@/components/SegmentedToggle';
 import { Bell, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { shareWithCoverImage } from '@/utils/share';
+import { APP_JOIN_URL } from '@/utils/links';
 
 export default function EventsScreen() {
   const router = useRouter();
@@ -24,10 +26,11 @@ export default function EventsScreen() {
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
   const filteredEvents = events.filter(e => (selectedTab === 'upcoming' ? !e.isPast : e.isPast));
 
-  const handleShare = (title: string) => {
-    Share.share({
-      message: `Join "${title}" — a Kiranam event. See details and RSVP: https://kiranam.online`,
-    });
+  const handleShare = (event: EventRecord) => {
+    shareWithCoverImage(
+      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      event.coverImageUrl
+    );
   };
 
   return (
@@ -80,7 +83,7 @@ export default function EventsScreen() {
                   />
                   <TouchableOpacity
                     style={styles.shareIconButton}
-                    onPress={() => handleShare(item.title)}
+                    onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
                   >
@@ -98,7 +101,7 @@ export default function EventsScreen() {
                   <ImageIcon size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
                   <TouchableOpacity
                     style={styles.shareIconButton}
-                    onPress={() => handleShare(item.title)}
+                    onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
                   >

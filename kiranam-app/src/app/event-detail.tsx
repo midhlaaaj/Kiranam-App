@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { GalleryLightbox } from '@/components/GalleryLightbox';
 import { ArrowLeft, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { shareWithCoverImage } from '@/utils/share';
+import { APP_JOIN_URL } from '@/utils/links';
 
 export default function EventDetailScreen() {
   const router = useRouter();
@@ -19,9 +21,10 @@ export default function EventDetailScreen() {
   if (!event) return null;
 
   const handleShare = () => {
-    Share.share({
-      message: `Join "${event.title}" — a Kiranam event. See details and RSVP: https://kiranam.online`,
-    });
+    shareWithCoverImage(
+      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      event.coverImageUrl
+    );
   };
 
   return (

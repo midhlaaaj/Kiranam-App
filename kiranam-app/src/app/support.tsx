@@ -27,10 +27,14 @@ export default function SupportScreen() {
     setOpenFaqId(openFaqId === id ? null : id);
   };
 
-  const WHATSAPP_NUMBER = '919876543210'; // TODO: replace with the real support WhatsApp number before submission
+  // Must be set via EXPO_PUBLIC_SUPPORT_WHATSAPP_NUMBER — never hardcode a
+  // placeholder here. An unconfigured/wrong number would open a WhatsApp
+  // chat with whoever actually holds that number, not Kiranam support.
+  const WHATSAPP_NUMBER = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP_NUMBER;
   const SUPPORT_EMAIL = 'support@kiranam.online';
 
   const handleWhatsApp = () => {
+    if (!WHATSAPP_NUMBER) return;
     const url = `https://wa.me/${WHATSAPP_NUMBER}`;
     Linking.canOpenURL(url).then(supported => {
       if (supported) {
@@ -115,10 +119,12 @@ export default function SupportScreen() {
         <View style={styles.supportCTA}>
           <Text style={styles.ctaTitle}>Still need help?</Text>
           
-          <TouchableOpacity style={styles.waButton} onPress={handleWhatsApp} activeOpacity={0.8}>
-            <MessageSquare size={16} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={styles.waButtonText}>Chat with us on WhatsApp</Text>
-          </TouchableOpacity>
+          {!!WHATSAPP_NUMBER && (
+            <TouchableOpacity style={styles.waButton} onPress={handleWhatsApp} activeOpacity={0.8}>
+              <MessageSquare size={16} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={styles.waButtonText}>Chat with us on WhatsApp</Text>
+            </TouchableOpacity>
+          )}
           
           <TouchableOpacity style={styles.mailButton} onPress={handleEmail} activeOpacity={0.8}>
             <Mail size={16} color="#FFFFFF" strokeWidth={2.2} />

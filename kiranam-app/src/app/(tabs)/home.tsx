@@ -2,12 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Platform, Animated, Easing, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useApp } from '@/context/AppContext';
+import { useApp, EventRecord } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '@/components/Button';
-import { Bell, Heart, Calendar, ArrowRight, ShieldCheck, ChevronRight, Check, Circle } from 'lucide-react-native';
+import { Card } from '@/components/Card';
+import { Bell, Heart, Calendar, MapPin, Image as ImageIcon, Share2, ShieldCheck, Check, Circle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
+import { shareWithCoverImage } from '@/utils/share';
+import { APP_JOIN_URL } from '@/utils/links';
 
 function SkeletonBlock({ style }: { style: any }) {
   const opacity = useRef(new Animated.Value(0.35)).current;
@@ -57,6 +60,13 @@ export default function HomeScreen() {
   const upcomingEvents = events.filter(e => !e.isPast).slice(0, 2);
   const recentPayments = payments.slice(0, 3);
   const unreadNotificationsCount = notifications.filter(n => n.unread).length;
+
+  const handleShareEvent = (event: EventRecord) => {
+    shareWithCoverImage(
+      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      event.coverImageUrl
+    );
+  };
 
   const setupSteps = [
     { key: 'amount', label: 'Set your monthly amount', done: hasCommitment, onPress: () => router.push('/choose-amount') },
@@ -257,18 +267,59 @@ export default function HomeScreen() {
             {upcomingEvents.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                style={styles.eventRow}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
                 onPress={() => router.push({ pathname: '/event-detail', params: { id: item.id } })}
               >
-                <View style={styles.eventIconBox}>
-                  <Calendar size={20} color="#B0ADA8" />
-                </View>
-                <View style={styles.eventInfo}>
-                  <Text style={styles.eventTitle} numberOfLines={1}>{item.title}</Text>
-                  <Text style={styles.eventSubtitle}>{item.dateStr} · {item.location}</Text>
-                </View>
-                <ChevronRight size={16} color="#B0ADA8" />
+                <Card style={styles.eventCard}>
+                  {item.coverImageUrl ? (
+                    <View style={styles.eventImagePlaceholder}>
+                      <Image
+                        source={{ uri: item.coverImageUrl }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        transition={200}
+                      />
+                      <TouchableOpacity
+                        style={styles.shareIconButton}
+                        onPress={() => handleShareEvent(item)}
+                        activeOpacity={0.8}
+                        hitSlop={8}
+                      >
+                        <Share2 size={15} color="#0C0C0D" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <LinearGradient
+                      colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
+                      locations={[0, 0.3, 0.65, 1]}
+                      start={{ x: 0.29, y: 0.05 }}
+                      end={{ x: 0.71, y: 0.95 }}
+                      style={styles.eventImagePlaceholder}
+                    >
+                      <ImageIcon size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
+                      <TouchableOpacity
+                        style={styles.shareIconButton}
+                        onPress={() => handleShareEvent(item)}
+                        activeOpacity={0.8}
+                        hitSlop={8}
+                      >
+                        <Share2 size={15} color="#0C0C0D" />
+                      </TouchableOpacity>
+                    </LinearGradient>
+                  )}
+
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+
+                  <View style={styles.infoRow}>
+                    <Calendar size={15} color="#7A756E" />
+                    <Text style={styles.infoText}>{item.dateStr} · {item.timeStr}</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <MapPin size={15} color="#7A756E" />
+                    <Text style={styles.infoText}>{item.location}</Text>
+                  </View>
+                </Card>
               </TouchableOpacity>
             ))}
           </View>
@@ -604,7 +655,7 @@ const styles = StyleSheet.create({
     color: '#0C0C0D',
   },
   eventsContainer: {
-    gap: 10,
+    gap: 16,
     marginBottom: 24,
   },
   emptyStateCard: {
@@ -620,12 +671,12 @@ const styles = StyleSheet.create({
   campaignsEmptyStateCard: {
     height: 176,
   },
-  // Matches the filled state's rendered height when showing the max of 2
-  // upcoming events (2 eventRows at 76px each + the 10px gap between them) —
-  // matching only 1 row's height left a visible jump whenever 2 events were
-  // actually shown.
+  // Approximates the filled state's rendered height when showing the max of
+  // 2 upcoming events (2 event cards, each ~235px, plus the 16px gap between
+  // them) so the empty state doesn't jump the layout smaller than real cards
+  // would be.
   eventsEmptyStateCard: {
-    height: 76 * 2 + 10,
+    height: 235 * 2 + 16,
   },
   emptyStateIconBox: {
     width: 44,
@@ -649,36 +700,59 @@ const styles = StyleSheet.create({
     color: '#7A756E',
     textAlign: 'center',
   },
-  eventRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: '#F9F8F6',
-    borderRadius: 18,
-    padding: 12,
+  eventCard: {
+    padding: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 3,
   },
-  eventIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#EFEBE6',
+  eventImagePlaceholder: {
+    width: '100%',
+    height: 120,
+    borderRadius: 18,
+    backgroundColor: '#F4F1EE',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
-  eventInfo: {
-    flex: 1,
+  shareIconButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   eventTitle: {
     fontFamily: 'Inter',
-    fontWeight: '600',
-    fontSize: 13.5,
+    fontWeight: '700',
+    fontSize: 16,
     color: '#0C0C0D',
-    marginBottom: 2,
+    letterSpacing: -0.2,
+    marginBottom: 10,
   },
-  eventSubtitle: {
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  infoText: {
     fontFamily: 'Inter',
-    fontSize: 12,
-    color: '#7A756E',
+    fontSize: 13,
+    color: '#4A4640',
   },
   recentContributionsContainer: {
     backgroundColor: '#FFFFFF',

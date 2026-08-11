@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Localization from 'expo-localization';
@@ -10,6 +10,7 @@ import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { getCountryByIso2 } from '@/utils/countries';
 import { validateRequired, validatePhoneNumber, validateReferralCode } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
+import { peekPendingReferralCode } from '@/utils/referral';
 import { ArrowLeft, Check, ChevronDown } from 'lucide-react-native';
 
 // Default the country picker to the device's own region instead of always
@@ -35,6 +36,20 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<{ name?: string; phone?: string; refCode?: string; terms?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // A code captured from a /join link (or the iOS clipboard fallback) gets
+  // redeemed automatically at signup regardless of this field — this just
+  // surfaces it so the person can see it was picked up rather than
+  // wondering whether they still need to type one in.
+  useEffect(() => {
+    if (role !== 'contributor') return;
+    peekPendingReferralCode().then((code) => {
+      if (code) {
+        setRefCode(code);
+        setShowReferralField(true);
+      }
+    });
+  }, [role]);
 
   const handleCreateAccount = async () => {
     const nameError = validateRequired(name, 'Full Name');

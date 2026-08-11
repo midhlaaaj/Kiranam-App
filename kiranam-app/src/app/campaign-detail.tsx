@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
@@ -8,6 +8,8 @@ import { GalleryLightbox } from '@/components/GalleryLightbox';
 import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
+import { shareWithCoverImage } from '@/utils/share';
+import { APP_JOIN_URL } from '@/utils/links';
 
 export default function CampaignDetailScreen() {
   const router = useRouter();
@@ -20,9 +22,10 @@ export default function CampaignDetailScreen() {
 
   const handleShare = () => {
     if (!campaign) return;
-    Share.share({
-      message: `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: https://kiranam.online`,
-    });
+    shareWithCoverImage(
+      `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: ${APP_JOIN_URL}`,
+      campaign.coverImageUrl
+    );
   };
 
   // Landed here from the "close to goal" push notification (?share=1) —

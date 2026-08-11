@@ -2,7 +2,6 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, StatusBar, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp, PaymentRecord } from '@/context/AppContext';
-import { Card } from '@/components/Card';
 import { Bell, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
