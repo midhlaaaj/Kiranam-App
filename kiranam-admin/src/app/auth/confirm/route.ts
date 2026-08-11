@@ -11,17 +11,23 @@ import { createClient } from '@/lib/supabase/server';
 //
 // One Supabase project, three apps sharing this same template (kiranam-app,
 // kiranam-admin, and admin-registered contributors claiming their account) —
-// `next` is how each caller says where to land afterward. A `kiranamapp://`
-// next means the destination is the *mobile app*, which can't read the
-// session this route just established in kiranam-admin's own cookies — so
-// instead of a bare redirect, forward the resulting access/refresh tokens as
-// query params, since the token_hash itself is single-use and would already
-// be spent by the time the app tried to verify it again.
+// `next` is how each caller says where to land afterward. This route only
+// ever runs on auth.kiranam.online, so any `next` on a *different* host
+// (the mobile app's kiranamapp:// scheme, or kiranam-admin's own main
+// domain — a sibling subdomain, not the same host) can't read the session
+// just established in cookies here: those are host-only. Forward the
+// resulting access/refresh tokens as query params instead, since the
+// token_hash itself is single-use and would already be spent by the time
+// the destination tried to verify it again.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const tokenHash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
-  const next = searchParams.get('next') || '/';
+  // Falling back to '/' would land non-admin users (contributors,
+  // volunteers) on the admin dashboard root, which verifyAdmin() then
+  // bounces to /login — looking exactly like a broken "redirects to admin
+  // login" bug. /auth/success is the neutral, unbranded-to-admin landing.
+  const next = searchParams.get('next') || '/auth/success';
 
   if (tokenHash && type) {
     const supabase = await createClient();
@@ -32,9 +38,24 @@ export async function GET(request: NextRequest) {
         const appUrl = new URL(next);
         appUrl.searchParams.set('access_token', data.session.access_token);
         appUrl.searchParams.set('refresh_token', data.session.refresh_token);
-        return NextResponse.redirect(appUrl);
+        // Route through /auth/verifying instead of redirecting straight to
+        // the app: the token is already spent at this point (verifyOtp just
+        // consumed it above), so this hop is purely cosmetic/UX — a visible
+        // "Authenticating → Verified" moment plus a manual "Open the app"
+        // button, since some in-app browsers (Mail's built-in Safari view,
+        // Gmail's webview) block a JS-triggered kiranamapp:// navigation.
+        const verifyingUrl = new URL('/auth/verifying', request.url);
+        verifyingUrl.searchParams.set('next', appUrl.toString());
+        return NextResponse.redirect(verifyingUrl);
       }
-      return NextResponse.redirect(new URL(next, request.url));
+
+      const targetUrl = new URL(next, request.url);
+      const isCrossHost = targetUrl.host !== request.nextUrl.host;
+      if (isCrossHost && data.session) {
+        targetUrl.searchParams.set('access_token', data.session.access_token);
+        targetUrl.searchParams.set('refresh_token', data.session.refresh_token);
+      }
+      return NextResponse.redirect(targetUrl);
     }
   }
 

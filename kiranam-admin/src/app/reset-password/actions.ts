@@ -7,6 +7,24 @@ export interface ResetPasswordState {
   error?: string;
 }
 
+// Called once on page load when /auth/confirm forwarded a session as
+// access_token/refresh_token query params (this page lives on a different
+// host than auth.kiranam.online, where those tokens' cookies were set — see
+// /auth/confirm/route.ts). setSession() here runs inside a Server Action,
+// which — unlike a Server Component render — is allowed to write cookies,
+// so this is what actually persists the session for updatePassword below.
+export async function establishResetSession(
+  accessToken: string,
+  refreshToken: string
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+  return error ? { error: error.message } : {};
+}
+
 export async function updatePassword(
   _prevState: ResetPasswordState,
   formData: FormData
@@ -23,9 +41,11 @@ export async function updatePassword(
 
   const supabase = await createClient();
 
-  // Only reachable with a valid session — /auth/confirm establishes one
-  // from the emailed reset link before redirecting here. No session means
-  // the link was invalid/expired rather than a real "wrong password" case.
+  // Only reachable with a valid session — established either directly by
+  // /auth/confirm (same-host redirect) or by establishResetSession above
+  // (forwarded tokens, cross-host redirect) before this form ever renders.
+  // No session means the link was invalid/expired rather than a real
+  // "wrong password" case.
   const {
     data: { user },
   } = await supabase.auth.getUser();
