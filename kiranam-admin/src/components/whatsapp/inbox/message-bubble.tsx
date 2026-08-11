@@ -110,6 +110,10 @@ function MediaImage({ url, alt }: { url: string; alt: string }) {
   }
 
   return (
+    // next/image needs every remote host allow-listed up front; src is a
+    // signed, expiring WhatsApp media URL resolved per-message, so a plain
+    // <img> is the correct tool here.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src ?? ""}
       alt={alt}

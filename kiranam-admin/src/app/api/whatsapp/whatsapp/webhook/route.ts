@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/whatsapp/encryption'
-import { getMediaUrl, downloadMedia } from '@/lib/whatsapp/whatsapp/meta-api'
+import { getMediaUrl } from '@/lib/whatsapp/whatsapp/meta-api'
 import { normalizePhone } from '@/lib/whatsapp/whatsapp/phone-utils'
 import { findExistingContact, isUniqueViolation } from '@/lib/whatsapp/contacts/dedupe'
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/whatsapp/webhook-signature'

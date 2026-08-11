@@ -81,7 +81,6 @@ export function CustomFieldsPanel() {
   // the effect body — so the cascade the lint rule warns about doesn't apply.
   useEffect(() => {
     if (accountId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchFields();
     }
   }, [accountId, fetchFields]);

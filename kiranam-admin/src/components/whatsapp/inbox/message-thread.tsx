@@ -38,7 +38,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/whatsapp/ui/dropdown-menu";
-import { ScrollArea } from "@/components/whatsapp/ui/scroll-area";
 import { MessageBubble } from "./message-bubble";
 import { MessageActions } from "./message-actions";
 import {
@@ -750,6 +749,9 @@ export function MessageThread({
         preview: buildReplyPreview(msg, tQuote),
       });
     },
+    // `tQuote` (next-intl) gets a new reference every render — including it
+    // would recreate this callback on every render for no behavioral benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [authorLabelFor],
   );
 

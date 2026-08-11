@@ -6,7 +6,7 @@ import { addContactTag, deleteContactTag } from '@/lib/whatsapp/contacts/tag-api
 import { useAuth } from '@/hooks/whatsapp/use-auth';
 import { formatCurrency } from '@/lib/whatsapp/currency';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal, MessageTemplate } from '@/types/whatsapp';
+import type { Contact, Tag, ContactNote, CustomField, Deal, MessageTemplate } from '@/types/whatsapp';
 import {
   TemplatePicker,
   type TemplateSendValues,
@@ -24,8 +24,6 @@ import { Input } from '@/components/whatsapp/ui/input';
 import { Label } from '@/components/whatsapp/ui/label';
 import { Textarea } from '@/components/whatsapp/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/whatsapp/ui/avatar';
-import { Badge } from '@/components/whatsapp/ui/badge';
-import { ScrollArea } from '@/components/whatsapp/ui/scroll-area';
 import {
   Phone,
   Mail,
@@ -36,7 +34,6 @@ import {
   Plus,
   Trash2,
   Save,
-  X,
   DollarSign,
   LayoutTemplate,
 } from 'lucide-react';

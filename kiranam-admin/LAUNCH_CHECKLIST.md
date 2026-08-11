@@ -24,7 +24,7 @@ Payments are currently switched off in the app on purpose, so it could be tested
 
 This is the internal tool your team uses day to day — it isn't meant for the public.
 
-- [ ] **Do a practice run of putting the website on its hosting service.** You're using very new website software, so it's better to catch any surprises now than on launch day.
+- [x] **Do a practice run of putting the website on its hosting service.** You're using very new website software, so it's better to catch any surprises now than on launch day.
 - [x] **Turn on the full security shield.** Right now it only watches for problems and reports them, without blocking anything. Once you've confirmed nothing gets wrongly blocked, switch it to actually block.
 - [ ] **Write down every secret setting the website needs, then enter them into the hosting service.** There are 19 of these (passwords, keys, and so on), and none are written down anywhere yet — easy to miss one when setting up.
 - [ ] **Make sure the payment behind-the-scenes functions are switched on in your real database.** Not just in your test one — they need to be live in the database your real app will use.

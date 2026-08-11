@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { Broadcast } from '@/types/whatsapp';
@@ -69,7 +69,7 @@ export default function BroadcastsPage() {
   // Used to kick off polling only while something is actively sending.
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function fetchBroadcasts() {
+  const fetchBroadcasts = useCallback(async () => {
     try {
       const supabase = createClient();
       const { data, error: fetchError } = await supabase
@@ -84,11 +84,15 @@ export default function BroadcastsPage() {
     } finally {
       setLoading(false);
     }
-  }
+    // `t` (next-intl) gets a new reference every render — including it
+    // would recreate this callback (and restart polling below) on every
+    // render for no behavioral benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchBroadcasts();
-  }, []);
+  }, [fetchBroadcasts]);
 
   const anySending = useMemo(
     () => broadcasts.some((b) => b.status === 'sending'),
@@ -129,7 +133,7 @@ export default function BroadcastsPage() {
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [anySending]);
+  }, [anySending, fetchBroadcasts]);
 
   if (loading) {
     return (

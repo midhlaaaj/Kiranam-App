@@ -118,6 +118,9 @@ export function SettingsOverview({
     return () => {
       cancelled = true;
     };
+    // Narrowed to user?.id deliberately — a `user` reference change alone
+    // (token refresh) shouldn't refire these fetches for the same account.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, accountId, canManageMembers]);
 
   const displayName = profile?.full_name || profile?.email || t('yourAccount');

@@ -180,6 +180,9 @@ export function WhatsAppConfig() {
     if (loadedAccountIdRef.current === accountId) return;
     loadedAccountIdRef.current = accountId;
     fetchConfig(accountId);
+    // Narrowed to user?.id deliberately — a `user` reference change alone
+    // (token refresh) shouldn't refire this fetch for the same account.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
 
   async function handleSave() {

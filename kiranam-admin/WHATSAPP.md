@@ -1,8 +1,8 @@
 # WhatsApp Communication Center
 
-Kiranam's WhatsApp inbox, broadcasts, templates, and automations run on **wacrm** (forked from [ArnasDon/wacrm](https://github.com/ArnasDon/wacrm)) — a separate Next.js app, but it shares this app's **same Supabase project**. One database, three apps: `kiranam-app` (mobile), `kiranam-admin` (this app), `wacrm` (the comm center).
+Kiranam's WhatsApp inbox, broadcasts, templates, and automations were originally built as **wacrm** (forked from [ArnasDon/wacrm](https://github.com/ArnasDon/wacrm)), a separate Next.js app sharing this app's Supabase project. That standalone app has since been **merged directly into kiranam-admin** as normal internal routes (`src/app/whatsapp/**`, `src/lib/whatsapp/**`) — it now shares this app's session natively instead of running as its own deployment. The standalone `wacrm/` folder has been removed; the rest of this doc (migrations, auto-provisioning, contact sync) still describes real, current behavior — only the "separate deployment + bridge" parts below are historical.
 
-wacrm was chosen over building a native module because it already solves shared inbox, broadcast delivery tracking, template creation + Meta approval, and team access control. The work on this side is wiring Kiranam's contributors/volunteers into it, not building the CRM itself.
+wacrm was chosen over building a native module because it already solved shared inbox, broadcast delivery tracking, template creation + Meta approval, and team access control. The work on this side was wiring Kiranam's contributors/volunteers into it, not building the CRM itself.
 
 ## How the merge works
 
@@ -17,15 +17,9 @@ The merge migrations live in `kiranam-admin/supabase/migrations/001` through `00
 
 ## Auto-provisioning: admins get comm-center access automatically
 
-A trigger on `profiles` (`provision_wacrm_access_for_admin`, in migration `002`) fires whenever a profile's `role` becomes (or already is) `'admin'`: it creates — or finds — a single shared wacrm `accounts` row named "Kiranam", and sets that profile's `account_id`/`account_role = 'admin'`. Every Kiranam admin lands in the *same* wacrm workspace, sharing one inbox/templates/broadcasts, rather than getting an isolated personal account each.
+A trigger on `profiles` (`provision_wacrm_access_for_admin`, in migration `002`) fires whenever a profile's `role` becomes (or already is) `'admin'`: it creates — or finds — a single shared wacrm `accounts` row named "Kiranam", and sets that profile's `account_id`/`account_role = 'admin'`. Every Kiranam admin lands in the *same* comm-center workspace, sharing one inbox/templates/broadcasts, rather than getting an isolated personal account each.
 
-**One-click bridge, not shared cookies.** kiranam-admin and wacrm are separate deployments on separate domains, so a normal session cookie can't carry over. Instead:
-
-1. The sidebar's "WhatsApp" link points at `kiranam-admin`'s own `GET /api/wacrm-bridge` (`src/app/api/wacrm-bridge/route.ts`).
-2. That route verifies the caller is a logged-in admin (`verifyAdmin()`), then uses the service-role client to mint a one-time Supabase magic-link token for that same user (`auth.admin.generateLink`), and redirects to `wacrm`'s `GET /auth/bridge?token_hash=...&type=magiclink`.
-3. wacrm's receiver (`wacrm/src/app/auth/bridge/route.ts`) exchanges the token (`auth.verifyOtp`) for a real wacrm session and redirects into `/dashboard`.
-
-No second signup, no second password — an admin clicks "WhatsApp" and lands in wacrm already authenticated.
+**No bridge needed anymore.** Historically kiranam-admin and wacrm were separate deployments, so a magic-link SSO bridge (`/api/wacrm-bridge`) carried the session across domains. Now that the comm center is just internal routes under `/whatsapp`, the sidebar link is a normal in-app route and the existing kiranam-admin session applies directly — no second login, no bridge route.
 
 ## Contributor/volunteer sync: trigger, not webhook
 
@@ -41,7 +35,7 @@ A one-time backfill (also in migration `004`) force-fires the trigger for every 
 
 ## Comm-center features already built (verify, don't rebuild)
 
-wacrm ships template creation + Meta approval submission (Settings → Templates) and tag/custom-field/CSV-based broadcast audience targeting out of the box. Once contacts are synced and tagged as above, both "create a template and send it for approval" and "create a message group" are already fully working — this was the point of forking a mature CRM instead of building one.
+The merged-in code ships template creation + Meta approval submission (Settings → Templates) and tag/custom-field/CSV-based broadcast audience targeting out of the box. Once contacts are synced and tagged as above, both "create a template and send it for approval" and "create a message group" are already fully working — this was the point of forking a mature CRM instead of building one.
 
 ## New kiranam-admin features (Phase 6)
 
@@ -50,33 +44,32 @@ wacrm ships template creation + Meta approval submission (Settings → Templates
 
 ## Env vars
 
-| Variable | App | Notes |
-|---|---|---|
-| `NEXT_PUBLIC_WACRM_ENABLED` | kiranam-admin | Set to `1` once wacrm is deployed and reachable — shows the sidebar "WhatsApp" link. |
-| `WACRM_URL` | kiranam-admin (server-only) | Where wacrm is deployed. Used by `/api/wacrm-bridge` to build the redirect. |
-| `SUPABASE_SERVICE_ROLE_KEY` | kiranam-admin (server-only) | Bypasses RLS. Used by `lib/supabase/admin.ts` for the bridge's `generateLink` call and manual contributor registration's `createUser` call. Never expose to the client. |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | wacrm | Same values as kiranam-admin's — same project. |
+| Variable | Notes |
+|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` (server-only) | Bypasses RLS. Used by `lib/supabase/admin.ts` for manual contributor registration's `createUser` call and by the comm-center routes. Never expose to the client. |
+| `SEND_SMS_HOOK_SECRET` | Verifies the Standard Webhooks signature Supabase signs Send-SMS-Hook requests with. |
+| `KIRANAM_WACRM_ACCOUNT_ID` | The shared "Kiranam" comm-center account id (`ae88b2b2-cc40-47f2-b154-6e35f49c56dd`) — used by the send-sms hook and elsewhere to scope queries to the one shared workspace. |
 
 ## kiranam-app login OTP delivery: WhatsApp, not SMS
 
-kiranam-app's contributor/volunteer login (`login.tsx` → `otp.tsx`) still uses Supabase Auth's phone-OTP flow (`signInWithOtp({ phone })` / `verifyOtp({ phone, token, type: 'sms' })`) — phone stays the auth identity, and Supabase Auth still generates the code, matches it, and issues the session exactly as it always did. What changed is **delivery**: instead of a paid SMS provider (Twilio, ~$0.10/verification, plus India's DLT template-registration requirement for transactional SMS), the code is sent as a WhatsApp message through Kiranam's own WhatsApp Business number — the same one wacrm already uses for the comm center.
+kiranam-app's contributor/volunteer login (`login.tsx` → `otp.tsx`) still uses Supabase Auth's phone-OTP flow (`signInWithOtp({ phone })` / `verifyOtp({ phone, token, type: 'sms' })`) — phone stays the auth identity, and Supabase Auth still generates the code, matches it, and issues the session exactly as it always did. What changed is **delivery**: instead of a paid SMS provider (Twilio, ~$0.10/verification, plus India's DLT template-registration requirement for transactional SMS), the code is sent as a WhatsApp message through Kiranam's own WhatsApp Business number — the same one the comm center uses.
 
 This works via Supabase Auth's **Send SMS Hook**: instead of Supabase calling a built-in provider, it calls an HTTP endpoint we control with the phone number + OTP, and that endpoint decides how to deliver it.
 
-- **Hook endpoint**: `wacrm/src/app/api/auth-hooks/send-sms/route.ts` — verifies the Standard Webhooks signature Supabase signs the request with (`wacrm/src/lib/supabase-hooks/verify-signature.ts`), looks up the Kiranam account's `whatsapp_config` row, decrypts the access token, and sends the code as a WhatsApp template message via the existing `sendTemplateMessage()` helper (`src/lib/whatsapp/meta-api.ts`) — the same function used elsewhere in wacrm.
+- **Hook endpoint**: `kiranam-admin/src/app/api/whatsapp/auth-hooks/send-sms/route.ts` — verifies the Standard Webhooks signature Supabase signs the request with (`src/lib/whatsapp/supabase-hooks/verify-signature.ts`), looks up the Kiranam account's `whatsapp_config` row, decrypts the access token, and sends the code as a WhatsApp template message via the existing `sendTemplateMessage()` helper (`src/lib/whatsapp/whatsapp/meta-api.ts`).
 - **kiranam-app side**: `AppContext.tsx`'s `signInWithPhone` needed no special option — the hook receives every phone-OTP send once configured, regardless of channel.
 
 ### Setup required (not code — do these once)
 
-1. **Connect a WhatsApp Business number** in wacrm's own Settings, for the Kiranam account (this populates `whatsapp_config` — currently empty; the hook route will 500 with `whatsapp_not_connected` until this is done).
-2. **Create an AUTHENTICATION-category template directly in Meta WhatsApp Manager.** wacrm's own template-creation UI deliberately rejects this category (`Authentication templates are not yet supported here` — see `api/whatsapp/templates/submit/route.ts`) because Meta enforces a fixed structure (no custom body copy, `{{1}}` for the code, an optional built-in Copy-Code button) that's different enough from Marketing/Utility templates to not be worth building UI for yet. Create it in Meta's own console, wait for approval, optionally pull it into `message_templates` via wacrm's "Sync from Meta" for visibility.
-3. **Configure the Send SMS Hook** in Supabase Dashboard → Auth → Hooks: URL = `https://<wacrm-deployment>/api/auth-hooks/send-sms`, then copy the secret Supabase generates into this app's `SEND_SMS_HOOK_SECRET`.
-4. **Set the remaining env vars** in `wacrm/.env.local`: `KIRANAM_WACRM_ACCOUNT_ID` (already set — the live "Kiranam" account's id), `OTP_TEMPLATE_NAME` / `OTP_TEMPLATE_LANGUAGE` (from step 2, once approved).
+1. **Connect a WhatsApp Business number** in kiranam-admin's own comm-center Settings (`/whatsapp/settings`), for the Kiranam account (this populates `whatsapp_config` — currently empty; the hook route will 500 with `whatsapp_not_connected` until this is done).
+2. **Create an AUTHENTICATION-category template directly in Meta WhatsApp Manager.** The comm center's own template-creation UI deliberately rejects this category (`Authentication templates are not yet supported here` — see `api/whatsapp/templates/submit/route.ts`) because Meta enforces a fixed structure (no custom body copy, `{{1}}` for the code, an optional built-in Copy-Code button) that's different enough from Marketing/Utility templates to not be worth building UI for yet. Create it in Meta's own console, wait for approval, optionally pull it into `message_templates` via the "Sync from Meta" action for visibility.
+3. **Configure the Send SMS Hook** in Supabase Dashboard → Auth → Hooks: URL = `https://<kiranam-admin-deployment>/api/whatsapp/auth-hooks/send-sms`, then copy the secret Supabase generates into this app's `SEND_SMS_HOOK_SECRET`.
+4. **Set the remaining env vars**: `KIRANAM_WACRM_ACCOUNT_ID` (already set — the live "Kiranam" account's id), `OTP_TEMPLATE_NAME` / `OTP_TEMPLATE_LANGUAGE` (from step 2, once approved).
 
 Until all four are done, phone login in kiranam-app will fail at the OTP-send step — Supabase calls the hook, the hook 500s, and `signInWithOtp` surfaces an error to the app.
 
 ## What's not wired yet
 
-- `payment_confirmation` / `receipt_delivery` automations inside wacrm aren't connected to Kiranam's actual Razorpay payment flow — a follow-up, not blocking.
+- `payment_confirmation` / `receipt_delivery` automations inside the comm center aren't connected to Kiranam's actual Razorpay payment flow — a follow-up, not blocking.
 - The now-unused standalone wacrm Supabase project (from an earlier two-project design) can be archived once you've confirmed everything above is working against the shared project.
 - The WhatsApp OTP setup above (Send SMS Hook, Meta Authentication template, `whatsapp_config` connection) — code is in place, but the manual Meta/Supabase dashboard steps haven't been done yet.

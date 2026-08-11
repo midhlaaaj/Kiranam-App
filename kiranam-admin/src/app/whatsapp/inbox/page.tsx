@@ -13,7 +13,6 @@ import { useRealtime } from "@/hooks/whatsapp/use-realtime";
 import { ConversationList } from "@/components/whatsapp/inbox/conversation-list";
 import { MessageThread } from "@/components/whatsapp/inbox/message-thread";
 import { ContactSidebar } from "@/components/whatsapp/inbox/contact-sidebar";
-import { toast } from "sonner";
 import { WifiOff } from "lucide-react";
 import { cn } from "@/lib/whatsapp/utils";
 

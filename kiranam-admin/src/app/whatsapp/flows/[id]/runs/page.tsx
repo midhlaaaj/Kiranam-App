@@ -141,6 +141,9 @@ export default function FlowRunsPage() {
     return () => {
       cancelled = true;
     };
+    // `t` (next-intl) gets a new reference every render — only used here
+    // for an error-message string, not worth retriggering the fetch over.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
   function toggle(runId: string) {

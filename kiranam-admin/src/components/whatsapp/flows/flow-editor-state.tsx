@@ -356,6 +356,10 @@ export function FlowEditorProvider({
     } finally {
       setSaving(false);
     }
+    // `t` (next-intl) gets a new reference every render — including it
+    // would recreate this callback (and everything memoized off it) on
+    // every render for no behavioral benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFlow.id, state]);
 
   // ---- Activate / Pause / Archive ----
@@ -397,6 +401,9 @@ export function FlowEditorProvider({
         setActivating(false);
       }
     },
+    // `t` (next-intl) gets a new reference every render — including it
+    // would recreate this callback on every render for no behavioral benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [canActivate, save, initialFlow.id],
   );
 

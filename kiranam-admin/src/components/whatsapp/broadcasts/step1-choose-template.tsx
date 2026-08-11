@@ -49,6 +49,9 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
     }
 
     fetchTemplates();
+    // `t` (next-intl) gets a new reference every render — only used here
+    // for an error-message string, not worth retriggering the fetch over.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {

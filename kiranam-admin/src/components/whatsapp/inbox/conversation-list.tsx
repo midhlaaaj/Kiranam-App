@@ -461,6 +461,10 @@ function ConversationItem({
       {/* Avatar */}
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-foreground">
         {contact?.avatar_url ? (
+          // next/image needs every remote host allow-listed up front;
+          // contact.avatar_url is an arbitrary per-contact URL (WhatsApp
+          // media/CDN), so a plain <img> is the correct tool here.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={contact.avatar_url}
             alt={displayName}

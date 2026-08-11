@@ -94,6 +94,9 @@ export function ApiKeysSettings() {
     } finally {
       setLoading(false);
     }
+    // `t` (next-intl) gets a new reference every render — including it
+    // would recreate this callback on every render for no behavioral benefit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

@@ -85,10 +85,16 @@ export default async function EventsPage({
 async function EventsTable({ q, status }: { q?: string; status?: string }) {
   const supabase = await createClient();
 
-  // Self-heal: any event whose date has passed becomes "past" automatically,
-  // regardless of whether an admin remembered to flip it manually.
+  // Self-heal in both directions: any event whose date has passed becomes
+  // "past" automatically, regardless of whether an admin remembered to flip
+  // it manually — and if a date gets edited back into the future (or was
+  // set incorrectly), the flag is cleared too, so it can never get stuck
+  // hiding an event that isn't actually past (kiranam-app treats is_past as
+  // authoritative whenever event_date is missing, so a stuck `true` here
+  // would otherwise never self-correct).
   const today = new Date().toISOString().slice(0, 10);
   await supabase.from('events').update({ is_past: true }).lt('event_date', today).eq('is_past', false);
+  await supabase.from('events').update({ is_past: false }).gte('event_date', today).eq('is_past', true);
 
   let query = supabase.from('events').select('*').order('event_date', { ascending: false });
   if (q) query = query.ilike('title', `%${q}%`);
