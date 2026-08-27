@@ -1,39 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import * as Localization from 'expo-localization';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { Toast } from '@/components/Toast';
-import { CountryCodePicker } from '@/components/CountryCodePicker';
-import { getCountryByIso2 } from '@/utils/countries';
-import { validateRequired, validatePhoneNumber, validateReferralCode } from '@/utils/validators';
+import { validateRequired, validateReferralCode } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { peekPendingReferralCode } from '@/utils/referral';
-import { ArrowLeft, Check, ChevronDown } from 'lucide-react-native';
-
-// Default the country picker to the device's own region instead of always
-// showing India — most users then never need to touch it at all.
-const deviceDefaultCountry = () => {
-  const regionCode = Localization.getLocales()[0]?.regionCode;
-  return (regionCode && getCountryByIso2(regionCode)) || getCountryByIso2('IN')!;
-};
+import { ArrowLeft, Check } from 'lucide-react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string }>();
   const role = params.role === 'volunteer' ? 'volunteer' : 'contributor';
-  const { saveProfile } = useApp();
+  const { phone, saveProfile } = useApp();
   const [name, setName] = useState('');
-  const [country, setCountry] = useState(deviceDefaultCountry);
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [showReferralField, setShowReferralField] = useState(false);
   const [refCode, setRefCode] = useState('');
   const [whatsappConsent, setWhatsappConsent] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; phone?: string; refCode?: string; terms?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; refCode?: string; terms?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -53,17 +40,15 @@ export default function RegisterScreen() {
 
   const handleCreateAccount = async () => {
     const nameError = validateRequired(name, 'Full Name');
-    const phoneError = validatePhoneNumber(phoneNumber, country.iso2 as any);
     const refCodeError = showReferralField ? validateReferralCode(refCode) : null;
-    if (nameError || phoneError || refCodeError) {
-      setErrors({ name: nameError || undefined, phone: phoneError || undefined, refCode: refCodeError || undefined });
+    if (nameError || refCodeError) {
+      setErrors({ name: nameError || undefined, refCode: refCodeError || undefined });
       return;
     }
     if (!agreedToTerms) {
       setErrors({ terms: 'Please accept the Terms & Conditions and Privacy Policy to continue.' });
       return;
     }
-    const phoneE164 = '+' + country.dialCode + phoneNumber.replace(/\D/g, '');
     setSubmitting(true);
     // Always save as 'contributor' here, even when the person picked
     // "volunteer" — that only reflects their *intent* to apply. The real
@@ -72,7 +57,9 @@ export default function RegisterScreen() {
     // here early let people get full volunteer-tab access — or get stuck
     // in a half-registered state with no reviewable application — just by
     // abandoning the next screen before actually applying.
-    const { error } = await saveProfile({ fullName: name, phone: phoneE164, role: 'contributor', whatsappConsent, referralCode: refCode });
+    // `phone` is already known and OTP-verified from the login step — no
+    // need to ask for it again here.
+    const { error } = await saveProfile({ fullName: name, phone, role: 'contributor', whatsappConsent, referralCode: refCode });
     setSubmitting(false);
     if (error) {
       // Network/server failures aren't about anything the person typed, so
@@ -125,52 +112,6 @@ export default function RegisterScreen() {
           }}
           placeholder="Enter your full name"
           error={errors.name}
-        />
-
-        {/* Mobile Number Field */}
-        <Text style={styles.inputLabel}>Mobile Number</Text>
-        <View style={styles.phoneInputRow}>
-          <TouchableOpacity
-            style={styles.countryCodeBox}
-            onPress={() => setPickerVisible(true)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.countryCodeText}>{country.flag} +{country.dialCode}</Text>
-            <ChevronDown size={14} color="#7A756E" />
-          </TouchableOpacity>
-          <View style={styles.numberInputContainer}>
-            <Input
-              variant="underline"
-              placeholder="Phone number"
-              keyboardType="number-pad"
-              textContentType="telephoneNumber"
-              autoComplete="tel"
-              maxLength={15}
-              value={phoneNumber}
-              onChangeText={(text) => {
-                setErrors((prev) => ({ ...prev, phone: undefined }));
-                setPhoneNumber(text.replace(/[^0-9]/g, ''));
-              }}
-              onBlur={() => {
-                const phoneError = phoneNumber ? validatePhoneNumber(phoneNumber, country.iso2 as any) : undefined;
-                setErrors((prev) => ({ ...prev, phone: phoneError || undefined }));
-              }}
-              error={errors.phone}
-              containerStyle={styles.phoneNumberInputContainer}
-              inputStyle={{ fontWeight: '700' }}
-            />
-          </View>
-        </View>
-        <Text style={styles.helperText}>We&apos;ll use this to send you updates over WhatsApp.</Text>
-
-        <CountryCodePicker
-          visible={pickerVisible}
-          selectedIso2={country.iso2}
-          onSelect={(c) => {
-            setCountry(c);
-            setErrors((prev) => ({ ...prev, phone: undefined }));
-          }}
-          onClose={() => setPickerVisible(false)}
         />
 
         {/* Referral Code — collapsed by default, contributors only */}
@@ -283,48 +224,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7A756E',
     marginBottom: 28,
-  },
-  inputLabel: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7A756E',
-    textTransform: 'uppercase',
-    letterSpacing: 0.04,
-    marginBottom: 10,
-  },
-  phoneInputRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  countryCodeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 44,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1.5,
-    borderBottomColor: '#E4E1DC',
-  },
-  countryCodeText: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 15,
-    color: '#0C0C0D',
-  },
-  numberInputContainer: {
-    flex: 1,
-  },
-  phoneNumberInputContainer: {
-    marginBottom: 0,
-  },
-  helperText: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    color: '#B0ADA8',
-    marginTop: 8,
-    marginBottom: 20,
   },
   referralToggle: {
     marginBottom: 20,

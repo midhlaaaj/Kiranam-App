@@ -92,10 +92,8 @@ interface AppContextType {
   updateReferralCode: (code: string) => Promise<{ error: string | null }>;
 
   // Auth actions (backed by Supabase)
-  signUpWithEmail: (email: string, password: string, role: 'contributor' | 'volunteer') => Promise<{ error: string | null }>;
-  resendSignupVerification: (email: string, role: 'contributor' | 'volunteer') => Promise<{ error: string | null }>;
-  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null; code?: string }>;
-  requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
+  signInWithPhone: (phoneE164: string) => Promise<{ error: string | null }>;
+  verifyOtpCode: (phoneE164: string, token: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<{ error: string | null }>;
   saveProfile: (fields: {
@@ -671,49 +669,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCampaignGiving(campaignTotal);
   }, [payments]);
 
-  // Email confirmation is mandatory before the account is usable — saveProfile
-  // (below) requires a session, and Supabase withholds one until the link in
-  // this email is clicked. The link routes through kiranam-admin's shared
-  // /auth/confirm (see requestPasswordReset below), carrying `role` along so
-  // the app knows to land back on /register once verified.
-  const signUpWithEmail = async (email: string, password: string, role: 'contributor' | 'volunteer') => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: `kiranamapp://email-verified?role=${role}` },
-    });
+  const signInWithPhone = async (phoneE164: string) => {
+    // Delivery is WhatsApp, not SMS — Supabase Auth is configured with a
+    // custom Send SMS Hook (kiranam-admin's /api/whatsapp/auth-hooks/send-sms)
+    // that sends the code through Kiranam's existing WhatsApp Business number
+    // instead of a paid SMS provider. No `channel` option needed here — the
+    // hook receives every phone-OTP send regardless. verifyOtpCode's
+    // `type: 'sms'` is unaffected either way — Supabase verifies a phone OTP
+    // the same way no matter which channel sent it.
+    const { error } = await supabase.auth.signInWithOtp({ phone: phoneE164 });
     return { error: error?.message ?? null };
   };
 
-  const resendSignupVerification = async (email: string, role: 'contributor' | 'volunteer') => {
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-      options: { emailRedirectTo: `kiranamapp://email-verified?role=${role}` },
-    });
-    return { error: error?.message ?? null };
-  };
-
-  const signInWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    // `code` (e.g. 'email_not_confirmed') lets callers branch on *why* sign-in
-    // failed, not just show the raw message — see password.tsx, which routes
-    // an unconfirmed account back to verify-email instead of dead-ending on
-    // an error the user has no obvious next step for.
-    return { error: error?.message ?? null, code: error?.code };
-  };
-
-  const requestPasswordReset = async (email: string) => {
-    // The recovery email link has to be *clicked* from an email client, which
-    // can't open a custom URL scheme (kiranamapp://) directly and reliably —
-    // so Supabase's "Reset Password" template routes through kiranam-admin's
-    // /auth/confirm first (shared across all three Kiranam apps), which
-    // verifies the one-time token server-side and, recognizing this
-    // kiranamapp:// redirect target, hands the app a real session via query
-    // params instead of a bare redirect. See reset-password.tsx.
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'kiranamapp://reset-password',
-    });
+  const verifyOtpCode = async (phoneE164: string, token: string) => {
+    const { error } = await supabase.auth.verifyOtp({ phone: phoneE164, token, type: 'sms' });
     return { error: error?.message ?? null };
   };
 
@@ -741,11 +710,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     referralCode?: string;
   }) => {
     if (!session) return { error: 'Not signed in' };
-    // Writing `phone` here (rather than a separate follow-up call) matters:
-    // under email/password auth, auth.users.phone is never populated, so
-    // this is the only write that lands a number in profiles.phone — and
-    // that's what sync_profile_to_wacrm_contact (fires on updates to
-    // full_name/phone/role) uses to create the WhatsApp comm-center contact.
+    // Writing `phone` here is (redundantly) explicit rather than relying
+    // solely on the handle_new_user trigger that copies auth.users.phone
+    // into profiles.phone on signup — cheap insurance, and it's what
+    // sync_profile_to_wacrm_contact (fires on updates to full_name/phone/role)
+    // uses to create the WhatsApp comm-center contact.
     const { error } = await supabase.from('profiles').upsert({
       id: session.user.id,
       user_id: session.user.id,
@@ -1197,10 +1166,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isVolunteer,
       myReferralCode,
       updateReferralCode,
-      signUpWithEmail,
-      resendSignupVerification,
-      signInWithEmail,
-      requestPasswordReset,
+      signInWithPhone,
+      verifyOtpCode,
       signOut,
       deleteAccount,
       saveProfile,
