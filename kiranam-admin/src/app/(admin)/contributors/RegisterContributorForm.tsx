@@ -8,8 +8,9 @@ import { buttonPrimary, cardClass, inputClass } from '@/lib/ui';
 const initialState: RegisterState = {};
 
 // For a contributor who made an offline commitment (e.g. signed up at an
-// event) but has never opened the app. Pre-creates their login and emails
-// them a link to set their own password and claim it.
+// event) but has never opened the app. Pre-creates their login by phone
+// number — they claim it just by logging into kiranam-app with this same
+// number and completing the normal phone-OTP flow, same as anyone else.
 export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
   const [state, formAction, pending] = useActionState(registerContributor, initialState);
   const lastState = useRef<RegisterState>(initialState);
@@ -29,7 +30,6 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
   return (
     <form ref={formRef} action={formAction} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
       <input name="full_name" placeholder="Full name" required className={`${inputClass} sm:col-span-2`} />
-      <input name="email" type="email" placeholder="Email" required className={`${inputClass} sm:col-span-2`} />
       <div className="relative sm:col-span-2">
         <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-kiranam-muted">
           +91

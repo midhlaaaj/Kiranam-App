@@ -2,10 +2,10 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from '@/lib/supabase/proxy';
 
-// auth.kiranam.online exists specifically so that password-reset,
-// signup-confirmation, and account-claim email links never expose the
-// admin app (login, contributors, etc.) to the contributors/volunteers
-// who make up most of the people clicking them. Vercel serves this same
+// auth.kiranam.online exists specifically so that password-reset and
+// signup-confirmation email links never expose the admin app (login,
+// contributors, etc.) to the contributors/volunteers who make up most
+// of the people clicking them. Vercel serves this same
 // deployment under any domain pointed at it, so without this check,
 // anything on this host would fall through to the normal admin app —
 // including its "redirect unauthenticated visitors to /login" behavior,

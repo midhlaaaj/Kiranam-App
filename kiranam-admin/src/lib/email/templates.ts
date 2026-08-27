@@ -1,5 +1,5 @@
 // Shared visual system for Kiranam emails sent via Resend's API from this
-// app (admin invite, contributor account-claim). The payment receipt email
+// app (admin invite). The payment receipt email
 // uses the same design but lives in the send-receipt-email Supabase Edge
 // Function instead — a separate Deno deployment that can't import from
 // here. Table-based markup — not flexbox/divs — because Outlook's
@@ -83,29 +83,25 @@ const disclaimerNote = () => `
   </p>
 `;
 
-export function adminInviteEmail(params: { signupUrl: string; invitedEmail: string }) {
+export function adminInviteEmail(params: { signupUrl: string; invitedEmail: string; expiresAt: Date }) {
+  const expiresLabel = params.expiresAt.toLocaleString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
   return wrapper(
     `
     ${heading("You've been invited to manage Kiranam")}
     ${paragraph(`Someone on the Kiranam team has invited <strong style="color: ${INK};">${params.invitedEmail}</strong> to help manage the Kiranam admin dashboard.`)}
     ${paragraph('Click below and sign up with this exact email address to set your password and get started.')}
     ${button(params.signupUrl, 'Accept Invite')}
+    ${paragraph(`This invite expires on <strong style="color: ${INK};">${expiresLabel}</strong> — after that, ask an admin to resend it.`)}
     ${fallbackLinkNote(params.signupUrl)}
     ${disclaimerNote()}
     `,
     "You've been invited to manage Kiranam"
-  );
-}
-
-export function claimAccountEmail(params: { claimUrl: string; fullName: string }) {
-  return wrapper(
-    `
-    ${heading(`Welcome to Kiranam, ${params.fullName}`)}
-    ${paragraph('A Kiranam team member has registered you as a contributor. To manage your contributions and payments from the app, set a password for your account below.')}
-    ${button(params.claimUrl, 'Set Your Password')}
-    ${fallbackLinkNote(params.claimUrl)}
-    ${disclaimerNote()}
-    `,
-    'Set your password to get started with Kiranam'
   );
 }

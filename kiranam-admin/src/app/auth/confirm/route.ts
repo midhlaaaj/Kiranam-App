@@ -9,9 +9,12 @@ import { createClient } from '@/lib/supabase/server';
 // — Supabase's default template instead points at its own hosted verify
 // endpoint, which doesn't hand this route anything to verify.
 //
-// One Supabase project, three apps sharing this same template (kiranam-app,
-// kiranam-admin, and admin-registered contributors claiming their account) —
-// `next` is how each caller says where to land afterward. This route only
+// One Supabase project, shared by kiranam-admin (its own admin password
+// reset) and kiranam-app (previously its forgot-password flow, archived
+// along with the rest of email+password login — see
+// kiranam-app/ROLLBACK_TO_EMAIL_LOGIN.md — but this route is kept as-is
+// since a rollback would need it again) — `next` is how each caller says
+// where to land afterward. This route only
 // ever runs on auth.kiranam.online, so any `next` on a *different* host
 // (the mobile app's kiranamapp:// scheme, or kiranam-admin's own main
 // domain — a sibling subdomain, not the same host) can't read the session
