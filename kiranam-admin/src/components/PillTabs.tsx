@@ -32,30 +32,36 @@ export function PillTabs({ items }: { items: PillTabItem[] }) {
   }, [activeKey]);
 
   return (
-    <div ref={containerRef} className="relative flex w-fit gap-1 rounded-full bg-kiranam-surface-alt p-1">
-      {indicator && (
-        <div
-          className="absolute top-1 bottom-1 rounded-full bg-kiranam-surface shadow-elevation-sm transition-[left,width] duration-200 ease-out"
-          style={{ left: indicator.left, width: indicator.width }}
-          aria-hidden="true"
-        />
-      )}
-      {items.map((item) => (
-        <Link
-          key={item.key}
-          href={item.href}
-          scroll={item.scroll}
-          ref={(el) => {
-            if (el) itemRefs.current.set(item.key, el);
-            else itemRefs.current.delete(item.key);
-          }}
-          className={`relative z-10 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors duration-200 ease-out ${
-            item.active ? 'text-kiranam-ink' : 'text-kiranam-muted hover:text-kiranam-ink'
-          }`}
-        >
-          {item.label}
-        </Link>
-      ))}
+    // max-w-full + overflow-x-auto: a wide pill row (4-5 items) previously
+    // had nowhere to go but push the whole page into horizontal scroll on
+    // a narrow phone, with no indication it was scrollable. Now only this
+    // row scrolls, and the pills themselves stay unshrunk (shrink-0).
+    <div className="max-w-full overflow-x-auto no-scrollbar">
+      <div ref={containerRef} className="relative flex w-max gap-1 rounded-full bg-kiranam-surface-alt p-1">
+        {indicator && (
+          <div
+            className="absolute top-1 bottom-1 rounded-full bg-kiranam-surface shadow-elevation-sm transition-[left,width] duration-200 ease-out"
+            style={{ left: indicator.left, width: indicator.width }}
+            aria-hidden="true"
+          />
+        )}
+        {items.map((item) => (
+          <Link
+            key={item.key}
+            href={item.href}
+            scroll={item.scroll}
+            ref={(el) => {
+              if (el) itemRefs.current.set(item.key, el);
+              else itemRefs.current.delete(item.key);
+            }}
+            className={`relative z-10 shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ease-out ${
+              item.active ? 'text-kiranam-ink' : 'text-kiranam-muted hover:text-kiranam-ink'
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

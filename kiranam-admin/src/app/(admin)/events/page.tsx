@@ -144,7 +144,7 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
                       href={`/events/${e.id}/edit`}
                       aria-label="Edit event"
                       title="Edit event"
-                      className="cursor-pointer rounded-lg p-2 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+                      className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
                     >
                       <Pencil size={16} strokeWidth={2} />
                     </Link>
@@ -156,7 +156,7 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
                       confirmLabel="Delete event"
                       successMessage="Event deleted."
                       pendingMessage="Deleting event…"
-                      className="cursor-pointer rounded-lg p-2 text-kiranam-danger transition hover:bg-kiranam-danger-soft"
+                      className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"
                       aria-label="Delete event"
                     />
                   </div>

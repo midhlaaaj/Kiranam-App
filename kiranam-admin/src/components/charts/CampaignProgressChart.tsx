@@ -30,7 +30,8 @@ export function CampaignProgressChart({ data }: { data: { title: string; pct: nu
           tickMargin={8}
           fontSize={12}
           tick={{ fill: 'var(--color-kiranam-ink)' }}
-          width={160}
+          width={96}
+          tickFormatter={(title: string) => (title.length > 14 ? `${title.slice(0, 13)}…` : title)}
         />
         <ChartTooltip cursor={false} content={<ChartTooltipContent formatter={(value) => `${value}%`} />} />
         <Bar dataKey="pct" radius={[0, 3, 3, 0]} maxBarSize={16} animationDuration={400}>

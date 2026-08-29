@@ -107,7 +107,7 @@ export default async function ContributorDetailPage({
               confirmLabel="Unassign"
               successMessage="Volunteer unassigned."
               pendingMessage="Unassigning…"
-              className="cursor-pointer rounded-lg p-2 text-kiranam-danger transition hover:bg-kiranam-danger-soft"
+              className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"
               aria-label="Unassign volunteer"
             />
           </>

@@ -47,7 +47,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="cursor-pointer rounded-lg p-1.5 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
           >
             <X size={18} strokeWidth={2.25} />
           </button>

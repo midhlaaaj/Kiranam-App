@@ -91,7 +91,7 @@ function ResetPasswordForm() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-kiranam-muted hover:text-kiranam-ink cursor-pointer"
+              className="absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer p-2 text-kiranam-muted hover:text-kiranam-ink"
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>

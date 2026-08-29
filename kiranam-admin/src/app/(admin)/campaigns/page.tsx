@@ -151,7 +151,7 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
                       href={`/campaigns/${c.id}/edit`}
                       aria-label="Edit campaign"
                       title="Edit campaign"
-                      className="cursor-pointer rounded-lg p-2 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+                      className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
                     >
                       <Pencil size={16} strokeWidth={2} />
                     </Link>
@@ -163,7 +163,7 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
                       confirmLabel="Delete campaign"
                       successMessage="Campaign deleted."
                       pendingMessage="Deleting campaign…"
-                      className="cursor-pointer rounded-lg p-2 text-kiranam-danger transition hover:bg-kiranam-danger-soft"
+                      className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"
                       aria-label="Delete campaign"
                     />
                   </div>

@@ -4,6 +4,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@layer utilities {
+  /* For horizontally-scrollable rows (e.g. PillTabs on narrow screens)
+     where a swipe affordance is enough and a visible scrollbar would just
+     add clutter under a row of pills. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 :root {
   --shadow-color: 35 8% 20%;
 

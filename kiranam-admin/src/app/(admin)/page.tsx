@@ -217,7 +217,7 @@ export default async function OverviewPage({
             <Link
               href={`/?range=${granularity}&page=${page + 1}`}
               scroll={false}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-kiranam-border-strong bg-kiranam-surface text-kiranam-ink shadow-elevation-sm transition hover:bg-kiranam-surface-alt active:scale-95 cursor-pointer"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-kiranam-border-strong bg-kiranam-surface text-kiranam-ink shadow-elevation-sm transition hover:bg-kiranam-surface-alt active:scale-95 cursor-pointer"
               title="Previous period"
             >
               <ChevronLeft size={16} />
@@ -226,14 +226,14 @@ export default async function OverviewPage({
               <Link
                 href={`/?range=${granularity}&page=${page - 1}`}
                 scroll={false}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-kiranam-border-strong bg-kiranam-surface text-kiranam-ink shadow-elevation-sm transition hover:bg-kiranam-surface-alt active:scale-95 cursor-pointer"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-kiranam-border-strong bg-kiranam-surface text-kiranam-ink shadow-elevation-sm transition hover:bg-kiranam-surface-alt active:scale-95 cursor-pointer"
                 title="Next period"
               >
                 <ChevronRight size={16} />
               </Link>
             ) : (
               <span
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-kiranam-border bg-kiranam-surface-alt text-kiranam-muted-2 cursor-not-allowed opacity-50"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-kiranam-border bg-kiranam-surface-alt text-kiranam-muted-2 cursor-not-allowed opacity-50"
                 title="No next period"
               >
                 <ChevronRight size={16} />

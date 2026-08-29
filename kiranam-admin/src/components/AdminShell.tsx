@@ -34,11 +34,11 @@ function SidebarContent({
               href="/my-notifications"
               onClick={onNavigate}
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-              className="relative cursor-pointer rounded-lg p-1.5 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+              className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-kiranam-primary px-1 text-[9px] font-bold text-white">
+                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-kiranam-primary px-1 text-[9px] font-bold text-white">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -49,7 +49,7 @@ function SidebarContent({
               type="button"
               onClick={onClose}
               aria-label="Close navigation"
-              className="shrink-0 cursor-pointer rounded-lg p-1.5 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink lg:hidden"
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink lg:hidden"
             >
               <X size={18} />
             </button>
@@ -142,7 +142,7 @@ export function AdminShell({
               type="button"
               onClick={() => setDrawerOpen(true)}
               aria-label="Open navigation"
-              className="cursor-pointer rounded-lg p-1.5 text-kiranam-ink transition hover:bg-kiranam-surface-alt"
+              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-kiranam-ink transition hover:bg-kiranam-surface-alt"
             >
               <Menu size={20} />
             </button>
@@ -151,11 +151,11 @@ export function AdminShell({
           <Link
             href="/my-notifications"
             aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-            className="relative cursor-pointer rounded-lg p-1.5 text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+            className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
           >
             <Bell size={18} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-kiranam-primary px-1 text-[9px] font-bold text-white">
+              <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-kiranam-primary px-1 text-[9px] font-bold text-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
