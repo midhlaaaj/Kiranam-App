@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
-import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
+import { checkFreshRejection, resolvePostAuthRoute } from '@/utils/volunteerRouting';
 
 export default function PendingScreen() {
   const router = useRouter();
@@ -26,44 +26,36 @@ export default function PendingScreen() {
   // Contributors who applied via their profile already have a real Home to
   // go back to — no need to make them wait on a status recheck here, since
   // approval gets picked up automatically the next time they open the app
-  // (see otp.tsx/index.tsx, both routed through resolveApprovedVolunteerRoute).
+  // (see otp.tsx/index.tsx, both routed through resolvePostAuthRoute). They
+  // still get one check first, though: a fresh rejection they haven't seen
+  // yet must show /volunteer-rejected rather than silently dropping them
+  // straight into Home with no explanation.
   // A fresh volunteer-only applicant has nowhere else to go yet, so for
-  // them this button doing an inline recheck is the only useful action.
+  // them this button doing a full inline recheck is the only useful action.
   const handleContinue = async () => {
-    if (hasCommitment) {
-      router.replace('/(tabs)/home');
-      return;
-    }
-
     setChecking(true);
     setNotYetApproved(false);
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
-    const [{ data: profile }, { data: application }] = uid
-      ? await Promise.all([
-          supabase.from('profiles').select('role').eq('id', uid).single(),
-          supabase
-            .from('volunteer_applications')
-            .select('status')
-            .eq('profile_id', uid)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ])
-      : [{ data: null }, { data: null }];
-
-    // Match otp.tsx's gate exactly: role only ever becomes 'volunteer' once
-    // an admin approves the application, so both must agree before granting
-    // dashboard access — checking application status alone let an account
-    // through with a stale 'contributor' role if the approval write had
-    // ever partially failed.
-    if (uid && profile?.role === 'volunteer' && application?.status === 'approved') {
-      const dest = await resolveApprovedVolunteerRoute(uid);
-      setChecking(false);
-      router.replace(dest);
-    } else {
+    if (!uid) {
       setChecking(false);
       setNotYetApproved(true);
+      return;
+    }
+
+    if (hasCommitment) {
+      const rejectedRoute = await checkFreshRejection(uid);
+      setChecking(false);
+      router.replace(rejectedRoute ?? '/(tabs)/home');
+      return;
+    }
+
+    const dest = await resolvePostAuthRoute(uid);
+    setChecking(false);
+    if (dest === '/pending') {
+      setNotYetApproved(true);
+    } else {
+      router.replace(dest);
     }
   };
 

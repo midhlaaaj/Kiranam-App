@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { buttonDanger, buttonPrimary, staggerDelay, tableCellClass, tableRowClass } from '@/lib/ui';
+import { buttonDanger, buttonPrimary, inputClass, staggerDelay, tableCellClass, tableRowClass } from '@/lib/ui';
 
 export function PendingApplicantRow({
   applicant,
@@ -27,6 +27,7 @@ export function PendingApplicantRow({
   index: number;
 }) {
   const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
   const [isPending, startTransition] = useTransition();
   const profileId = applicant.profiles?.id;
 
@@ -45,8 +46,10 @@ export function PendingApplicantRow({
   function handleReject() {
     if (!profileId) return;
     setOpen(false);
+    const reasonToSend = reason;
+    setReason('');
     startTransition(() => {
-      toast.promise(rejectApplication(applicant.id, profileId), {
+      toast.promise(rejectApplication(applicant.id, profileId, reasonToSend), {
         loading: 'Rejecting…',
         success: 'Application rejected.',
         error: (err) => (err instanceof Error ? friendlyErrorMessage(err.message) : 'Something went wrong.'),
@@ -80,6 +83,20 @@ export function PendingApplicantRow({
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-kiranam-muted">Motivation</p>
             <p className="mt-1.5 text-sm text-kiranam-ink/80">{applicant.motivation || '—'}</p>
+          </div>
+
+          <div>
+            <label htmlFor={`reject-reason-${applicant.id}`} className="text-xs font-semibold uppercase tracking-wide text-kiranam-muted">
+              Rejection reason (optional)
+            </label>
+            <textarea
+              id={`reject-reason-${applicant.id}`}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              placeholder="Shown to the applicant if you reject this application…"
+              className={`${inputClass} mt-1.5 resize-none`}
+            />
           </div>
 
           <DialogFooter>

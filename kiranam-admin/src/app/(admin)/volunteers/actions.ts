@@ -52,13 +52,18 @@ export async function approveApplication(applicationId: string, profileId: strin
   revalidatePath('/volunteers');
 }
 
-export async function rejectApplication(applicationId: string, profileId: string) {
+export async function rejectApplication(applicationId: string, profileId: string, reason?: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
 
   const { error } = await supabase
     .from('volunteer_applications')
-    .update({ status: 'rejected', reviewed_by: admin.id, reviewed_at: new Date().toISOString() })
+    .update({
+      status: 'rejected',
+      reviewed_by: admin.id,
+      reviewed_at: new Date().toISOString(),
+      rejection_reason: reason?.trim() || null,
+    })
     .eq('id', applicationId);
   if (error) throw new Error(error.message);
 

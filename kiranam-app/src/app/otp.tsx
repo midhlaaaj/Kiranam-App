@@ -19,7 +19,7 @@ import { Button } from '@/components/Button';
 import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { COUNTRIES, getCountryByIso2 } from '@/utils/countries';
 import { validatePhoneNumber } from '@/utils/validators';
-import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
+import { resolvePostAuthRoute } from '@/utils/volunteerRouting';
 import { ArrowLeft, Pencil, Check, X, ChevronDown } from 'lucide-react-native';
 
 // Longest dial codes first, so e.g. "971" matches before "97" would.
@@ -164,27 +164,8 @@ export default function OtpScreen() {
     setVerifying(false);
 
     if (profile?.full_name) {
-      // profiles.role only ever becomes 'volunteer' once an admin approves
-      // the application (register.tsx always saves 'contributor' at signup,
-      // regardless of which mode was picked) — so a pending/rejected/no-
-      // application account still has role 'contributor' and must be routed
-      // by application status, not role, to land on /pending correctly.
-      const { data: application } = await supabase
-        .from('volunteer_applications')
-        .select('status')
-        .eq('profile_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (profile.role === 'volunteer' && application?.status === 'approved') {
-        const dest = await resolveApprovedVolunteerRoute(uid);
-        router.replace(dest);
-      } else if (profile.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved') {
-        router.replace('/pending');
-      } else {
-        router.replace('/(tabs)/home');
-      }
+      const dest = await resolvePostAuthRoute(uid);
+      router.replace(dest);
       return;
     }
 

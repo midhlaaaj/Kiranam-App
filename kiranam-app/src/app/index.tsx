@@ -7,7 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Button } from '@/components/Button';
 import { supabase } from '@/lib/supabase';
 import { extractReferralCodeFromText, stashPendingReferralCode } from '@/utils/referral';
-import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
+import { resolvePostAuthRoute } from '@/utils/volunteerRouting';
 
 const CLIPBOARD_CHECKED_KEY = 'kiranam.referralClipboardChecked';
 
@@ -63,28 +63,9 @@ export default function SplashScreen() {
         return;
       }
 
-      // profiles.role only ever becomes 'volunteer' once an admin approves
-      // the application — a pending/rejected/no-application account still
-      // has role 'contributor', so routing must check application status,
-      // not just role, to land a pending applicant on /pending correctly.
-      const { data: application } = await supabase
-        .from('volunteer_applications')
-        .select('status')
-        .eq('profile_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const dest = await resolvePostAuthRoute(uid);
       if (cancelled) return;
-
-      if (profile.role === 'volunteer' && application?.status === 'approved') {
-        const dest = await resolveApprovedVolunteerRoute(uid);
-        if (cancelled) return;
-        router.replace(dest);
-      } else if (profile.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved') {
-        router.replace('/pending');
-      } else {
-        router.replace('/(tabs)/home');
-      }
+      router.replace(dest);
     })();
 
     return () => {
