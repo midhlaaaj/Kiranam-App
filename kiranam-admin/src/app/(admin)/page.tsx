@@ -11,7 +11,8 @@ import { ContributorGrowthFilter } from '@/components/ContributorGrowthFilter';
 import { StatusBreakdownChart } from '@/components/charts/StatusBreakdownChart';
 import { deriveContributorStatus } from '@/lib/volunteerStats';
 import { bucketKey, bucketLabel, getBucketsForPage, type Granularity } from '@/lib/timeBuckets';
-import { cardClass, formatMoney, pillTabClass, pillTabItemClass } from '@/lib/ui';
+import { cardClass, formatMoney } from '@/lib/ui';
+import { PillTabs } from '@/components/PillTabs';
 
 async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?: string, cgTo?: string) {
   const supabase = await createClient();
@@ -238,18 +239,15 @@ export default async function OverviewPage({
                 <ChevronRight size={16} />
               </span>
             )}
-            <div className={pillTabClass}>
-              {(['daily', 'weekly', 'monthly'] as const).map((g) => (
-                <Link
-                  key={g}
-                  href={`/?range=${g}&page=0`}
-                  scroll={false}
-                  className={`${pillTabItemClass(granularity === g)} capitalize`}
-                >
-                  {g}
-                </Link>
-              ))}
-            </div>
+            <PillTabs
+              items={(['daily', 'weekly', 'monthly'] as const).map((g) => ({
+                key: g,
+                label: g.charAt(0).toUpperCase() + g.slice(1),
+                href: `/?range=${g}&page=0`,
+                active: granularity === g,
+                scroll: false,
+              }))}
+            />
           </div>
         </div>
         <div className="mt-4">

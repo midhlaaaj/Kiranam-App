@@ -8,12 +8,11 @@ import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { SkeletonTable } from '@/components/Skeleton';
+import { PillTabs } from '@/components/PillTabs';
 import {
   badgeClass,
   buttonPrimary,
   inputClass,
-  pillTabClass,
-  pillTabItemClass,
   staggerDelay,
   tableCellClass,
   tableHeadRowClass,
@@ -35,23 +34,23 @@ export default async function EventsPage({
         label="Add new event"
         modal
         filters={
-          <div className={pillTabClass}>
-            <Link href={`/events${q ? `?q=${encodeURIComponent(q)}` : ''}`} className={pillTabItemClass(!status)}>
-              All
-            </Link>
-            <Link
-              href={`/events?status=upcoming${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-              className={pillTabItemClass(status === 'upcoming')}
-            >
-              Upcoming
-            </Link>
-            <Link
-              href={`/events?status=past${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-              className={pillTabItemClass(status === 'past')}
-            >
-              Past
-            </Link>
-          </div>
+          <PillTabs
+            items={[
+              { key: 'all', label: 'All', href: `/events${q ? `?q=${encodeURIComponent(q)}` : ''}`, active: !status },
+              {
+                key: 'upcoming',
+                label: 'Upcoming',
+                href: `/events?status=upcoming${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+                active: status === 'upcoming',
+              },
+              {
+                key: 'past',
+                label: 'Past',
+                href: `/events?status=past${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+                active: status === 'past',
+              },
+            ]}
+          />
         }
         search={
           <form className="flex flex-wrap items-center gap-3">

@@ -1,14 +1,12 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
 import { History } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { NotificationsForm } from './NotificationsForm';
 import { SkeletonTable } from '@/components/Skeleton';
+import { PillTabs } from '@/components/PillTabs';
 import {
-  pillTabClass,
-  pillTabItemClass,
   staggerDelay,
   tableCellClass,
   tableCellNumClass,
@@ -32,7 +30,7 @@ async function getSentHistory(): Promise<Broadcast[]> {
   const { data } = await supabase
     .from('notifications')
     .select('title, body, created_at, is_read, profiles!notifications_profile_id_fkey(role)')
-    .eq('category', 'system')
+    .eq('category', 'broadcast')
     .order('created_at', { ascending: false })
     .limit(500);
 
@@ -78,17 +76,23 @@ export default async function NotificationsPage({
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Sent History</h2>
-        <div className={pillTabClass}>
-          <Link href="/notifications" className={pillTabItemClass(!audience)}>
-            All
-          </Link>
-          <Link href="/notifications?audience=contributor" className={pillTabItemClass(audience === 'contributor')}>
-            Contributors
-          </Link>
-          <Link href="/notifications?audience=volunteer" className={pillTabItemClass(audience === 'volunteer')}>
-            Volunteers
-          </Link>
-        </div>
+        <PillTabs
+          items={[
+            { key: 'all', label: 'All', href: '/notifications', active: !audience },
+            {
+              key: 'contributor',
+              label: 'Contributors',
+              href: '/notifications?audience=contributor',
+              active: audience === 'contributor',
+            },
+            {
+              key: 'volunteer',
+              label: 'Volunteers',
+              href: '/notifications?audience=volunteer',
+              active: audience === 'volunteer',
+            },
+          ]}
+        />
       </div>
 
       <Suspense fallback={<SkeletonTable rows={5} cols={5} />}>

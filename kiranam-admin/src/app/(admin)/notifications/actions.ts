@@ -37,7 +37,7 @@ export async function sendAnnouncement(_prevState: SendState, formData: FormData
         p_profile_id: profileId,
         p_title: title,
         p_body: body,
-        p_category: 'system',
+        p_category: 'broadcast',
       })
     )
   );

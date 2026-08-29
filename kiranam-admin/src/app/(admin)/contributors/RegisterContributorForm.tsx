@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { registerContributor, type RegisterState } from './actions';
 import { buttonPrimary, cardClass, inputClass } from '@/lib/ui';
+import { COUNTRIES } from '@/lib/countries';
 
 const initialState: RegisterState = {};
 
@@ -30,18 +31,27 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
   return (
     <form ref={formRef} action={formAction} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
       <input name="full_name" placeholder="Full name" required className={`${inputClass} sm:col-span-2`} />
-      <div className="relative sm:col-span-2">
-        <span className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-sm text-kiranam-muted">
-          +91
-        </span>
+      <div className="flex gap-2 sm:col-span-2">
+        <select
+          name="dial_code"
+          defaultValue="91"
+          aria-label="Country code"
+          className={`${inputClass} w-[6.5rem] shrink-0`}
+        >
+          {COUNTRIES.map((c) => (
+            <option key={c.iso2} value={c.dialCode}>
+              {c.flag} +{c.dialCode}
+            </option>
+          ))}
+        </select>
         <input
           name="phone"
           type="tel"
           inputMode="numeric"
-          placeholder="10-digit phone number"
+          placeholder="Phone number"
           required
-          maxLength={10}
-          className={`${inputClass} pl-12`}
+          maxLength={15}
+          className={`${inputClass} flex-1`}
         />
       </div>
       <input

@@ -7,14 +7,13 @@ import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { RegisterContributorForm } from './RegisterContributorForm';
 import { deriveContributorStatus, type ContributorStatus } from '@/lib/volunteerStats';
+import { PillTabs } from '@/components/PillTabs';
 import {
   badgeClass,
   buttonPrimary,
   buttonSecondary,
   formatMoney,
   inputClass,
-  pillTabClass,
-  pillTabItemClass,
   staggerDelay,
   tableCellClass,
   tableCellNumClass,
@@ -52,20 +51,22 @@ export default async function ContributorsPage({
         description="For a contributor who committed offline and hasn't signed up in the app yet."
         modal
         filters={
-          <div className={pillTabClass}>
-            <Link href={`/contributors${q ? `?q=${encodeURIComponent(q)}` : ''}`} className={pillTabItemClass(!status)}>
-              All
-            </Link>
-            {(['active', 'due', 'overdue', 'inactive'] as const).map((s) => (
-              <Link
-                key={s}
-                href={`/contributors?status=${s}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-                className={pillTabItemClass(status === s)}
-              >
-                {STATUS_LABEL[s]}
-              </Link>
-            ))}
-          </div>
+          <PillTabs
+            items={[
+              {
+                key: 'all',
+                label: 'All',
+                href: `/contributors${q ? `?q=${encodeURIComponent(q)}` : ''}`,
+                active: !status,
+              },
+              ...(['active', 'due', 'overdue', 'inactive'] as const).map((s) => ({
+                key: s,
+                label: STATUS_LABEL[s],
+                href: `/contributors?status=${s}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+                active: status === s,
+              })),
+            ]}
+          />
         }
         search={
           <div className="flex flex-wrap items-center gap-3">

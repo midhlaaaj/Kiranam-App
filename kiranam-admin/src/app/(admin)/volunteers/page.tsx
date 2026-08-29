@@ -5,11 +5,11 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeading } from '@/components/PageHeading';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
+import { PendingApplicantRow } from './PendingApplicantRow';
+import { PillTabs } from '@/components/PillTabs';
 import {
   buttonPrimary,
   inputClass,
-  pillTabClass,
-  pillTabItemClass,
   staggerDelay,
   tableCellClass,
   tableHeadRowClass,
@@ -60,13 +60,14 @@ async function getPendingApplicants(query: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from('volunteer_applications')
-    .select('id, created_at, profiles!volunteer_applications_profile_id_fkey(id, full_name, phone)')
+    .select('id, created_at, motivation, profiles!volunteer_applications_profile_id_fkey(id, full_name, phone)')
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
 
   const rows = (data || []) as unknown as {
     id: string;
     created_at: string;
+    motivation: string | null;
     profiles: { id: string; full_name: string; phone: string | null } | null;
   }[];
 
@@ -90,20 +91,22 @@ export default async function VolunteersPage({
       <PageHeading title="Volunteers" />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className={pillTabClass}>
-          <Link
-            href={`/volunteers?tab=approved${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-            className={pillTabItemClass(activeTab === 'approved')}
-          >
-            Approved
-          </Link>
-          <Link
-            href={`/volunteers?tab=pending${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-            className={pillTabItemClass(activeTab === 'pending')}
-          >
-            Pending
-          </Link>
-        </div>
+        <PillTabs
+          items={[
+            {
+              key: 'approved',
+              label: 'Approved',
+              href: `/volunteers?tab=approved${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+              active: activeTab === 'approved',
+            },
+            {
+              key: 'pending',
+              label: 'Pending',
+              href: `/volunteers?tab=pending${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+              active: activeTab === 'pending',
+            },
+          ]}
+        />
 
         <form className="flex flex-wrap items-center gap-3">
           <div className="relative">
@@ -185,20 +188,7 @@ async function VolunteersTable({ activeTab, q }: { activeTab: 'approved' | 'pend
           </thead>
           <tbody>
             {applicants.map((a, i) => (
-              <tr key={a.id} className={tableRowClass} style={staggerDelay(i)}>
-                <td className={tableCellClass}>
-                  <Link
-                    href={`/volunteers/${a.profiles?.id}`}
-                    className="font-semibold text-kiranam-ink hover:text-kiranam-primary hover:underline"
-                  >
-                    {a.profiles?.full_name || 'Unnamed'}
-                  </Link>
-                </td>
-                <td className={`${tableCellClass} text-kiranam-muted`}>{a.profiles?.phone}</td>
-                <td className={`${tableCellClass} text-kiranam-muted`}>
-                  {new Date(a.created_at).toLocaleDateString('en-IN')}
-                </td>
-              </tr>
+              <PendingApplicantRow key={a.id} applicant={a} index={i} />
             ))}
           </tbody>
         </table>

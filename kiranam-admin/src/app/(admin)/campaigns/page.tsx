@@ -8,13 +8,12 @@ import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { SkeletonTable } from '@/components/Skeleton';
+import { PillTabs } from '@/components/PillTabs';
 import {
   badgeClass,
   buttonPrimary,
   formatMoney,
   inputClass,
-  pillTabClass,
-  pillTabItemClass,
   staggerDelay,
   tableCellClass,
   tableHeadRowClass,
@@ -36,23 +35,28 @@ export default async function CampaignsPage({
         label="Add new campaign"
         modal
         filters={
-          <div className={pillTabClass}>
-            <Link href={`/campaigns${q ? `?q=${encodeURIComponent(q)}` : ''}`} className={pillTabItemClass(!status)}>
-              All
-            </Link>
-            <Link
-              href={`/campaigns?status=active${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-              className={pillTabItemClass(status === 'active')}
-            >
-              Ongoing
-            </Link>
-            <Link
-              href={`/campaigns?status=completed${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-              className={pillTabItemClass(status === 'completed')}
-            >
-              Completed
-            </Link>
-          </div>
+          <PillTabs
+            items={[
+              {
+                key: 'all',
+                label: 'All',
+                href: `/campaigns${q ? `?q=${encodeURIComponent(q)}` : ''}`,
+                active: !status,
+              },
+              {
+                key: 'active',
+                label: 'Ongoing',
+                href: `/campaigns?status=active${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+                active: status === 'active',
+              },
+              {
+                key: 'completed',
+                label: 'Completed',
+                href: `/campaigns?status=completed${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+                active: status === 'completed',
+              },
+            ]}
+          />
         }
         search={
           <form className="flex flex-wrap items-center gap-3">

@@ -27,12 +27,12 @@ import {
   Zap,
 } from "lucide-react";
 
-// wacrm doesn't have its own admin session — this just navigates back to
-// the kiranam-admin domain, where the admin's cookie (set when they
-// crossed over via the wacrm-bridge, see auth/bridge/route.ts) is still
-// valid. Falls back to a relative "/admin" so the link never renders
-// with an empty href if the env var is unset.
-const ADMIN_PANEL_URL = process.env.NEXT_PUBLIC_ADMIN_URL || "/admin";
+// wacrm is served from this same Next.js app (under /whatsapp), sharing
+// the admin's session cookie directly — no cross-domain bridge needed.
+// NEXT_PUBLIC_ADMIN_URL lets a split-deployment setup point elsewhere;
+// unset, it falls back to "/", the dashboard root in this app (not
+// "/admin", which doesn't exist here and previously 404'd).
+const ADMIN_PANEL_URL = process.env.NEXT_PUBLIC_ADMIN_URL || "/";
 import type { AccountRole } from "@/lib/whatsapp/auth/roles";
 
 // Per-role chip metadata used in the sidebar's account strip + the

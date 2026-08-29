@@ -16,14 +16,16 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const admin = await verifyAdmin();
 
   const fullName = String(formData.get('full_name') || '').trim();
+  const dialCode = String(formData.get('dial_code') || '91').replace(/\D/g, '') || '91';
   const phoneDigits = String(formData.get('phone') || '').replace(/\D/g, '');
   const monthlyAmount = Number(formData.get('monthly_amount') || 0);
 
   if (!fullName) return { error: 'Full name is required.' };
-  if (phoneDigits.length !== 10) return { error: 'Enter a valid 10-digit phone number.' };
+  if (dialCode === '91' && phoneDigits.length !== 10) return { error: 'Enter a valid 10-digit phone number.' };
+  if (phoneDigits.length < 4 || phoneDigits.length > 14) return { error: 'Enter a valid phone number.' };
   if (!(monthlyAmount > 0)) return { error: 'Monthly amount must be greater than zero.' };
 
-  const phoneE164 = `+91${phoneDigits}`;
+  const phoneE164 = `+${dialCode}${phoneDigits}`;
   const supabaseAdmin = createAdminClient();
 
   // Phone is the auth identity, matching kiranam-app's phone-OTP login — no
