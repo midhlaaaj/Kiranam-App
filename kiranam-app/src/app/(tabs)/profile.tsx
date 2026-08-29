@@ -20,7 +20,11 @@ export default function ProfileScreen() {
     hasCommitment,
     commitmentAmount,
     isAutopayEnabled,
-    setAutopayEnabled,
+    mandateStatus,
+    enableAutopay,
+    disableAutopay,
+    contributionPaused,
+    setContributionPaused,
     isVolunteer,
     signOut,
     deleteAccount,
@@ -30,25 +34,45 @@ export default function ProfileScreen() {
   } = useApp();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [autopayBusy, setAutopayBusy] = useState(false);
+  const [pauseBusy, setPauseBusy] = useState(false);
 
-  const applyAutopayChange = async (val: boolean) => {
-    const { error } = await setAutopayEnabled(val);
+  const handleToggleAutopay = async () => {
+    setAutopayBusy(true);
+    const { error } = isAutopayEnabled ? await disableAutopay() : await enableAutopay(commitmentAmount);
+    setAutopayBusy(false);
     if (error) Alert.alert('Could not update autopay', friendlyError(error));
   };
 
-  const handlePause = () => {
-    if (isAutopayEnabled) {
-      Alert.alert(
-        'Pause Contributions',
-        'Are you sure you want to pause your monthly commitments? This turns off auto-pay — you can resume anytime.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Yes, Pause', style: 'destructive', onPress: () => applyAutopayChange(false) },
-        ]
-      );
-    } else {
-      applyAutopayChange(true);
-    }
+  // Pausing is a heavier action than turning autopay off on its own — it
+  // also cancels any live mandate outright and stops WhatsApp broadcasts
+  // reaching this contributor, so it gets an explicit warning step rather
+  // than firing on a single tap the way the autopay toggle does.
+  const handlePauseContributions = () => {
+    Alert.alert(
+      'Pause your contributions?',
+      "This will turn off autopay (if it's on) and stop WhatsApp updates from Kiranam until you resume. Your giving history is kept either way.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Pause',
+          style: 'destructive',
+          onPress: async () => {
+            setPauseBusy(true);
+            const { error } = await setContributionPaused(true);
+            setPauseBusy(false);
+            if (error) Alert.alert('Could not pause', friendlyError(error));
+          },
+        },
+      ]
+    );
+  };
+
+  const handleResumeContributions = async () => {
+    setPauseBusy(true);
+    const { error } = await setContributionPaused(false);
+    setPauseBusy(false);
+    if (error) Alert.alert('Could not resume', friendlyError(error));
   };
 
   const handleLogout = async () => {
@@ -110,9 +134,29 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.paddingRow} onPress={handlePause} activeOpacity={0.7}>
-            <Text style={styles.actionLink}>{isAutopayEnabled ? 'Pause my contributions' : 'Resume my contributions'}</Text>
-          </TouchableOpacity>
+          {!contributionPaused && hasCommitment && (
+            <TouchableOpacity style={[styles.paddingRow, styles.rowBorder]} onPress={handleToggleAutopay} activeOpacity={0.7} disabled={autopayBusy}>
+              <Text style={styles.actionLink}>
+                {autopayBusy ? 'Working…' : isAutopayEnabled ? 'Turn off Autopay' : 'Turn on Autopay'}
+              </Text>
+              {isAutopayEnabled && mandateStatus && mandateStatus !== 'authenticated' && mandateStatus !== 'active' && (
+                <Text style={styles.mandateWarningText}>Mandate {mandateStatus} — tap to fix</Text>
+              )}
+            </TouchableOpacity>
+          )}
+
+          {hasCommitment && (
+            <TouchableOpacity
+              style={[styles.paddingRow, styles.noBorder]}
+              onPress={contributionPaused ? handleResumeContributions : handlePauseContributions}
+              activeOpacity={0.7}
+              disabled={pauseBusy}
+            >
+              <Text style={[styles.actionLink, contributionPaused ? null : styles.pauseLinkText]}>
+                {pauseBusy ? 'Working…' : contributionPaused ? 'Resume my contributions' : 'Pause my contributions'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Personal Info */}
@@ -322,6 +366,19 @@ const styles = StyleSheet.create({
   },
   paddingRow: {
     paddingVertical: 16,
+  },
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EEEA',
+  },
+  mandateWarningText: {
+    fontFamily: 'Inter',
+    fontSize: 11.5,
+    color: '#BA1A1A',
+    marginTop: 3,
+  },
+  pauseLinkText: {
+    color: '#7A756E',
   },
   rowInfo: {
     flex: 1,

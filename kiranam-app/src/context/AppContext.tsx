@@ -122,7 +122,11 @@ interface AppContextType {
   commitmentAmount: number;
   setCommitmentAmount: (amount: number) => Promise<{ error: string | null }>;
   isAutopayEnabled: boolean;
-  setAutopayEnabled: (val: boolean) => Promise<{ error: string | null }>;
+  mandateStatus: string | null;
+  enableAutopay: (amount: number) => Promise<{ error: string | null }>;
+  disableAutopay: () => Promise<{ error: string | null }>;
+  contributionPaused: boolean;
+  setContributionPaused: (paused: boolean) => Promise<{ error: string | null }>;
   nextDueDate: string;
   setNextDueDate: (date: string) => void;
   isPaidThisCycle: boolean;
@@ -298,7 +302,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [profileLoading, setProfileLoading] = useState(true);
   const [hasCommitment, setHasCommitment] = useState(false);
   const [commitmentAmount, setCommitmentAmountState] = useState(500);
-  const [isAutopayEnabled, setAutopayEnabledState] = useState(true);
+  const [isAutopayEnabled, setAutopayEnabledState] = useState(false);
+  const [mandateStatus, setMandateStatus] = useState<string | null>(null);
+  const [contributionPaused, setContributionPausedState] = useState(false);
   const [nextDueDate, setNextDueDateState] = useState('');
   // Raw ISO next_due_date, kept alongside the formatted display string so
   // payment code can compare it to "today" without re-parsing display text.
@@ -600,12 +606,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setHasCommitment(true);
       setCommitmentAmountState(Number(commitment.monthly_amount));
       setAutopayEnabledState(commitment.autopay_enabled);
+      setMandateStatus(commitment.mandate_status);
+      setContributionPausedState(commitment.contribution_paused);
       setNextDueDateState(formatDueDateLabel(commitment.next_due_date));
       setNextDueDateIso(commitment.next_due_date);
     } else {
       setHasCommitment(false);
       setCommitmentAmountState(500);
-      setAutopayEnabledState(true);
+      setAutopayEnabledState(false);
+      setMandateStatus(null);
+      setContributionPausedState(false);
       setNextDueDateState('');
       setNextDueDateIso(null);
     }
@@ -636,7 +646,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setVolunteerMembers([]);
       setHasCommitment(false);
       setCommitmentAmountState(500);
-      setAutopayEnabledState(true);
+      setAutopayEnabledState(false);
+      setMandateStatus(null);
+      setContributionPausedState(false);
       setNextDueDateState('');
       setProfileLoading(false);
       return;
@@ -924,19 +936,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { error: null };
   };
 
-  const setAutopayEnabled = async (val: boolean): Promise<{ error: string | null }> => {
+  // Real recurring autopay via a Razorpay Subscription — the contributor
+  // authorizes a UPI Autopay/card mandate once, and Razorpay charges them
+  // automatically every cycle after that. Mirrors makeRazorpayPayment's own
+  // create → native checkout → verify shape, but with a subscription_id
+  // instead of an order_id, since a mandate is authorized rather than a
+  // single payment captured.
+  const enableAutopay = async (amount: number): Promise<{ error: string | null }> => {
     if (!session) return { error: 'Not signed in' };
-    const { error } = await supabase
-      .from('commitments')
-      .upsert(
-        { contributor_id: session.user.id, autopay_enabled: val },
-        { onConflict: 'contributor_id' }
-      );
+    try {
+      const { data: subData, error: subError } = await supabase.functions.invoke('create-razorpay-subscription', {
+        body: { amount },
+      });
+      if (subError || !subData) return { error: subError?.message || 'Could not create subscription' };
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const RazorpayCheckout = require('react-native-razorpay').default;
+      const checkoutResult = await RazorpayCheckout.open({
+        key: subData.keyId,
+        subscription_id: subData.subscriptionId,
+        name: 'Kiranam',
+        description: 'Monthly Autopay Authorization',
+        prefill: {
+          name: userName || undefined,
+          email: userEmail || undefined,
+          contact: phone || undefined,
+        },
+        theme: { color: '#EC2028' },
+      });
+
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-subscription', {
+        body: {
+          razorpay_subscription_id: checkoutResult.razorpay_subscription_id,
+          razorpay_payment_id: checkoutResult.razorpay_payment_id,
+          razorpay_signature: checkoutResult.razorpay_signature,
+        },
+      });
+      if (verifyError || !verifyData?.record) return { error: verifyError?.message || 'Could not verify autopay' };
+
+      setAutopayEnabledState(true);
+      setMandateStatus('authenticated');
+      setCommitmentAmountState(amount);
+      setHasCommitment(true);
+      return { error: null };
+    } catch (err: any) {
+      // Razorpay's native SDK rejects the promise (rather than resolving
+      // with an error field) when the user backs out of checkout — not a
+      // real failure, just "didn't finish authorizing."
+      return { error: err?.description || err?.message || 'Autopay setup was cancelled' };
+    }
+  };
+
+  const disableAutopay = async (): Promise<{ error: string | null }> => {
+    if (!session) return { error: 'Not signed in' };
+    const { error } = await supabase.functions.invoke('cancel-razorpay-subscription', { body: {} });
     if (error) {
-      console.error('Failed to save autopay setting:', error.message);
+      console.error('Failed to cancel autopay:', error.message);
       return { error: error.message };
     }
-    setAutopayEnabledState(val);
+    setAutopayEnabledState(false);
+    setMandateStatus('cancelled');
+    return { error: null };
+  };
+
+  // Pausing is heavier than just turning autopay off: it also cancels any
+  // live mandate outright (server-side, see set-contribution-paused) and
+  // removes the contributor from WhatsApp broadcasts until resumed.
+  const setContributionPaused = async (paused: boolean): Promise<{ error: string | null }> => {
+    if (!session) return { error: 'Not signed in' };
+    const { error } = await supabase.functions.invoke('set-contribution-paused', { body: { paused } });
+    if (error) {
+      console.error('Failed to update contribution pause state:', error.message);
+      return { error: error.message };
+    }
+    setContributionPausedState(paused);
+    if (paused) {
+      setAutopayEnabledState(false);
+      setMandateStatus('cancelled');
+    }
     return { error: null };
   };
 
@@ -983,7 +1060,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         {
           contributor_id: uid,
           monthly_amount: amount,
-          autopay_enabled: isAutopayEnabled,
+          // A manual one-off payment never implies autopay is active —
+          // real autopay only ever gets flipped on by enableAutopay's
+          // verified mandate authorization. Quick Pay is hidden from the
+          // UI whenever autopay is genuinely on, so this path shouldn't
+          // normally run while it's true anyway, but never assert it here.
+          autopay_enabled: false,
           next_due_date: nextIso,
         },
         { onConflict: 'contributor_id' }
@@ -1226,7 +1308,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       profileLoading,
       hasCommitment,
       commitmentAmount, setCommitmentAmount,
-      isAutopayEnabled, setAutopayEnabled,
+      isAutopayEnabled, mandateStatus, enableAutopay, disableAutopay,
+      contributionPaused, setContributionPaused,
       nextDueDate, setNextDueDate,
       isPaidThisCycle,
       campaigns,

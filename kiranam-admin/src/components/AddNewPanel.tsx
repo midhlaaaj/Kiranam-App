@@ -25,6 +25,7 @@ export function AddNewPanel({
   label,
   filters,
   search,
+  mobileToolbar,
   children,
   modal = false,
 }: {
@@ -35,6 +36,10 @@ export function AddNewPanel({
   filters?: React.ReactNode;
   /** Right side of the toolbar row (search box + button). */
   search?: React.ReactNode;
+  /** Compact icon-row replacement for `filters`/`search` on small screens
+   * (e.g. `MobileToolbar`). When passed, the regular toolbar row hides below
+   * `sm:` in favor of this instead of wrapping. */
+  mobileToolbar?: React.ReactNode;
   children: React.ReactNode;
   /** Render the create form in a popup instead of expanding it inline. */
   modal?: boolean;
@@ -60,11 +65,14 @@ export function AddNewPanel({
       </div>
 
       {(filters || search) && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div
+          className={`mb-6 flex-wrap items-center justify-between gap-3 ${mobileToolbar ? 'hidden sm:flex' : 'flex'}`}
+        >
           <div className="flex flex-wrap items-center gap-3">{filters}</div>
           <div className="flex flex-wrap items-center gap-3">{search}</div>
         </div>
       )}
+      {mobileToolbar}
 
       {modal ? (
         <Modal open={open} onClose={close} title={label}>

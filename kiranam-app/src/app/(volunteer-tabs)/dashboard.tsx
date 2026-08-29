@@ -40,6 +40,8 @@ export default function VolunteerDashboardScreen() {
     commitmentAmount,
     nextDueDate,
     isPaidThisCycle,
+    isAutopayEnabled,
+    mandateStatus,
     refreshAll,
   } = useApp();
   const [copied, setCopied] = useState(false);
@@ -53,6 +55,7 @@ export default function VolunteerDashboardScreen() {
   }, [refreshAll]);
 
   const firstName = userName.split(' ')[0];
+  const autopayHealthy = isAutopayEnabled && (mandateStatus === 'authenticated' || mandateStatus === 'active');
   const pendingCount = volunteerMembers.filter((m) => m.status === 'due').length;
   const overdueCount = volunteerMembers.filter((m) => m.status === 'overdue').length;
   const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
@@ -138,6 +141,11 @@ export default function VolunteerDashboardScreen() {
                 <View style={styles.paidBadge}>
                   <Check size={15} color="#22A559" strokeWidth={3} />
                   <Text style={styles.paidBadgeText}>Paid for this cycle</Text>
+                </View>
+              ) : autopayHealthy ? (
+                <View style={styles.autopayBadge}>
+                  <Check size={15} color="#FFFFFF" strokeWidth={3} />
+                  <Text style={styles.autopayBadgeText}>Autopay active — next charge {nextDueDate}</Text>
                 </View>
               ) : (
                 <Button
@@ -507,6 +515,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
     color: '#FFFFFF',
+  },
+  autopayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  autopayBadgeText: {
+    flexShrink: 1,
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 13,
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
   referralCompactCard: {
     flexDirection: 'row',

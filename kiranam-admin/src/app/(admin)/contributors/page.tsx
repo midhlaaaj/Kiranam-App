@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Search, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { AddNewPanel } from '@/components/AddNewPanel';
+import { MobileToolbar } from '@/components/MobileToolbar';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { RegisterContributorForm } from './RegisterContributorForm';
@@ -43,6 +44,44 @@ export default async function ContributorsPage({
 }) {
   const { q, status } = await searchParams;
 
+  const filterPills = (
+    <PillTabs
+      items={[
+        {
+          key: 'all',
+          label: 'All',
+          href: `/contributors${q ? `?q=${encodeURIComponent(q)}` : ''}`,
+          active: !status,
+        },
+        ...(['active', 'due', 'overdue', 'inactive'] as const).map((s) => ({
+          key: s,
+          label: STATUS_LABEL[s],
+          href: `/contributors?status=${s}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+          active: status === s,
+        })),
+      ]}
+    />
+  );
+
+  const searchForm = (
+    <form className="flex flex-wrap items-center gap-3">
+      <div className="relative">
+        <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Search by name or phone…"
+          className={`${inputClass} w-64 pl-9`}
+        />
+      </div>
+      {status && <input type="hidden" name="status" value={status} />}
+      <button type="submit" className={buttonPrimary}>
+        Search
+      </button>
+    </form>
+  );
+
   return (
     <div>
       <AddNewPanel
@@ -50,47 +89,16 @@ export default async function ContributorsPage({
         label="Register contributor"
         description="For a contributor who committed offline and hasn't signed up in the app yet."
         modal
-        filters={
-          <PillTabs
-            items={[
-              {
-                key: 'all',
-                label: 'All',
-                href: `/contributors${q ? `?q=${encodeURIComponent(q)}` : ''}`,
-                active: !status,
-              },
-              ...(['active', 'due', 'overdue', 'inactive'] as const).map((s) => ({
-                key: s,
-                label: STATUS_LABEL[s],
-                href: `/contributors?status=${s}${q ? `&q=${encodeURIComponent(q)}` : ''}`,
-                active: status === s,
-              })),
-            ]}
-          />
-        }
+        filters={filterPills}
         search={
           <div className="flex flex-wrap items-center gap-3">
-            <form className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Search by name or phone…"
-                  className={`${inputClass} w-64 pl-9`}
-                />
-              </div>
-              {status && <input type="hidden" name="status" value={status} />}
-              <button type="submit" className={buttonPrimary}>
-                Search
-              </button>
-            </form>
+            {searchForm}
             <Link href="/contributors/export" className={buttonSecondary}>
               Export CSV
             </Link>
           </div>
         }
+        mobileToolbar={<MobileToolbar filters={filterPills} search={searchForm} exportHref="/contributors/export" />}
       >
         <RegisterContributorForm />
       </AddNewPanel>

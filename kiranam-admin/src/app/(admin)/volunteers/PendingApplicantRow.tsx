@@ -12,6 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { buttonDanger, buttonPrimary, inputClass, staggerDelay, tableCellClass, tableRowClass } from '@/lib/ui';
 
 export function PendingApplicantRow({
@@ -27,12 +37,19 @@ export function PendingApplicantRow({
   index: number;
 }) {
   const [open, setOpen] = useState(false);
+  // Which action is awaiting a second, explicit confirmation — approving
+  // promotes the profile's role and rejecting is only reversible by having
+  // the applicant reapply, so neither should fire straight off the review
+  // dialog's buttons the way it used to.
+  const [confirmStep, setConfirmStep] = useState<'approve' | 'reject' | null>(null);
   const [reason, setReason] = useState('');
   const [isPending, startTransition] = useTransition();
   const profileId = applicant.profiles?.id;
+  const applicantName = applicant.profiles?.full_name || 'This applicant';
 
   function handleApprove() {
     if (!profileId) return;
+    setConfirmStep(null);
     setOpen(false);
     startTransition(() => {
       toast.promise(approveApplication(applicant.id, profileId), {
@@ -45,6 +62,7 @@ export function PendingApplicantRow({
 
   function handleReject() {
     if (!profileId) return;
+    setConfirmStep(null);
     setOpen(false);
     const reasonToSend = reason;
     setReason('');
@@ -100,15 +118,47 @@ export function PendingApplicantRow({
           </div>
 
           <DialogFooter>
-            <button type="button" onClick={handleReject} disabled={isPending} className={buttonDanger}>
+            <button type="button" onClick={() => setConfirmStep('reject')} disabled={isPending} className={buttonDanger}>
               Reject
             </button>
-            <button type="button" onClick={handleApprove} disabled={isPending} className={buttonPrimary}>
+            <button type="button" onClick={() => setConfirmStep('approve')} disabled={isPending} className={buttonPrimary}>
               Approve
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmStep === 'approve'} onOpenChange={(v) => !v && setConfirmStep(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve this application?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {applicantName} will be promoted to a volunteer and can start being assigned contributors.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleApprove}>Approve</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmStep === 'reject'} onOpenChange={(v) => !v && setConfirmStep(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject this application?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {applicantName} will not be made a volunteer. They can reapply later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleReject}>
+              Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

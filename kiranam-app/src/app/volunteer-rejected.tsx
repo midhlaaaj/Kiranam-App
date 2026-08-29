@@ -46,7 +46,16 @@ export default function VolunteerRejectedScreen() {
     if (uid && applicationId) {
       await markRejectionAcknowledged(uid, applicationId);
     }
-    router.replace(hasCommitment ? '/(tabs)/home' : '/choose-amount');
+    router.replace(
+      hasCommitment
+        ? '/(tabs)/home'
+        // Without `onboarding: '1'`, choose-amount's Save button treats this
+        // as "editing an existing commitment" and does router.back() — which
+        // lands back on whatever was still under volunteer-rejected in the
+        // stack (the mobile-number screen), not home. Marking it onboarding
+        // routes Save (and Skip) to home instead, same as a fresh signup.
+        : { pathname: '/choose-amount', params: { onboarding: '1', role: 'contributor' } }
+    );
   };
 
   return (

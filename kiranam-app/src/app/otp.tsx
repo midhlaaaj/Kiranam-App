@@ -165,13 +165,21 @@ export default function OtpScreen() {
 
     if (profile?.full_name) {
       const dest = await resolvePostAuthRoute(uid);
+      // `replace` alone only swaps the current (otp) entry — splash and the
+      // mobile-number screen pushed before it stay underneath, so hardware
+      // back from home would land a signed-in user back on the phone-entry
+      // screen. dismissAll() first collapses the stack to its root before
+      // replace() swaps that root entry, leaving nothing to go back to.
+      router.dismissAll();
       router.replace(dest);
       return;
     }
 
     // New account: proceed to Registration Screen, carrying the chosen role forward.
-    // `replace`, not `push` — otp must not remain in the back stack, or the
-    // hardware back button would return a signed-in user to the OTP screen.
+    // Same dismissAll()+replace() as above — otp (and everything before it)
+    // must not remain in the back stack, or the hardware back button would
+    // return a signed-in user to the OTP or phone-entry screen.
+    router.dismissAll();
     router.replace({ pathname: '/register', params: { role } });
   };
 

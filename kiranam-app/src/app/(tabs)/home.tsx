@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 import { useApp, EventRecord } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { Bell, Heart, Calendar, MapPin, Image as ImageIcon, Share2, ShieldCheck, Check, Circle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney, getGreeting } from '@/utils/format';
@@ -39,6 +38,8 @@ export default function HomeScreen() {
     commitmentAmount,
     nextDueDate,
     isPaidThisCycle,
+    isAutopayEnabled,
+    mandateStatus,
     userAvatarUrl,
     campaigns,
     payments,
@@ -74,6 +75,12 @@ export default function HomeScreen() {
     { key: 'email', label: 'Add your email', done: !!userEmail, onPress: () => router.push('/(tabs)/profile') },
   ];
   const showSetupCard = !profileLoading && setupSteps.some((s) => !s.done);
+  // Once a mandate is genuinely charging, a manual Quick Pay could collide
+  // with the scheduled autopay charge for the same cycle — Razorpay's
+  // subscription billing and a one-off Checkout payment are independent
+  // systems with no shared awareness, so nothing would stop both firing.
+  // Hiding Quick Pay whenever autopay is healthy removes that risk outright.
+  const autopayHealthy = isAutopayEnabled && (mandateStatus === 'authenticated' || mandateStatus === 'active');
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -138,6 +145,11 @@ export default function HomeScreen() {
                 <View style={styles.paidBadgeButton}>
                   <Check size={16} color="#FFFFFF" strokeWidth={3} />
                   <Text style={styles.paidBadgeButtonText}>Paid for this cycle</Text>
+                </View>
+              ) : autopayHealthy ? (
+                <View style={styles.autopayActiveBadge}>
+                  <Check size={15} color="#FFFFFF" strokeWidth={3} />
+                  <Text style={styles.autopayActiveText}>Autopay active — next charge {nextDueDate}</Text>
                 </View>
               ) : (
                 <Button
@@ -271,59 +283,58 @@ export default function HomeScreen() {
             contentContainerStyle={styles.campaignListContainer}
             renderItem={({ item }) => (
               <TouchableOpacity
+                style={styles.eventCard}
                 activeOpacity={0.9}
                 onPress={() => router.push({ pathname: '/event-detail', params: { id: item.id } })}
               >
-                <Card style={styles.eventCard}>
-                  {item.coverImageUrl ? (
-                    <View style={styles.eventImagePlaceholder}>
-                      <Image
-                        source={{ uri: item.coverImageUrl }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                        transition={200}
-                      />
-                      <TouchableOpacity
-                        style={styles.shareIconButton}
-                        onPress={() => handleShareEvent(item)}
-                        activeOpacity={0.8}
-                        hitSlop={8}
-                      >
-                        <Share2 size={13} color="#0C0C0D" />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <LinearGradient
-                      colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
-                      locations={[0, 0.3, 0.65, 1]}
-                      start={{ x: 0.29, y: 0.05 }}
-                      end={{ x: 0.71, y: 0.95 }}
-                      style={styles.eventImagePlaceholder}
+                {item.coverImageUrl ? (
+                  <View style={styles.eventImagePlaceholder}>
+                    <Image
+                      source={{ uri: item.coverImageUrl }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                    <TouchableOpacity
+                      style={styles.shareIconButton}
+                      onPress={() => handleShareEvent(item)}
+                      activeOpacity={0.8}
+                      hitSlop={8}
                     >
-                      <ImageIcon size={20} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
-                      <TouchableOpacity
-                        style={styles.shareIconButton}
-                        onPress={() => handleShareEvent(item)}
-                        activeOpacity={0.8}
-                        hitSlop={8}
-                      >
-                        <Share2 size={13} color="#0C0C0D" />
-                      </TouchableOpacity>
-                    </LinearGradient>
-                  )}
-
-                  <Text style={styles.eventTitle} numberOfLines={2}>{item.title}</Text>
-
-                  <View style={styles.infoRow}>
-                    <Calendar size={13} color="#7A756E" />
-                    <Text style={styles.infoText} numberOfLines={1}>{item.dateStr}</Text>
+                      <Share2 size={11} color="#0C0C0D" />
+                    </TouchableOpacity>
                   </View>
+                ) : (
+                  <LinearGradient
+                    colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
+                    locations={[0, 0.3, 0.65, 1]}
+                    start={{ x: 0.29, y: 0.05 }}
+                    end={{ x: 0.71, y: 0.95 }}
+                    style={styles.eventImagePlaceholder}
+                  >
+                    <ImageIcon size={18} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
+                    <TouchableOpacity
+                      style={styles.shareIconButton}
+                      onPress={() => handleShareEvent(item)}
+                      activeOpacity={0.8}
+                      hitSlop={8}
+                    >
+                      <Share2 size={11} color="#0C0C0D" />
+                    </TouchableOpacity>
+                  </LinearGradient>
+                )}
 
-                  <View style={styles.infoRow}>
-                    <MapPin size={13} color="#7A756E" />
-                    <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
-                  </View>
-                </Card>
+                <Text style={styles.eventTitle} numberOfLines={1}>{item.title}</Text>
+
+                <View style={styles.infoRow}>
+                  <Calendar size={11} color="#7A756E" />
+                  <Text style={styles.infoText} numberOfLines={1}>{item.dateStr}</Text>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <MapPin size={11} color="#7A756E" />
+                  <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
+                </View>
               </TouchableOpacity>
             )}
           />
@@ -520,6 +531,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#FFFFFF',
   },
+  autopayActiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 50,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 25,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    zIndex: 1,
+  },
+  autopayActiveText: {
+    flexShrink: 1,
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 13,
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
   skeletonAmount: {
     width: 140,
     height: 36,
@@ -699,32 +730,39 @@ const styles = StyleSheet.create({
     color: '#7A756E',
     textAlign: 'center',
   },
+  // Deliberately mirrors campaignCard exactly (same width/padding/radius/
+  // shadow) so the two horizontal sliders read as the same size on the home
+  // screen — only the inner content (image height, text sizes) differs to
+  // fit an extra info row in the same footprint.
   eventCard: {
-    padding: 16,
+    width: 172,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 14,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 2,
   },
   eventImagePlaceholder: {
     width: '100%',
-    height: 120,
-    borderRadius: 18,
+    height: 76,
+    borderRadius: 14,
     backgroundColor: '#F4F1EE',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginBottom: 10,
     overflow: 'hidden',
   },
   shareIconButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -735,23 +773,24 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   eventTitle: {
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 13,
     color: '#0C0C0D',
     letterSpacing: -0.2,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 5,
+    marginBottom: 3,
   },
   infoText: {
     fontFamily: 'Inter',
-    fontSize: 13,
-    color: '#4A4640',
+    fontSize: 10.5,
+    color: '#7A756E',
+    flexShrink: 1,
   },
   recentContributionsContainer: {
     backgroundColor: '#FFFFFF',

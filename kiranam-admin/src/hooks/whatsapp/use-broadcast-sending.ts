@@ -202,6 +202,29 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       contacts = contacts.filter((c) => !excludedIds.has(c.id));
     }
 
+    // Contacts tagged "Paused" (a contributor who paused their giving from
+    // the app, see set-contribution-paused Edge Function) are always
+    // subtracted, unconditionally — unlike the optional excludeTagIds
+    // above, this isn't something whoever composes a broadcast has to
+    // remember to pick each time. Applies to CSV-resolved contacts too,
+    // since upsertCsvContacts can match an existing (already-paused) row.
+    if (contacts.length > 0 && accountId) {
+      const { data: pausedTag } = await supabase
+        .from('tags')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('name', 'Paused')
+        .maybeSingle();
+      if (pausedTag) {
+        const { data: pausedRows } = await supabase
+          .from('contact_tags')
+          .select('contact_id')
+          .eq('tag_id', pausedTag.id);
+        const pausedIds = new Set((pausedRows ?? []).map((r) => r.contact_id));
+        contacts = contacts.filter((c) => !pausedIds.has(c.id));
+      }
+    }
+
     return contacts;
   }
 

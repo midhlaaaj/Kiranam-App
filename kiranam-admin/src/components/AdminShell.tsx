@@ -146,7 +146,7 @@ export function AdminShell({
             >
               <Menu size={20} />
             </button>
-            <p className="text-xl leading-none font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
+            <p className="text-3xl leading-none font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
           </div>
           <Link
             href="/my-notifications"

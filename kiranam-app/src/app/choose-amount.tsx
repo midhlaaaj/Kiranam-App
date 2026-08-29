@@ -14,7 +14,7 @@ const MIN_AMOUNT = 30;
 export default function ChooseAmountScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { commitmentAmount, setCommitmentAmount, campaigns, hasCommitment } = useApp();
+  const { commitmentAmount, setCommitmentAmount, campaigns, hasCommitment, isAutopayEnabled, enableAutopay, disableAutopay } = useApp();
 
   const customAmountAccessoryId = 'customAmountAccessory';
 
@@ -110,11 +110,35 @@ export default function ChooseAmountScreen() {
   const handleSave = async () => {
     if (!validateCurrentAmount() || !currentFinalAmount) return;
     setSaveState('saving');
-    const { error } = await setCommitmentAmount(currentFinalAmount);
-    if (error) {
-      setSaveState('idle');
-      Alert.alert('Could not save', friendlyError(error));
-      return;
+
+    // A UPI Autopay/card mandate has a fixed ceiling authorized at signup —
+    // it can't be silently raised (or safely assumed sufficient if lowered),
+    // so any amount change while autopay is active always re-authorizes:
+    // cancel the current mandate outright first (or a duplicate one would
+    // keep billing in parallel, invisible to future webhook lookups once
+    // commitments.razorpay_subscription_id gets overwritten), then set up
+    // and authorize a fresh subscription for the new amount.
+    const amountChanged = currentFinalAmount !== commitmentAmount;
+    if (isAutopayEnabled && amountChanged) {
+      const cancelResult = await disableAutopay();
+      if (cancelResult.error) {
+        setSaveState('idle');
+        Alert.alert('Could not update autopay', friendlyError(cancelResult.error));
+        return;
+      }
+      const { error } = await enableAutopay(currentFinalAmount);
+      if (error) {
+        setSaveState('idle');
+        Alert.alert('Could not re-authorize autopay', friendlyError(error));
+        return;
+      }
+    } else {
+      const { error } = await setCommitmentAmount(currentFinalAmount);
+      if (error) {
+        setSaveState('idle');
+        Alert.alert('Could not save', friendlyError(error));
+        return;
+      }
     }
     setSaveState('saved');
     setTimeout(() => {
