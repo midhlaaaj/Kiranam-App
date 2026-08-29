@@ -8,7 +8,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Bell, Heart, Calendar, MapPin, Image as ImageIcon, Share2, ShieldCheck, Check, Circle } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { formatMoney } from '@/utils/format';
+import { formatMoney, getGreeting } from '@/utils/format';
 import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
@@ -87,7 +87,7 @@ export default function HomeScreen() {
         {/* Header greeting and Bell Icon */}
         <View style={styles.header}>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.greeting}>Good morning</Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>{userName}</Text>
           </View>
           <TouchableOpacity 

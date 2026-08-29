@@ -22,7 +22,7 @@ import {
   Circle,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { formatMoney } from '@/utils/format';
+import { formatMoney, getGreeting } from '@/utils/format';
 import { referralJoinUrl } from '@/utils/links';
 
 export default function VolunteerDashboardScreen() {
@@ -92,7 +92,7 @@ export default function VolunteerDashboardScreen() {
         {/* Header greeting and Bell Icon */}
         <View style={styles.header}>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.greeting}>Welcome back</Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>{firstName}</Text>
           </View>
           <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications')} activeOpacity={0.7}>
