@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { ArrowLeft, Trash2, Users as UsersIcon } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { approveApplication, assignContributor, rejectApplication, unassignContributor } from '../actions';
+import { approveApplication, assignContributor, unassignContributor } from '../actions';
+import { RejectApplicationButton } from '../RejectApplicationButton';
 import { deriveContributorStatus } from '@/lib/volunteerStats';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { PersonCombobox } from '@/components/PersonCombobox';
-import { badgeClass, buttonPrimary, buttonSecondary, cardClass, formatMoney } from '@/lib/ui';
+import { badgeClass, buttonPrimary, cardClass, formatMoney } from '@/lib/ui';
 
 export default async function VolunteerDetailPage({
   params,
@@ -56,15 +57,10 @@ export default async function VolunteerDetailPage({
               pendingMessage="Approving…"
               className={buttonPrimary}
             />
-            <ConfirmSubmitButton
-              action={rejectApplication.bind(null, application!.id, profile.id)}
-              label="Reject"
-              title="Reject this application?"
-              description={`${profile.full_name || 'This applicant'} will not be made a volunteer. They can reapply later.`}
-              confirmLabel="Reject"
-              successMessage="Application rejected."
-              pendingMessage="Rejecting…"
-              className={buttonSecondary}
+            <RejectApplicationButton
+              applicationId={application!.id}
+              profileId={profile.id}
+              applicantName={profile.full_name || ''}
             />
           </div>
         </div>
