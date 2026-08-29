@@ -154,7 +154,9 @@ export default function ReceiptScreen() {
           <View style={[styles.detailRow, styles.noBorder]}>
             <Text style={styles.detailLabel}>Transaction ID</Text>
             <TouchableOpacity style={styles.copyRow} onPress={handleCopyTxn} activeOpacity={0.7}>
-              <Text style={styles.txnText}>{txnId}</Text>
+              <Text style={styles.txnText} numberOfLines={1} ellipsizeMode="tail">
+                {txnId}
+              </Text>
               <CopyIcon size={13} color="#7A756E" />
             </TouchableOpacity>
           </View>
@@ -249,6 +251,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#EEEBE7',
@@ -271,9 +274,12 @@ const styles = StyleSheet.create({
   copyRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
     gap: 6,
   },
   txnText: {
+    flexShrink: 1,
     fontFamily: 'monospace',
     fontSize: 12,
     fontWeight: '600',

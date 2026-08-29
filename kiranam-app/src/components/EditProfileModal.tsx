@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ScrollView, Dimensions } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { validateRequired, validateEmail } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 import { X, Camera } from 'lucide-react-native';
+
+const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.75;
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -135,60 +137,67 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
           <View style={styles.sheet}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Edit Profile</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
-                <X size={18} color="#7A756E" />
-              </TouchableOpacity>
-            </View>
+            <ScrollView
+              style={styles.sheetScroll}
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.header}>
+                <Text style={styles.title}>Edit Profile</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+                  <X size={18} color="#7A756E" />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.avatarSection}>
-              <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8} style={styles.avatarWrap}>
-                {displayUri ? (
-                  <Image source={{ uri: displayUri }} style={styles.avatarImage} />
-                ) : (
-                  <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarFallbackText}>{getInitials(name)}</Text>
+              <View style={styles.avatarSection}>
+                <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8} style={styles.avatarWrap}>
+                  {displayUri ? (
+                    <Image source={{ uri: displayUri }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={styles.avatarFallback}>
+                      <Text style={styles.avatarFallbackText}>{getInitials(name)}</Text>
+                    </View>
+                  )}
+                  <View style={styles.cameraBadge}>
+                    <Camera size={14} color="#FFFFFF" />
                   </View>
-                )}
-                <View style={styles.cameraBadge}>
-                  <Camera size={14} color="#FFFFFF" />
-                </View>
+                </TouchableOpacity>
+                <Text style={styles.avatarHint}>{previewUri ? 'Tap Save Changes to apply' : 'Tap to change photo'}</Text>
+              </View>
+
+              <Input
+                label="Name"
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+              />
+
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setEmailError('');
+                }}
+                placeholder="you@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={emailError}
+              />
+
+              <Button
+                title="Save Changes"
+                onPress={handleSave}
+                loading={saving}
+                style={styles.saveButton}
+              />
+
+              <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <Text style={styles.avatarHint}>{previewUri ? 'Tap Save Changes to apply' : 'Tap to change photo'}</Text>
-            </View>
-
-            <Input
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-            />
-
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setEmailError('');
-              }}
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              error={emailError}
-            />
-
-            <Button
-              title="Save Changes"
-              onPress={handleSave}
-              loading={saving}
-              style={styles.saveButton}
-            />
-
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -209,6 +218,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
+  },
+  // A plain View's maxHeight only clips visually (overflow defaults to
+  // 'visible' in RN) — it doesn't hand ScrollView a bounded viewport to
+  // actually scroll within. ScrollView needs the height limit on its own
+  // `style`, not just an ancestor, or content past this point just spills
+  // outside the sheet with nothing scrollable — exactly what was happening
+  // once the keyboard (plus, on Android, an autofill suggestion strip
+  // above it) ate into the available height, since RN's Modal renders in
+  // its own native window and doesn't resize as cleanly as a regular
+  // screen would.
+  sheetScroll: {
+    maxHeight: SHEET_MAX_HEIGHT,
+  },
+  sheetContent: {
     padding: 24,
     paddingBottom: 36,
   },
