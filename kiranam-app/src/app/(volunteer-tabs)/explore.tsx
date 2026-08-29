@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   campaignTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',

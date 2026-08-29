@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   referralCode: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 32,
     color: '#FFFFFF',
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   referralActionText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 13.5,
     color: '#FFFFFF',
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   kpiValue: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 16,
     color: '#0C0C0D',
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     color: '#7A756E',
   },
   sectionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   memberAvatarText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 12,
     color: '#FFFFFF',
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   memberName: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',

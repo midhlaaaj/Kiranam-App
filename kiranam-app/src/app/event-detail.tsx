@@ -39,12 +39,21 @@ export default function EventDetailScreen() {
           disabled={!event.coverImageUrl}
           onPress={() => setLightboxIndex(0)}
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <ArrowLeft size={20} color="#0C0C0D" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.shareButtonIcon} onPress={handleShare} activeOpacity={0.8}>
-            <Share2 size={18} color="#0C0C0D" />
-          </TouchableOpacity>
+          {/* Hidden (not just covered) while the lightbox is open — Android's
+              `elevation` shadow on these buttons can bleed through a
+              transparent Modal's backdrop due to how the GPU compositor
+              draws Z-depth shadows, so simply overlaying them isn't
+              reliable; not rendering them at all is. */}
+          {lightboxIndex === null && (
+            <>
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <ArrowLeft size={20} color="#0C0C0D" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.shareButtonIcon} onPress={handleShare} activeOpacity={0.8}>
+                <Share2 size={18} color="#0C0C0D" />
+              </TouchableOpacity>
+            </>
+          )}
           {event.coverImageUrl ? (
             <Image source={{ uri: event.coverImageUrl }} style={styles.coverImage} contentFit="cover" transition={200} />
           ) : (
@@ -200,7 +209,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.04,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
@@ -239,7 +248,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   galleryTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',

@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { validateRequired } from '@/utils/validators';
+import { validateRequired, validateEmail } from '@/utils/validators';
+import { friendlyError } from '@/utils/errors';
+import { Button } from '@/components/Button';
+import { Input } from '@/components/Input';
 import { X, Camera } from 'lucide-react-native';
 
 interface EditProfileModalProps {
@@ -9,21 +12,27 @@ interface EditProfileModalProps {
   onClose: () => void;
   currentName: string;
   currentAvatarUrl: string;
+  currentEmail: string;
   onSaveName: (name: string) => Promise<{ error: string | null }>;
   onSavePhoto: (localUri: string) => Promise<{ error: string | null; url?: string }>;
+  onSaveEmail: (email: string) => Promise<{ error: string | null }>;
 }
 
-export function EditProfileModal({ visible, onClose, currentName, currentAvatarUrl, onSaveName, onSavePhoto }: EditProfileModalProps) {
+export function EditProfileModal({ visible, onClose, currentName, currentAvatarUrl, currentEmail, onSaveName, onSavePhoto, onSaveEmail }: EditProfileModalProps) {
   const [name, setName] = useState(currentName);
+  const [email, setEmail] = useState(currentEmail);
+  const [emailError, setEmailError] = useState('');
   const [previewUri, setPreviewUri] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setName(currentName);
+      setEmail(currentEmail);
+      setEmailError('');
       setPreviewUri('');
     }
-  }, [visible, currentName]);
+  }, [visible, currentName, currentEmail]);
 
   const getInitials = (value: string) =>
     value.split(' ').filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2);
@@ -73,18 +82,39 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
 
   const handleSave = async () => {
     const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
     const nameError = validateRequired(name, 'Name');
     if (nameError) {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
+    // Email is optional (it can be added later, per the Getting Started
+    // checklist), so only validate format when something's actually typed.
+    const emailValidationError = trimmedEmail ? validateEmail(trimmedEmail) : null;
+    if (emailValidationError) {
+      setEmailError(emailValidationError);
+      return;
+    }
+    setEmailError('');
     setSaving(true);
 
     if (previewUri) {
       const { error: photoError } = await onSavePhoto(previewUri);
       if (photoError) {
         setSaving(false);
-        Alert.alert('Could not update photo', photoError);
+        Alert.alert('Could not update photo', friendlyError(photoError));
+        return;
+      }
+    }
+
+    // Only calls onSaveEmail when the address actually changed — it kicks
+    // off a real confirmation-email send, which shouldn't refire just
+    // because the user re-saved their name/photo with the same email.
+    if (trimmedEmail && trimmedEmail !== currentEmail) {
+      const { error: emailSaveError } = await onSaveEmail(trimmedEmail);
+      if (emailSaveError) {
+        setSaving(false);
+        Alert.alert('Could not update email', friendlyError(emailSaveError));
         return;
       }
     }
@@ -92,7 +122,7 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
     const { error } = await onSaveName(trimmedName);
     setSaving(false);
     if (error) {
-      Alert.alert('Could not save changes', error);
+      Alert.alert('Could not save changes', friendlyError(error));
       return;
     }
     onClose();
@@ -103,7 +133,7 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrapper}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
           <View style={styles.sheet}>
             <View style={styles.header}>
               <Text style={styles.title}>Edit Profile</Text>
@@ -128,23 +158,33 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
               <Text style={styles.avatarHint}>{previewUri ? 'Tap Save Changes to apply' : 'Tap to change photo'}</Text>
             </View>
 
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Name"
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor="#B0ADA8"
             />
 
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            <Input
+              label="Email"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setEmailError('');
+              }}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={emailError}
+            />
+
+            <Button
+              title="Save Changes"
               onPress={handleSave}
-              disabled={saving}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
-            </TouchableOpacity>
+              loading={saving}
+              style={styles.saveButton}
+            />
 
             <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -179,7 +219,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -217,7 +257,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarFallbackText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 28,
     color: '#FFFFFF',
@@ -240,41 +280,8 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: '#7A756E',
   },
-  label: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7A756E',
-    marginBottom: 8,
-  },
-  input: {
-    height: 50,
-    backgroundColor: '#F9F8F6',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E4E1DC',
-    paddingHorizontal: 16,
-    fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#0C0C0D',
-    marginBottom: 20,
-  },
   saveButton: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EC2028',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 10,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 15,
-    color: '#FFFFFF',
   },
   cancelButton: {
     height: 48,
@@ -282,7 +289,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',

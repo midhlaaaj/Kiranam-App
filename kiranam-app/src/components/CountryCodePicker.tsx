@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Search, Check } from 'lucide-react-native';
 import { COUNTRIES, Country } from '@/utils/countries';
 
@@ -23,7 +24,7 @@ export function CountryCodePicker({ visible, selectedIso2, onSelect, onClose }: 
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.title}>Select Country</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',

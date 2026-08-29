@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
 import { validateReferralCode } from '@/utils/validators';
+import { Button } from '@/components/Button';
+import { Input } from '@/components/Input';
 
 interface EditReferralCodeModalProps {
   visible: boolean;
@@ -52,7 +54,7 @@ export function EditReferralCodeModal({ visible, onClose, currentCode, onSave }:
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrapper}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
           <View style={styles.sheet}>
             <View style={styles.header}>
               <Text style={styles.title}>Edit Referral Code</Text>
@@ -65,27 +67,24 @@ export function EditReferralCodeModal({ visible, onClose, currentCode, onSave }:
               Letters and numbers only, 4-20 characters. New members enter this code when signing up.
             </Text>
 
-            <Text style={styles.label}>Referral Code</Text>
-            <TextInput
-              style={[styles.input, !!error && styles.inputError]}
+            <Input
+              label="Referral Code"
               value={code}
               onChangeText={handleChange}
               placeholder="YOURCODE"
-              placeholderTextColor="#B0ADA8"
               autoCapitalize="characters"
               autoCorrect={false}
               maxLength={20}
+              error={error}
+              inputStyle={styles.codeInputText}
             />
-            {!!error && <Text style={styles.errorText}>{error}</Text>}
 
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            <Button
+              title="Save Changes"
               onPress={handleSave}
-              disabled={saving}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Save Changes'}</Text>
-            </TouchableOpacity>
+              loading={saving}
+              style={styles.saveButton}
+            />
 
             <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -120,7 +119,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -141,52 +140,17 @@ const styles = StyleSheet.create({
     color: '#7A756E',
     marginBottom: 20,
   },
-  label: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#7A756E',
-    marginBottom: 8,
-  },
-  input: {
-    height: 50,
-    backgroundColor: '#F9F8F6',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E4E1DC',
-    paddingHorizontal: 16,
-    fontFamily: 'Inter',
+  // The referral code itself keeps a distinct bold/letter-spaced treatment
+  // (it's a code people read character-by-character), applied via Input's
+  // inputStyle override on top of the shared filled-input shape.
+  codeInputText: {
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
-    fontSize: 15,
     letterSpacing: 0.4,
-    color: '#0C0C0D',
-  },
-  inputError: {
-    borderColor: '#BA1A1A',
-  },
-  errorText: {
-    fontFamily: 'Inter',
-    fontSize: 12.5,
-    color: '#BA1A1A',
-    marginTop: 8,
   },
   saveButton: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EC2028',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: 20,
     marginBottom: 10,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 15,
-    color: '#FFFFFF',
   },
   cancelButton: {
     height: 48,
@@ -194,7 +158,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',

@@ -3,13 +3,38 @@ import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-nativ
 import { useRouter } from 'expo-router';
 import { Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { useApp } from '@/context/AppContext';
+import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
 
 export default function PendingScreen() {
   const router = useRouter();
+  const { signOut, hasCommitment } = useApp();
   const [checking, setChecking] = useState(false);
   const [notYetApproved, setNotYetApproved] = useState(false);
 
+  // This screen is reached via router.replace (see otp.tsx/index.tsx), so
+  // there's nothing sensible in the back stack for a hardware/gesture back
+  // press to land on — and re-checking status via "Continue" was the only
+  // way off this screen otherwise, with no way to actually leave the
+  // account if someone landed here by mistake or wants to try a different
+  // number. An explicit sign-out is the deliberate way out.
+  const handleLogout = async () => {
+    await signOut();
+    router.replace('/');
+  };
+
+  // Contributors who applied via their profile already have a real Home to
+  // go back to — no need to make them wait on a status recheck here, since
+  // approval gets picked up automatically the next time they open the app
+  // (see otp.tsx/index.tsx, both routed through resolveApprovedVolunteerRoute).
+  // A fresh volunteer-only applicant has nowhere else to go yet, so for
+  // them this button doing an inline recheck is the only useful action.
   const handleContinue = async () => {
+    if (hasCommitment) {
+      router.replace('/(tabs)/home');
+      return;
+    }
+
     setChecking(true);
     setNotYetApproved(false);
     const { data: userData } = await supabase.auth.getUser();
@@ -26,16 +51,18 @@ export default function PendingScreen() {
             .maybeSingle(),
         ])
       : [{ data: null }, { data: null }];
-    setChecking(false);
 
     // Match otp.tsx's gate exactly: role only ever becomes 'volunteer' once
     // an admin approves the application, so both must agree before granting
     // dashboard access — checking application status alone let an account
     // through with a stale 'contributor' role if the approval write had
     // ever partially failed.
-    if (profile?.role === 'volunteer' && application?.status === 'approved') {
-      router.replace('/(volunteer-tabs)/dashboard');
+    if (uid && profile?.role === 'volunteer' && application?.status === 'approved') {
+      const dest = await resolveApprovedVolunteerRoute(uid);
+      setChecking(false);
+      router.replace(dest);
     } else {
+      setChecking(false);
       setNotYetApproved(true);
     }
   };
@@ -54,7 +81,9 @@ export default function PendingScreen() {
         {/* Messaging */}
         <Text style={styles.title}>Your application is under review</Text>
         <Text style={styles.subtitle}>
-          We&apos;ll notify you once an admin approves your volunteer account — this usually takes a few days.
+          {hasCommitment
+            ? "Your interest in becoming a volunteer has been noted — you can check back once approved."
+            : "We'll notify you once an admin approves your volunteer account — this usually takes a few days."}
         </Text>
 
         {notYetApproved && (
@@ -67,7 +96,11 @@ export default function PendingScreen() {
           activeOpacity={0.7}
           disabled={checking}
         >
-          <Text style={styles.backLink}>Continue</Text>
+          <Text style={styles.backLink}>{hasCommitment ? 'Continue to Home' : 'Continue'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleLogout} activeOpacity={0.7} style={styles.logoutLink}>
+          <Text style={styles.logoutLinkText}>Log out</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -112,7 +145,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
@@ -138,10 +171,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backLink: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#0C0C0D',
+    textDecorationLine: 'underline',
+  },
+  logoutLink: {
+    marginTop: 20,
+  },
+  logoutLinkText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#7A756E',
     textDecorationLine: 'underline',
   },
 });

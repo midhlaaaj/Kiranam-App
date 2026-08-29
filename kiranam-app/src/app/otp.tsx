@@ -19,6 +19,7 @@ import { Button } from '@/components/Button';
 import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { COUNTRIES, getCountryByIso2 } from '@/utils/countries';
 import { validatePhoneNumber } from '@/utils/validators';
+import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
 import { ArrowLeft, Pencil, Check, X, ChevronDown } from 'lucide-react-native';
 
 // Longest dial codes first, so e.g. "971" matches before "97" would.
@@ -154,9 +155,12 @@ export default function OtpScreen() {
     // registration — skip "Tell us about yourself" and go straight in.
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
-    const { data: profile } = uid
-      ? await supabase.from('profiles').select('full_name, role').eq('id', uid).single()
-      : { data: null };
+    if (!uid) {
+      setVerifying(false);
+      setError('Something went wrong. Please try again.');
+      return;
+    }
+    const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', uid).single();
     setVerifying(false);
 
     if (profile?.full_name) {
@@ -174,7 +178,8 @@ export default function OtpScreen() {
         .maybeSingle();
 
       if (profile.role === 'volunteer' && application?.status === 'approved') {
-        router.replace('/(volunteer-tabs)/dashboard');
+        const dest = await resolveApprovedVolunteerRoute(uid);
+        router.replace(dest);
       } else if (profile.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved') {
         router.replace('/pending');
       } else {
@@ -183,8 +188,10 @@ export default function OtpScreen() {
       return;
     }
 
-    // New account: proceed to Registration Screen, carrying the chosen role forward
-    router.push({ pathname: '/register', params: { role } });
+    // New account: proceed to Registration Screen, carrying the chosen role forward.
+    // `replace`, not `push` — otp must not remain in the back stack, or the
+    // hardware back button would return a signed-in user to the OTP screen.
+    router.replace({ pathname: '/register', params: { role } });
   };
 
   const formatTime = (seconds: number) => {
@@ -333,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 25,
     color: '#0C0C0D',
@@ -354,7 +361,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   phonePillText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 15.5,
     color: '#0C0C0D',
@@ -387,14 +394,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   phonePillPrefix: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 15,
     color: '#0C0C0D',
   },
   phoneEditInput: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 15,
     color: '#0C0C0D',
@@ -435,7 +442,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: '#E4E1DC',
     borderRadius: 14,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',

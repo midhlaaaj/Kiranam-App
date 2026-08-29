@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "kiranam-app",
+    "name": "Karunya Kiranam",
     "slug": "kiranam-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -56,8 +56,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#3D0709",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 320
+          "image": "./assets/images/android-icon-foreground.png",
+          "imageWidth": 192
         }
       ],
       "expo-font",

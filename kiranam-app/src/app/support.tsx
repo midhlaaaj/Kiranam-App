@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F8F6',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   faqQuestion: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   ctaTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#FFFFFF',
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   waButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#FFFFFF',
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   mailButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#FFFFFF',

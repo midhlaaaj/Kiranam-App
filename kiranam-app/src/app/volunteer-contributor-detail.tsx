@@ -8,6 +8,7 @@ import { RecordContributionModal } from '@/components/RecordContributionModal';
 import { ArrowLeft, Phone, MessageCircle, Send, Plus, IndianRupee } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney, formatDate } from '@/utils/format';
+import { friendlyError } from '@/utils/errors';
 
 interface HistoryRow {
   date: string;
@@ -110,7 +111,7 @@ export default function VolunteerContributorDetailScreen() {
     const { error } = await addContributorNote(member.id, noteDraft.trim());
     setAddingNote(false);
     if (error) {
-      Alert.alert('Could not save note', error);
+      Alert.alert('Could not save note', friendlyError(error));
       return;
     }
     setNoteDraft('');
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
     width: 40,
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
@@ -311,13 +312,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   avatarText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#FFFFFF',
   },
   memberName: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F8F6',
   },
   actionButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 13,
     color: '#0C0C0D',
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   recordContributionButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 13.5,
     color: '#FFFFFF',
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     color: '#7A756E',
   },
   summaryValue: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#0C0C0D',

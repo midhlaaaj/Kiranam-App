@@ -31,14 +31,10 @@ export function GalleryLightbox({ visible, images, initialIndex, onClose }: Gall
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.8} hitSlop={10}>
-          <X size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        {images.length > 1 && (
-          <Text style={styles.counter}>{index + 1} / {images.length}</Text>
-        )}
-
+        {/* The FlatList renders first, so it paints (and hit-tests) below
+            the controls below it — with a horizontal, paging FlatList
+            underneath, zIndex alone isn't reliably respected for touch
+            priority on Android; sibling order is. */}
         <FlatList
           ref={listRef}
           data={images}
@@ -58,6 +54,14 @@ export function GalleryLightbox({ visible, images, initialIndex, onClose }: Gall
             </View>
           )}
         />
+
+        <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.8} hitSlop={10}>
+          <X size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+
+        {images.length > 1 && (
+          <Text style={styles.counter}>{index + 1} / {images.length}</Text>
+        )}
 
         {images.length > 1 && (
           <>
@@ -110,7 +114,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: 'center',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 13,
     color: 'rgba(255,255,255,0.7)',

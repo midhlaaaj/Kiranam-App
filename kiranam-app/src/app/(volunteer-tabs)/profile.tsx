@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeleteAccountModal } from '@/components/DeleteAccountModal';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { formatMoney } from '@/utils/format';
+import { friendlyError } from '@/utils/errors';
 
 export default function VolunteerProfileScreen() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function VolunteerProfileScreen() {
     deleteAccount,
     updateName,
     updateProfilePhoto,
+    updateEmail,
     hasCommitment,
     commitmentAmount,
     isAutopayEnabled,
@@ -31,7 +33,7 @@ export default function VolunteerProfileScreen() {
 
   const applyAutopayChange = async (val: boolean) => {
     const { error } = await setAutopayEnabled(val);
-    if (error) Alert.alert('Could not update autopay', error);
+    if (error) Alert.alert('Could not update autopay', friendlyError(error));
   };
 
   const handlePause = () => {
@@ -191,8 +193,10 @@ export default function VolunteerProfileScreen() {
         onClose={() => setEditModalVisible(false)}
         currentName={userName}
         currentAvatarUrl={userAvatarUrl}
+        currentEmail={userEmail}
         onSaveName={updateName}
         onSavePhoto={updateProfilePhoto}
+        onSaveEmail={updateEmail}
       />
     </SafeAreaView>
   );
@@ -228,7 +232,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   editButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 12.5,
     color: '#0C0C0D',
@@ -249,13 +253,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatarText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#FFFFFF',
   },
   userName: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -324,7 +328,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   rowValue: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -372,13 +376,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   actionRowText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     fontWeight: '500',
     fontSize: 14,
     color: '#0C0C0D',
   },
   logoutText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#EC2028',
@@ -391,7 +395,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoutButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#FFFFFF',

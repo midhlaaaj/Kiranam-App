@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   successTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 20,
     color: '#0C0C0D',
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   amountDisplay: {
     textAlign: 'center',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 34,
     color: '#0C0C0D',

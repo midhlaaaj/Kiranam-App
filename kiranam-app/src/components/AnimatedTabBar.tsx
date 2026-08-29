@@ -113,7 +113,13 @@ function TabBarButton({
       <Animated.View style={[styles.iconContainer, bounceStyle]}>
         {renderIcon(isFocused ? ACTIVE_COLOR : INACTIVE_COLOR)}
       </Animated.View>
-      <Text style={[styles.label, isFocused && styles.labelActive]}>{label}</Text>
+      <Text
+        style={[styles.label, isFocused && styles.labelActive]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -159,6 +165,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: INACTIVE_COLOR,
     marginTop: 3,
+    textAlign: 'center',
+    paddingHorizontal: 2,
   },
   labelActive: {
     color: ACTIVE_COLOR,

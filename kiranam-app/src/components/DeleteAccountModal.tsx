@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
+import { friendlyError } from '@/utils/errors';
+import { Button } from '@/components/Button';
+import { Input } from '@/components/Input';
 
 const CONFIRM_PHRASE = 'delete my account';
 
@@ -42,7 +45,7 @@ export function DeleteAccountModal({ visible, onClose, onConfirmed, onDeleted, d
             const { error } = await onConfirmed();
             setDeleting(false);
             if (error) {
-              Alert.alert('Could not delete account', error);
+              Alert.alert('Could not delete account', friendlyError(error));
               return;
             }
             setTyped('');
@@ -56,7 +59,7 @@ export function DeleteAccountModal({ visible, onClose, onConfirmed, onDeleted, d
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrapper}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
           <View style={styles.sheet}>
             <View style={styles.header}>
               <Text style={styles.title}>Delete Account</Text>
@@ -70,26 +73,21 @@ export function DeleteAccountModal({ visible, onClose, onConfirmed, onDeleted, d
             <Text style={styles.instruction}>
               To confirm, type <Text style={styles.instructionPhrase}>delete my account</Text> below.
             </Text>
-            <TextInput
-              style={styles.input}
+            <Input
               value={typed}
               onChangeText={setTyped}
               placeholder="delete my account"
-              placeholderTextColor="#B0ADA8"
               autoCapitalize="none"
               autoCorrect={false}
             />
 
-            <TouchableOpacity
-              style={[styles.deleteButton, !isMatch && styles.deleteButtonDisabled]}
+            <Button
+              title="Delete Account"
               onPress={handleDeletePress}
-              disabled={!isMatch || deleting}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.deleteButtonText, !isMatch && styles.deleteButtonTextDisabled]}>
-                {deleting ? 'Deleting…' : 'Delete Account'}
-              </Text>
-            </TouchableOpacity>
+              disabled={!isMatch}
+              loading={deleting}
+              style={[styles.deleteButton, isMatch && styles.deleteButtonActive]}
+            />
 
             <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -124,7 +122,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -154,37 +152,15 @@ const styles = StyleSheet.create({
   instructionPhrase: {
     fontWeight: '700',
   },
-  input: {
-    height: 50,
-    backgroundColor: '#F9F8F6',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E4E1DC',
-    paddingHorizontal: 16,
-    fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#0C0C0D',
-    marginBottom: 20,
-  },
   deleteButton: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#BA1A1A',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 10,
   },
-  deleteButtonDisabled: {
-    backgroundColor: '#F1EEEA',
-  },
-  deleteButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 15,
-    color: '#FFFFFF',
-  },
-  deleteButtonTextDisabled: {
-    color: '#C7C3BD',
+  // Only applied once the confirmation phrase matches — Button's own
+  // disabled state (gray) governs the button before that, same gray it
+  // uses everywhere else, so this only needs to define the "armed" color.
+  deleteButtonActive: {
+    backgroundColor: '#BA1A1A',
+    shadowColor: '#BA1A1A',
   },
   cancelButton: {
     height: 48,
@@ -192,7 +168,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',

@@ -7,11 +7,16 @@ import { Input } from '@/components/Input';
 import { Toast } from '@/components/Toast';
 import { validateRequired } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
-import { ArrowLeft, HeartHandshake, Check } from 'lucide-react-native';
+import { ArrowLeft, HeartHandshake, Check, Users, Clock3, HandCoins } from 'lucide-react-native';
 
 export default function VolunteerApplicationScreen() {
   const router = useRouter();
-  const { applyForVolunteer } = useApp();
+  const { applyForVolunteer, hasCommitment } = useApp();
+  // Reached from two places: a fresh signup choosing "volunteer" (register.tsx)
+  // and an existing contributor tapping "Become a Volunteer" on their profile.
+  // Both see the same warning step first — applying is a real commitment,
+  // not a form to breeze through.
+  const [step, setStep] = useState<'warning' | 'form'>('warning');
   const [motivation, setMotivation] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -46,7 +51,10 @@ export default function VolunteerApplicationScreen() {
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Back button */}
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => (step === 'form' ? setStep('warning') : router.back())}
+        >
           <ArrowLeft size={20} color="#0C0C0D" />
         </TouchableOpacity>
 
@@ -55,51 +63,100 @@ export default function VolunteerApplicationScreen() {
           <HeartHandshake size={26} color="#EC2028" strokeWidth={2} />
         </View>
 
-        {/* Title */}
-        <Text style={styles.title}>Become a Kiranam Volunteer</Text>
-        <Text style={styles.subtitle}>
-          Recruit new members with your own referral code and track your impact from a dedicated dashboard.
-        </Text>
+        {step === 'warning' ? (
+          <>
+            <Text style={styles.title}>Before you apply</Text>
+            <Text style={styles.subtitle}>
+              A few things worth knowing before you commit to this.
+            </Text>
 
-        {/* Motivation Field */}
-        <Input
-          variant="underline"
-          label="Why do you want to volunteer?"
-          value={motivation}
-          onChangeText={(text) => {
-            setMotivation(text);
-            setError('');
-          }}
-          placeholder="Share your motivation and any skills you'd like to contribute..."
-          multiline
-          numberOfLines={4}
-        />
+            <View style={styles.warningList}>
+              <View style={styles.warningRow}>
+                <View style={styles.warningIconBg}>
+                  <Users size={18} color="#EC2028" strokeWidth={2} />
+                </View>
+                <Text style={styles.warningText}>
+                  Volunteers get assigned real contributors to follow up with on payments and
+                  communication — it&apos;s a responsibility, not just a title.
+                </Text>
+              </View>
 
-        {/* Agreement toggle */}
-        <TouchableOpacity
-          style={styles.agreeRow}
-          onPress={() => {
-            setAgreed(!agreed);
-            setError('');
-          }}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.checkbox, agreed ? styles.checkboxChecked : null]}>
-            {agreed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-          </View>
-          <Text style={styles.agreeText}>
-            I agree to Kiranam&apos;s volunteer code of conduct and privacy policy.
-          </Text>
-        </TouchableOpacity>
+              <View style={styles.warningRow}>
+                <View style={styles.warningIconBg}>
+                  <Clock3 size={18} color="#EC2028" strokeWidth={2} />
+                </View>
+                <Text style={styles.warningText}>
+                  Applications are reviewed by an admin, not instant — approval usually takes a
+                  few days.
+                </Text>
+              </View>
 
-        {/* Submit CTA */}
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Apply to Volunteer"
-            onPress={handleSubmit}
-            loading={submitting}
-          />
-        </View>
+              {hasCommitment && (
+                <View style={styles.warningRow}>
+                  <View style={styles.warningIconBg}>
+                    <HandCoins size={18} color="#EC2028" strokeWidth={2} />
+                  </View>
+                  <Text style={styles.warningText}>
+                    You&apos;ll keep contributing exactly as you already do — this only adds
+                    volunteer duties on top, nothing about your existing giving changes.
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <Button title="Continue" onPress={() => setStep('form')} />
+            </View>
+          </>
+        ) : (
+          <>
+            {/* Title */}
+            <Text style={styles.title}>Become a Kiranam Volunteer</Text>
+            <Text style={styles.subtitle}>
+              Recruit new members with your own referral code and track your impact from a dedicated dashboard.
+            </Text>
+
+            {/* Motivation Field */}
+            <Input
+              variant="underline"
+              label="Why do you want to volunteer?"
+              value={motivation}
+              onChangeText={(text) => {
+                setMotivation(text);
+                setError('');
+              }}
+              placeholder="Share your motivation and any skills you'd like to contribute..."
+              multiline
+              numberOfLines={4}
+            />
+
+            {/* Agreement toggle */}
+            <TouchableOpacity
+              style={styles.agreeRow}
+              onPress={() => {
+                setAgreed(!agreed);
+                setError('');
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, agreed ? styles.checkboxChecked : null]}>
+                {agreed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
+              </View>
+              <Text style={styles.agreeText}>
+                I agree to Kiranam&apos;s volunteer code of conduct and privacy policy.
+              </Text>
+            </TouchableOpacity>
+
+            {/* Submit CTA */}
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Apply to Volunteer"
+                onPress={handleSubmit}
+                loading={submitting}
+              />
+            </View>
+          </>
+        )}
       </ScrollView>
       <Toast message={error || null} onDismiss={() => setError('')} />
     </KeyboardAvoidingView>
@@ -136,7 +193,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 25,
     color: '#0C0C0D',
@@ -149,6 +206,31 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#7A756E',
     marginBottom: 28,
+  },
+  warningList: {
+    gap: 18,
+    marginBottom: 8,
+  },
+  warningRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  warningIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FBEAEA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningText: {
+    flex: 1,
+    fontFamily: 'Inter',
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#4A4642',
+    paddingTop: 8,
   },
   agreeRow: {
     flexDirection: 'row',

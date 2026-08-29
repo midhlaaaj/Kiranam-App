@@ -89,6 +89,14 @@ interface AppContextType {
   isLoggedIn: boolean;
   isVolunteer: boolean;
   myReferralCode: string;
+  // True until the volunteer has deliberately changed their code away from
+  // the auto-generated FIRSTNAME+YEAR default — drives the volunteer
+  // dashboard's "set up your referral code" checklist item.
+  isReferralCodeDefault: boolean;
+  // True once at least one contributor has signed up using this
+  // volunteer's referral code — distinct from volunteerMembers.length,
+  // which also includes admin-assigned contributors.
+  hasReferredContributor: boolean;
   updateReferralCode: (code: string) => Promise<{ error: string | null }>;
 
   // Auth actions (backed by Supabase)
@@ -185,6 +193,13 @@ const deriveMemberStatus = (commitment?: {
 // Supabase stores auth phone numbers without a leading "+" (e.g. "918086623316"),
 // but the rest of the app treats `phone` as full E.164 with the "+" prefix.
 const normalizePhone = (raw: string) => (raw && !raw.startsWith('+') ? `+${raw}` : raw);
+// The reverse, for writes: handle_new_user's trigger-created row already
+// holds phone in Supabase's no-"+" form (copied straight from
+// auth.users.phone), so any app-side write to profiles.phone must match
+// that same canonical form — otherwise the same real number can end up
+// stored as two different-looking strings across rows, defeating the
+// UNIQUE constraint's ability to actually catch a real duplicate.
+const denormalizePhone = (e164: string) => e164.replace(/^\+/, '');
 
 // Best-effort — silently no-ops on a simulator, in Expo Go (remote push
 // isn't supported there as of SDK 53+), or if the user declines the
@@ -215,15 +230,26 @@ const registerPushToken = async (profileId: string) => {
   }
 };
 
-const ensureReferralCode = async (uid: string, fullName: string): Promise<string> => {
+const ensureReferralCode = async (
+  uid: string,
+  fullName: string
+): Promise<{ code: string; isDefault: boolean }> => {
+  const firstName = (fullName.split(' ')[0] || 'VOL').toUpperCase().replace(/[^A-Z]/g, '') || 'VOL';
+
   const { data: existing } = await supabase
     .from('referrals')
-    .select('referral_code')
+    .select('referral_code, created_at')
     .eq('volunteer_id', uid)
     .maybeSingle();
-  if (existing?.referral_code) return existing.referral_code;
+  if (existing?.referral_code) {
+    // Compare against what the default WOULD have been using the row's own
+    // creation year, not the current year — a volunteer who signed up last
+    // year and never touched their code must not look "customized" just
+    // because the calendar moved on.
+    const createdYear = new Date(existing.created_at).getFullYear();
+    return { code: existing.referral_code, isDefault: existing.referral_code === `${firstName}${createdYear}` };
+  }
 
-  const firstName = (fullName.split(' ')[0] || 'VOL').toUpperCase().replace(/[^A-Z]/g, '') || 'VOL';
   const year = new Date().getFullYear();
   const baseCode = `${firstName}${year}`;
 
@@ -238,20 +264,23 @@ const ensureReferralCode = async (uid: string, fullName: string): Promise<string
       .insert({ volunteer_id: uid, referral_code: candidate })
       .select('referral_code')
       .single();
-    if (!error && inserted) return inserted.referral_code;
+    if (!error && inserted) return { code: inserted.referral_code, isDefault: inserted.referral_code === baseCode };
     // Anything other than a unique-constraint violation isn't worth retrying.
     if (error && error.code !== '23505') break;
   }
 
   // Every attempt collided (or a non-collision error occurred) — fall back
   // to a fully random suffix that's astronomically unlikely to collide.
+  // Its own randomness means it'll never equal baseCode, so isDefault is
+  // always false here — reasonable, since a collision this persistent is
+  // itself an unusual case not worth representing as "still the default."
   const desperateCode = `${baseCode}${Math.floor(1000 + Math.random() * 9000)}`;
   const { data: last } = await supabase
     .from('referrals')
     .insert({ volunteer_id: uid, referral_code: desperateCode })
     .select('referral_code')
     .single();
-  return last?.referral_code ?? desperateCode;
+  return { code: last?.referral_code ?? desperateCode, isDefault: false };
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -263,6 +292,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userAvatarUrl, setUserAvatarUrl] = useState('');
   const [isVolunteer, setIsVolunteer] = useState(false);
   const [myReferralCode, setMyReferralCode] = useState('');
+  const [isReferralCodeDefault, setIsReferralCodeDefault] = useState(true);
+  const [hasReferredContributor, setHasReferredContributor] = useState(false);
 
   const [profileLoading, setProfileLoading] = useState(true);
   const [hasCommitment, setHasCommitment] = useState(false);
@@ -482,14 +513,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsVolunteer(!!volunteerEligible);
 
     if (volunteerEligible) {
-      const code = await ensureReferralCode(uid, profile?.full_name || userNameRef.current);
+      const { code, isDefault } = await ensureReferralCode(uid, profile?.full_name || userNameRef.current);
       setMyReferralCode(code);
+      setIsReferralCodeDefault(isDefault);
 
       const { data: assignments } = await supabase
         .from('contributor_assignments')
-        .select('contributor_id')
+        .select('contributor_id, source')
         .eq('volunteer_id', uid);
       const contributorIds = (assignments || []).map((a) => a.contributor_id);
+      // Distinct from "assigned contributors" (which includes admin-driven
+      // assignments too) — this specifically means someone signed up using
+      // this volunteer's own referral code, for the "invite your first
+      // contributor" checklist item.
+      setHasReferredContributor((assignments || []).some((a) => a.source === 'referral'));
 
       if (contributorIds.length > 0) {
         const [{ data: memberProfiles }, { data: memberCommitments }] = await Promise.all([
@@ -513,6 +550,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } else {
       setMyReferralCode('');
+      setIsReferralCodeDefault(true);
+      setHasReferredContributor(false);
       setVolunteerMembers([]);
     }
 
@@ -590,6 +629,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setPhone('');
       setIsVolunteer(false);
       setMyReferralCode('');
+      setIsReferralCodeDefault(true);
+      setHasReferredContributor(false);
       setPayments([]);
       setNotifications([]);
       setVolunteerMembers([]);
@@ -719,7 +760,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: session.user.id,
       user_id: session.user.id,
       full_name: fields.fullName,
-      phone: fields.phone,
+      phone: denormalizePhone(fields.phone),
       email: session.user.email || null,
       role: fields.role,
       whatsapp_consent: fields.whatsappConsent ?? false,
@@ -781,6 +822,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { error: error.message };
     }
     setMyReferralCode(normalized);
+    // A deliberate save always counts as "customized," regardless of
+    // whether the chosen code happens to coincidentally match the
+    // FIRSTNAME+YEAR default pattern — intent is what this tracks.
+    setIsReferralCodeDefault(false);
     return { error: null };
   };
 
@@ -846,8 +891,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (insertError) throw insertError;
 
       setIsVolunteer(true);
-      const code = await ensureReferralCode(uid, userNameRef.current);
+      const { code, isDefault } = await ensureReferralCode(uid, userNameRef.current);
       setMyReferralCode(code);
+      setIsReferralCodeDefault(isDefault);
       return { error: null };
     } catch (e) {
       return { error: e instanceof Error ? e.message : 'Something went wrong submitting your application.' };
@@ -1165,6 +1211,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isLoggedIn: !!session,
       isVolunteer,
       myReferralCode,
+      isReferralCodeDefault,
+      hasReferredContributor,
       updateReferralCode,
       signInWithPhone,
       verifyOtpCode,

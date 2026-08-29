@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.04,
   },
   eventTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   emptyTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',

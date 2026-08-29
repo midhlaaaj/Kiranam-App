@@ -62,14 +62,20 @@ export default function RegisterScreen() {
     const { error } = await saveProfile({ fullName: name, phone, role: 'contributor', whatsappConsent, referralCode: refCode });
     setSubmitting(false);
     if (error) {
-      // Network/server failures aren't about anything the person typed, so
+      // Network/server failures (and raw backend errors like a Postgres
+      // constraint violation) aren't about anything the person typed, so
       // they don't belong pinned to the Full Name field — that previously
-      // left the raw `TypeError: Network request failed` message sitting
-      // under an unrelated input (or invisible, depending on the OS's
-      // default uncaught-error toast). Route those to a proper banner with
-      // a human-readable message instead; keep field-shaped errors inline.
-      if (/network request failed/i.test(error)) {
-        setToastMessage(friendlyError(error));
+      // left messages like `TypeError: Network request failed`, or worse
+      // `duplicate key value violates unique constraint "profiles_phone_key"`,
+      // sitting under an unrelated input. Route those to a proper banner
+      // with a human-readable message instead; keep genuinely field-shaped
+      // errors inline.
+      const cleaned = friendlyError(error);
+      if (cleaned !== error) {
+        // friendlyError actually rewrote something — it was a raw/system
+        // error, not a real field-validation message, so it belongs in
+        // the banner.
+        setToastMessage(cleaned);
       } else {
         setErrors({ name: error });
       }
@@ -77,7 +83,15 @@ export default function RegisterScreen() {
     }
 
     if (role === 'volunteer') {
-      router.push('/volunteer-application');
+      // No amount picker yet — a volunteer applicant isn't a volunteer
+      // until an admin approves them, so asking for a monthly commitment
+      // now would be premature. That happens once, right after approval —
+      // see otp.tsx/index.tsx's post-login routing.
+      // `replace`, not `push` — register must not remain in the back
+      // stack, same reasoning as otp.tsx not remaining in it: once past
+      // this step, back must not return the person to an earlier part of
+      // signup they've already completed.
+      router.replace('/volunteer-application');
     } else {
       // New contributors land on the amount picker first, not Home directly —
       // otherwise most people never set up a monthly commitment at all.
@@ -212,7 +226,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 25,
     color: '#0C0C0D',

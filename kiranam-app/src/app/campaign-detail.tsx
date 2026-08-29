@@ -51,12 +51,19 @@ export default function CampaignDetailScreen() {
           disabled={!campaign.coverImageUrl}
           onPress={() => setLightboxIndex(0)}
         >
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <ArrowLeft size={20} color="#0C0C0D" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.shareButtonIcon} onPress={handleShare} activeOpacity={0.8}>
-            <Share2 size={18} color="#0C0C0D" />
-          </TouchableOpacity>
+          {/* Hidden (not just covered) while the lightbox is open — see
+              event-detail.tsx for why: Android's `elevation` shadow can
+              bleed through a transparent Modal's backdrop. */}
+          {lightboxIndex === null && (
+            <>
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <ArrowLeft size={20} color="#0C0C0D" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.shareButtonIcon} onPress={handleShare} activeOpacity={0.8}>
+                <Share2 size={18} color="#0C0C0D" />
+              </TouchableOpacity>
+            </>
+          )}
           {campaign.coverImageUrl ? (
             <Image source={{ uri: campaign.coverImageUrl }} style={styles.coverImage} contentFit="cover" transition={200} />
           ) : (
@@ -196,7 +203,7 @@ const styles = StyleSheet.create({
     padding: 26,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
@@ -211,7 +218,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   raisedText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 24,
     color: '#0C0C0D',
@@ -250,7 +257,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   galleryTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',

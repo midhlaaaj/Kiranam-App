@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { validateAmount } from '@/utils/validators';
 import { formatMoney } from '@/utils/format';
+import { friendlyError } from '@/utils/errors';
 import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,7 +14,7 @@ const MIN_AMOUNT = 30;
 export default function ChooseAmountScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { commitmentAmount, setCommitmentAmount, campaigns } = useApp();
+  const { commitmentAmount, setCommitmentAmount, campaigns, hasCommitment } = useApp();
 
   const customAmountAccessoryId = 'customAmountAccessory';
 
@@ -21,26 +22,39 @@ export default function ChooseAmountScreen() {
   const campaignTitle = params.campaignTitle as string | undefined;
   const isCommitmentMode = !campaignId;
   const isOnboarding = params.onboarding === '1';
+  const onboardingRole = params.role === 'volunteer' ? 'volunteer' : 'contributor';
 
   const campaign = campaignId ? campaigns.find((c) => c.id === campaignId) : undefined;
   // Cap donations at what's actually left to fill the campaign, so a person
   // can't pledge more than the campaign still needs.
   const remaining = campaign ? Math.max(0, campaign.goal - campaign.raised) : null;
 
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(campaignId ? 100 : commitmentAmount);
-  const [customAmount, setCustomAmount] = useState('');
-  const [isCustomOpen, setIsCustomOpen] = useState(false);
-  const [amountError, setAmountError] = useState('');
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
-
   const amountOptions = [
-    { value: 30, label: formatMoney(30), sub: 'Minimum' },
+    // "Minimum" only applies to the recurring monthly commitment — a
+    // one-off campaign donation has no floor, so don't label this option
+    // as a minimum when it isn't one.
+    { value: 30, label: formatMoney(30), sub: isCommitmentMode ? 'Minimum' : null },
     { value: 50, label: formatMoney(50), sub: null },
     { value: 100, label: formatMoney(100), sub: 'Recommended' },
     { value: 250, label: formatMoney(250), sub: null },
     { value: 500, label: formatMoney(500), sub: null },
     { value: 1000, label: formatMoney(1000), sub: null },
   ];
+  const recommendedAmount = amountOptions.find((o) => o.sub === 'Recommended')!.value;
+
+  // A brand-new user with no commitment yet should land on the amount the
+  // "Recommended" badge actually points at, not AppContext's generic ₹500
+  // placeholder default — that default exists for other screens that read
+  // commitmentAmount before any commitment is known, and was never meant to
+  // double as "the amount we suggest," so the two had drifted apart.
+  // Someone editing an *existing* commitment still sees their real amount.
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(
+    campaignId ? recommendedAmount : hasCommitment ? commitmentAmount : recommendedAmount
+  );
+  const [customAmount, setCustomAmount] = useState('');
+  const [isCustomOpen, setIsCustomOpen] = useState(false);
+  const [amountError, setAmountError] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const handleSelectOption = (value: number) => {
     if (remaining !== null && value > remaining) return;
@@ -66,8 +80,12 @@ export default function ChooseAmountScreen() {
   const currentFinalAmount = selectedAmount;
 
   const validateCurrentAmount = () => {
+    // A minimum only makes sense for the recurring monthly commitment (to
+    // avoid a trivial ₹1 subscription) — a one-off campaign donation has no
+    // floor beyond validateAmount's own built-in "must be greater than
+    // zero" check.
     const err = validateAmount(currentFinalAmount ?? '', {
-      min: MIN_AMOUNT,
+      min: isCommitmentMode ? MIN_AMOUNT : undefined,
       max: remaining ?? undefined,
       label: 'a contribution amount',
     });
@@ -95,13 +113,16 @@ export default function ChooseAmountScreen() {
     const { error } = await setCommitmentAmount(currentFinalAmount);
     if (error) {
       setSaveState('idle');
-      Alert.alert('Could not save', error);
+      Alert.alert('Could not save', friendlyError(error));
       return;
     }
     setSaveState('saved');
     setTimeout(() => {
       if (isOnboarding) {
-        router.replace('/(tabs)/home');
+        // Volunteers only ever land here post-approval (see
+        // otp.tsx/index.tsx), so this is their dashboard, not the
+        // application form they already submitted and cleared.
+        router.replace(onboardingRole === 'volunteer' ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home');
       } else {
         router.back();
       }
@@ -276,7 +297,7 @@ const styles = StyleSheet.create({
     color: '#7A756E',
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 25,
     color: '#0C0C0D',
@@ -328,7 +349,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   chipLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
@@ -374,7 +395,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   customBoxText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 15,
     color: '#0C0C0D',
@@ -401,7 +422,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   customCurrencySymbol: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 22,
     color: '#FFFFFF',
@@ -409,7 +430,7 @@ const styles = StyleSheet.create({
   },
   customTextInput: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 22,
     color: '#FFFFFF',
@@ -430,7 +451,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#DCD9D3',
   },
   accessoryDoneText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 16,
     color: '#EC2028',

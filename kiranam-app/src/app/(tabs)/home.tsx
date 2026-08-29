@@ -263,10 +263,14 @@ export default function HomeScreen() {
             <Text style={styles.emptyStateTitle}>No upcoming events</Text>
           </View>
         ) : (
-          <View style={styles.eventsContainer}>
-            {upcomingEvents.map((item) => (
+          <FlatList
+            data={upcomingEvents}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.campaignListContainer}
+            renderItem={({ item }) => (
               <TouchableOpacity
-                key={item.id}
                 activeOpacity={0.9}
                 onPress={() => router.push({ pathname: '/event-detail', params: { id: item.id } })}
               >
@@ -285,7 +289,7 @@ export default function HomeScreen() {
                         activeOpacity={0.8}
                         hitSlop={8}
                       >
-                        <Share2 size={15} color="#0C0C0D" />
+                        <Share2 size={13} color="#0C0C0D" />
                       </TouchableOpacity>
                     </View>
                   ) : (
@@ -296,33 +300,33 @@ export default function HomeScreen() {
                       end={{ x: 0.71, y: 0.95 }}
                       style={styles.eventImagePlaceholder}
                     >
-                      <ImageIcon size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
+                      <ImageIcon size={20} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
                       <TouchableOpacity
                         style={styles.shareIconButton}
                         onPress={() => handleShareEvent(item)}
                         activeOpacity={0.8}
                         hitSlop={8}
                       >
-                        <Share2 size={15} color="#0C0C0D" />
+                        <Share2 size={13} color="#0C0C0D" />
                       </TouchableOpacity>
                     </LinearGradient>
                   )}
 
-                  <Text style={styles.eventTitle}>{item.title}</Text>
+                  <Text style={styles.eventTitle} numberOfLines={2}>{item.title}</Text>
 
                   <View style={styles.infoRow}>
-                    <Calendar size={15} color="#7A756E" />
-                    <Text style={styles.infoText}>{item.dateStr} · {item.timeStr}</Text>
+                    <Calendar size={13} color="#7A756E" />
+                    <Text style={styles.infoText} numberOfLines={1}>{item.dateStr}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <MapPin size={15} color="#7A756E" />
-                    <Text style={styles.infoText}>{item.location}</Text>
+                    <MapPin size={13} color="#7A756E" />
+                    <Text style={styles.infoText} numberOfLines={1}>{item.location}</Text>
                   </View>
                 </Card>
               </TouchableOpacity>
-            ))}
-          </View>
+            )}
+          />
         )}
 
         {/* Recent Contributions */}
@@ -398,7 +402,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   userName: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
@@ -474,7 +478,7 @@ const styles = StyleSheet.create({
     color: '#4ADE80',
   },
   commitmentAmount: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 40,
     color: '#FFFFFF',
@@ -483,7 +487,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   commitmentUnit: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     fontWeight: '500',
     fontSize: 15,
     color: 'rgba(255,255,255,0.5)',
@@ -511,7 +515,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   paidBadgeButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 15,
     color: '#FFFFFF',
@@ -545,7 +549,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   setupCardTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 13,
     color: '#0C0C0D',
@@ -568,7 +572,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   setupStepLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
@@ -584,7 +588,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
@@ -623,7 +627,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   campaignCardTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 13,
     color: '#0C0C0D',
@@ -649,14 +653,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#EC2028',
   },
   progressText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 11.5,
     color: '#0C0C0D',
-  },
-  eventsContainer: {
-    gap: 16,
-    marginBottom: 24,
   },
   emptyStateCard: {
     alignItems: 'center',
@@ -671,12 +671,11 @@ const styles = StyleSheet.create({
   campaignsEmptyStateCard: {
     height: 176,
   },
-  // Approximates the filled state's rendered height when showing the max of
-  // 2 upcoming events (2 event cards, each ~235px, plus the 16px gap between
-  // them) so the empty state doesn't jump the layout smaller than real cards
-  // would be.
+  // Matches campaignsEmptyStateCard — event cards were resized to exactly
+  // match campaign cards, so the two empty states now render at the same
+  // height too, not the old vertical full-width card's ~235px.
   eventsEmptyStateCard: {
-    height: 235 * 2 + 16,
+    height: 176,
   },
   emptyStateIconBox: {
     width: 44,
@@ -688,7 +687,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   emptyStateTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#0C0C0D',
@@ -736,7 +735,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   eventTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',
@@ -809,7 +808,7 @@ const styles = StyleSheet.create({
     maxWidth: 180,
   },
   paymentAmount: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14.5,
     color: '#0C0C0D',
@@ -833,7 +832,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   totalBlockValue: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 20,
     color: '#0C0C0D',

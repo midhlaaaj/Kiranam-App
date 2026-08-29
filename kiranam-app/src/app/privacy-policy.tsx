@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F8F6',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 20,
     color: '#0C0C0D',
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   sectionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 15,
     color: '#0C0C0D',

@@ -19,6 +19,7 @@ import {
   Bell,
   Gift,
   Check,
+  Circle,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
@@ -29,6 +30,8 @@ export default function VolunteerDashboardScreen() {
   const {
     userName,
     myReferralCode,
+    isReferralCodeDefault,
+    hasReferredContributor,
     updateReferralCode,
     volunteerMembers,
     notifications,
@@ -67,6 +70,15 @@ export default function VolunteerDashboardScreen() {
       message: `Join me on Kiranam and make a difference! Use my referral code ${myReferralCode} when you sign up: ${referralJoinUrl(myReferralCode)}`,
     });
   };
+
+  // Getting Started checklist — same pattern as the contributor home screen's,
+  // minus a "set your monthly amount" step: that's a dedicated screen shown
+  // during signup itself for volunteers now, not a checklist item here.
+  const setupSteps = [
+    { key: 'referral', label: 'Set up your referral code', done: !isReferralCodeDefault, onPress: () => setEditCodeVisible(true) },
+    { key: 'invite', label: 'Invite your first contributor', done: hasReferredContributor, onPress: handleShare },
+  ];
+  const showSetupCard = !profileLoading && setupSteps.some((s) => !s.done);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -147,6 +159,33 @@ export default function VolunteerDashboardScreen() {
             </>
           )}
         </LinearGradient>
+
+        {/* Getting Started checklist — disappears once every step is done */}
+        {showSetupCard && (
+          <View style={styles.setupCard}>
+            <Text style={styles.setupCardTitle}>Getting Started</Text>
+            {setupSteps.map((step) => (
+              <TouchableOpacity
+                key={step.key}
+                style={styles.setupStepRow}
+                onPress={step.onPress}
+                activeOpacity={0.7}
+                disabled={step.done}
+              >
+                {step.done ? (
+                  <View style={styles.setupStepCheckDone}>
+                    <Check size={13} color="#FFFFFF" strokeWidth={3} />
+                  </View>
+                ) : (
+                  <Circle size={20} color="#D8D5D0" strokeWidth={1.5} />
+                )}
+                <Text style={[styles.setupStepLabel, step.done ? styles.setupStepLabelDone : null]}>
+                  {step.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Contribution stats — pending/overdue workload for assigned contributors */}
         <FlatList
@@ -286,6 +325,50 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#EEF0F1',
   },
+  setupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 18,
+    marginTop: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  setupCardTitle: {
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    fontSize: 13,
+    color: '#0C0C0D',
+    textTransform: 'uppercase',
+    letterSpacing: 0.04,
+    marginBottom: 14,
+  },
+  setupStepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  setupStepCheckDone: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#22A559',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setupStepLabel: {
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#0C0C0D',
+  },
+  setupStepLabelDone: {
+    color: '#B0ADA8',
+    textDecorationLine: 'line-through',
+  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
@@ -307,7 +390,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   userName: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
@@ -380,14 +463,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   updateLink: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 13,
     color: '#FFFFFF',
     textDecorationLine: 'underline',
   },
   givingAmount: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 30,
     color: '#FFFFFF',
@@ -395,7 +478,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   givingUnit: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     fontWeight: '500',
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
@@ -420,7 +503,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   paidBadgeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#FFFFFF',
@@ -459,7 +542,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   referralCompactCode: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 18,
     color: '#0C0C0D',
@@ -478,7 +561,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   referralCompactCopiedText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#22A559',
@@ -509,7 +592,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   kpiValue: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 20,
     color: '#0C0C0D',
@@ -528,7 +611,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
@@ -565,7 +648,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   quickActionTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
@@ -607,7 +690,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   memberAvatarText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 12,
     color: '#FFFFFF',
@@ -616,7 +699,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   memberName: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',

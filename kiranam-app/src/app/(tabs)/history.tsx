@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   paymentLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   paymentAmount: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 15,
     color: '#0C0C0D',
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     color: '#C7C3BD',
   },
   emptyTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { X } from 'lucide-react-native';
 import type { Campaign } from '@/context/AppContext';
 import { validateAmount } from '@/utils/validators';
+import { friendlyError } from '@/utils/errors';
+import { Button } from '@/components/Button';
+import { Input } from '@/components/Input';
 
 interface RecordContributionModalProps {
   visible: boolean;
@@ -57,7 +60,7 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
     setSaving(false);
 
     if (error) {
-      Alert.alert('Could not record contribution', error);
+      Alert.alert('Could not record contribution', friendlyError(error));
       return;
     }
     onClose();
@@ -66,7 +69,7 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.sheetWrapper}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
           <View style={styles.sheet}>
             <View style={styles.header}>
               <View style={{ flex: 1 }}>
@@ -120,36 +123,30 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
               )
             )}
 
-            <Text style={styles.label}>Amount</Text>
-            <View style={styles.amountInputRow}>
-              <Text style={styles.currencySymbol}>₹</Text>
-              <TextInput
-                style={styles.amountInput}
-                value={amount}
-                onChangeText={handleAmountChange}
-                placeholder="0"
-                placeholderTextColor="#B0ADA8"
-                keyboardType="number-pad"
-              />
-            </View>
+            <Input
+              label="Amount"
+              value={amount}
+              onChangeText={handleAmountChange}
+              placeholder="0"
+              keyboardType="number-pad"
+              prefix="₹"
+              inputStyle={styles.amountInputText}
+            />
 
-            <Text style={styles.label}>Note (optional)</Text>
-            <TextInput
-              style={styles.input}
+            <Input
+              label="Note (optional)"
               value={note}
               onChangeText={setNote}
               placeholder="e.g. Collected in cash"
-              placeholderTextColor="#B0ADA8"
             />
 
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            <Button
+              title="Record Contribution"
               onPress={handleSave}
-              disabled={saving || (type === 'campaign' && activeCampaigns.length === 0)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.saveButtonText}>{saving ? 'Saving…' : 'Record Contribution'}</Text>
-            </TouchableOpacity>
+              loading={saving}
+              disabled={type === 'campaign' && activeCampaigns.length === 0}
+              style={styles.saveButton}
+            />
 
             <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -184,7 +181,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -221,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0C0C0D',
   },
   typeOptionText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 13.5,
     color: '#7A756E',
@@ -258,7 +255,7 @@ const styles = StyleSheet.create({
     borderColor: '#EC2028',
   },
   campaignChipText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 13,
     color: '#0C0C0D',
@@ -266,60 +263,13 @@ const styles = StyleSheet.create({
   campaignChipTextActive: {
     color: '#EC2028',
   },
-  amountInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 50,
-    backgroundColor: '#F9F8F6',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E4E1DC',
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  currencySymbol: {
-    fontFamily: 'Inter',
+  amountInputText: {
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 16,
-    color: '#0C0C0D',
-    marginRight: 6,
-  },
-  amountInput: {
-    flex: 1,
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 16,
-    color: '#0C0C0D',
-    padding: 0,
-  },
-  input: {
-    height: 50,
-    backgroundColor: '#F9F8F6',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E4E1DC',
-    paddingHorizontal: 16,
-    fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#0C0C0D',
-    marginBottom: 20,
   },
   saveButton: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EC2028',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 10,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    fontSize: 15,
-    color: '#FFFFFF',
   },
   cancelButton: {
     height: 48,
@@ -327,7 +277,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',

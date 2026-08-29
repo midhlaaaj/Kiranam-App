@@ -7,6 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Button } from '@/components/Button';
 import { supabase } from '@/lib/supabase';
 import { extractReferralCodeFromText, stashPendingReferralCode } from '@/utils/referral';
+import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
 
 const CLIPBOARD_CHECKED_KEY = 'kiranam.referralClipboardChecked';
 
@@ -76,7 +77,9 @@ export default function SplashScreen() {
       if (cancelled) return;
 
       if (profile.role === 'volunteer' && application?.status === 'approved') {
-        router.replace('/(volunteer-tabs)/dashboard');
+        const dest = await resolveApprovedVolunteerRoute(uid);
+        if (cancelled) return;
+        router.replace(dest);
       } else if (profile.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved') {
         router.replace('/pending');
       } else {
@@ -98,7 +101,10 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      {/* Android's status bar has its own opaque background by default,
+          unlike iOS (always transparent-over-content) — without this it
+          shows a visible seam against the full-bleed gradient below. */}
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
       {/* Deep dual-tone gradient background */}
       <LinearGradient
@@ -117,7 +123,7 @@ export default function SplashScreen() {
       />
 
       <View style={styles.content}>
-        <Text style={styles.brand}>Kiranam</Text>
+        <Text style={styles.brand}>Karunya Kiranam</Text>
         <View style={styles.divider} />
         <Text style={styles.tagline}>{tagline}</Text>
       </View>
@@ -155,12 +161,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   brand: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
-    fontSize: 46,
+    fontSize: 34,
     color: '#FFFFFF',
-    letterSpacing: -1,
+    letterSpacing: -0.6,
     marginBottom: 12,
+    textAlign: 'center',
   },
   divider: {
     width: 36,

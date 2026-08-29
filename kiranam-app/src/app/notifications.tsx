@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F8F6',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   menuItemText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notifTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   emptyTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',

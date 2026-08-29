@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 34,
     color: '#0C0C0D',
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   countryCodeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 15,
     color: '#0C0C0D',

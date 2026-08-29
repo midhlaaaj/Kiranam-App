@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { ArrowLeft, Lock } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
+import { friendlyError } from '@/utils/errors';
 
 export default function SecurePaymentScreen() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function SecurePaymentScreen() {
       });
     } catch (e) {
       setLoading(false);
-      Alert.alert('Payment not completed', e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      Alert.alert('Payment not completed', e instanceof Error ? friendlyError(e.message) : 'Something went wrong. Please try again.');
     }
   };
 
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F8F6',
   },
   headerTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 18,
     color: '#0C0C0D',
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   amountText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 46,
     color: '#0C0C0D',

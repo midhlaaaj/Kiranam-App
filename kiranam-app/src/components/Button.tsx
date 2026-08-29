@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, StyleProp, ViewStyle, TextStyle } from 'react-native';
 
 interface ButtonProps {
   title: string;
@@ -7,8 +7,11 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'dark' | 'outline';
   disabled?: boolean;
   loading?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  // StyleProp (not a bare ViewStyle) so callers can pass an array — e.g.
+  // a base override plus a conditional variant, like a destructive button
+  // that only takes its danger color once a confirmation gate is passed.
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
 export const Button: React.FC<ButtonProps> = ({

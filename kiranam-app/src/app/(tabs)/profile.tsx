@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
-import { ChevronRight, Pencil } from 'lucide-react-native';
+import { ChevronRight, Pencil, HeartHandshake, Clock3 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeleteAccountModal } from '@/components/DeleteAccountModal';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { formatMoney } from '@/utils/format';
+import { friendlyError } from '@/utils/errors';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -20,17 +21,19 @@ export default function ProfileScreen() {
     commitmentAmount,
     isAutopayEnabled,
     setAutopayEnabled,
+    isVolunteer,
     signOut,
     deleteAccount,
     updateName,
     updateProfilePhoto,
+    updateEmail,
   } = useApp();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
 
   const applyAutopayChange = async (val: boolean) => {
     const { error } = await setAutopayEnabled(val);
-    if (error) Alert.alert('Could not update autopay', error);
+    if (error) Alert.alert('Could not update autopay', friendlyError(error));
   };
 
   const handlePause = () => {
@@ -135,6 +138,32 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Volunteering */}
+        <Text style={styles.sectionHeader}>Volunteering</Text>
+        <View style={styles.sectionCard}>
+          <TouchableOpacity
+            style={[styles.actionRow, styles.noBorder]}
+            activeOpacity={isVolunteer ? 1 : 0.7}
+            disabled={isVolunteer}
+            onPress={() => router.push('/volunteer-application')}
+          >
+            <View style={styles.volunteerRowLeft}>
+              <View style={styles.volunteerIconBg}>
+                {isVolunteer ? (
+                  <Clock3 size={18} color="#EC2028" strokeWidth={2} />
+                ) : (
+                  <HeartHandshake size={18} color="#EC2028" strokeWidth={2} />
+                )}
+              </View>
+              <View>
+                <Text style={styles.actionRowText}>Become a Volunteer</Text>
+                {isVolunteer && <Text style={styles.volunteerPendingText}>Application pending review</Text>}
+              </View>
+            </View>
+            {!isVolunteer && <ChevronRight size={16} color="#D8D5D0" />}
+          </TouchableOpacity>
+        </View>
+
         {/* Account Options */}
         <Text style={styles.sectionHeader}>Account</Text>
         <View style={styles.sectionCard}>
@@ -181,8 +210,10 @@ export default function ProfileScreen() {
         onClose={() => setEditModalVisible(false)}
         currentName={userName}
         currentAvatarUrl={userAvatarUrl}
+        currentEmail={userEmail}
         onSaveName={updateName}
         onSavePhoto={updateProfilePhoto}
+        onSaveEmail={updateEmail}
       />
     </SafeAreaView>
   );
@@ -218,7 +249,7 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   editButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 12.5,
     color: '#0C0C0D',
@@ -239,13 +270,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatarText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 24,
     color: '#FFFFFF',
   },
   userName: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -296,7 +327,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
@@ -309,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   rowValue: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
@@ -348,6 +379,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0C0C0D',
   },
+  volunteerRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  volunteerIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FBEAEA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  volunteerPendingText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: '#7A756E',
+    marginTop: 2,
+  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -357,13 +407,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1EEEA',
   },
   actionRowText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     fontWeight: '500',
     fontSize: 14,
     color: '#0C0C0D',
   },
   logoutText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#EC2028',
@@ -379,7 +429,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoutButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontWeight: '700',
     fontSize: 14,
     color: '#FFFFFF',
