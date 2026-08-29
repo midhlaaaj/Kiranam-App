@@ -14,7 +14,8 @@ export const buttonSecondary =
 export const buttonDanger =
   'inline-flex items-center justify-center gap-2 rounded-lg bg-kiranam-danger px-5 py-2.5 text-sm font-semibold text-white shadow-elevation-sm transition duration-200 ease-out hover:brightness-95 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer';
 
-export const linkDanger = 'text-sm font-semibold text-kiranam-danger transition hover:underline cursor-pointer';
+export const linkDanger =
+  'inline-flex min-h-10 items-center text-sm font-semibold text-kiranam-danger transition hover:underline cursor-pointer';
 
 export const linkGhost = 'text-sm font-semibold text-kiranam-ink transition hover:underline cursor-pointer';
 

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { deleteEventImage, updateEvent } from '../../actions';
 import { buttonPrimary, cardClass, inputClass, linkDanger } from '@/lib/ui';
+import { Form } from '@/components/Form';
 
 export default async function EditEventPage({
   params,
@@ -29,7 +30,7 @@ export default async function EditEventPage({
 
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-kiranam-ink">Edit Event</h1>
 
-      <form action={updateEvent.bind(null, id)} className={`mt-6 grid max-w-xl gap-3 ${cardClass} p-5`}>
+      <Form action={updateEvent.bind(null, id)} className={`mt-6 grid max-w-xl gap-3 ${cardClass} p-5`}>
         <input name="title" defaultValue={event.title} required className={inputClass} />
         <textarea name="description" defaultValue={event.description} className={inputClass} />
         <input name="event_date" type="date" defaultValue={event.event_date ?? ''} className={inputClass} />
@@ -68,7 +69,7 @@ export default async function EditEventPage({
         <button type="submit" className={buttonPrimary}>
           Save Changes
         </button>
-      </form>
+      </Form>
 
       {(images || []).length > 0 && (
         <>

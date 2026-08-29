@@ -95,7 +95,10 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
   // conditions the mobile app already checks client-side.
   await supabase.rpc('self_heal_campaign_completion');
 
-  let query = supabase.from('campaigns').select('*').order('created_at', { ascending: false });
+  let query = supabase
+    .from('campaigns')
+    .select('id, title, status, raised, goal, cover_image_url')
+    .order('created_at', { ascending: false });
   if (q) query = query.ilike('title', `%${q}%`);
   if (status === 'active' || status === 'completed') query = query.eq('status', status);
 
@@ -110,7 +113,7 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
           <thead>
             <tr className={tableHeadRowClass}>
               <th className={tableCellClass}>Title</th>
-              <th className={tableCellClass}>Status</th>
+              <th className={`${tableCellClass} hidden sm:table-cell`}>Status</th>
               <th className={tableCellClass}>Raised / Goal</th>
               <th className={tableCellClass}></th>
             </tr>
@@ -119,17 +122,18 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
             {(campaigns || []).map((c, i) => (
               <tr key={c.id} className={tableRowClass} style={staggerDelay(i)}>
                 <td className={tableCellClass}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {c.cover_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.cover_image_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      <img src={c.cover_image_url} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                     ) : (
-                      <div className="h-10 w-10 rounded-lg bg-kiranam-primary-soft" />
+                      <div className="h-10 w-10 shrink-0 rounded-lg bg-kiranam-primary-soft" />
                     )}
                     <span className="font-semibold text-kiranam-ink">{c.title}</span>
+                    <span className={`${badgeClass(c.status === 'active' ? 'success' : 'neutral')} sm:hidden`}>{c.status}</span>
                   </div>
                 </td>
-                <td className={tableCellClass}>
+                <td className={`${tableCellClass} hidden sm:table-cell`}>
                   <span className={badgeClass(c.status === 'active' ? 'success' : 'neutral')}>{c.status}</span>
                 </td>
                 <td className={`${tableCellClass} min-w-[160px]`}>

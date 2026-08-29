@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { createEvent, type CreateEventState } from './actions';
 import { buttonPrimary, cardClass, inputClass } from '@/lib/ui';
+import { Form } from '@/components/Form';
 
 const initialState: CreateEventState = {};
 
@@ -24,7 +25,7 @@ export function CreateEventForm({ onDone }: { onDone?: () => void }) {
   }, [state, onDone]);
 
   return (
-    <form ref={formRef} action={formAction} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
+    <Form ref={formRef} action={formAction} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
       <input name="title" placeholder="Title" required className={`${inputClass} sm:col-span-2`} />
       <textarea name="description" placeholder="Description" className={`${inputClass} sm:col-span-2`} />
       <input name="event_date" type="date" required className={inputClass} />
@@ -45,6 +46,6 @@ export function CreateEventForm({ onDone }: { onDone?: () => void }) {
       <button type="submit" disabled={pending} className={`${buttonPrimary} sm:col-span-2`}>
         {pending ? 'Creating…' : 'Create Event'}
       </button>
-    </form>
+    </Form>
   );
 }

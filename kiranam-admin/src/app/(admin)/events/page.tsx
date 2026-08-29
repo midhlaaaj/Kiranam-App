@@ -92,10 +92,15 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
   // authoritative whenever event_date is missing, so a stuck `true` here
   // would otherwise never self-correct).
   const today = new Date().toISOString().slice(0, 10);
-  await supabase.from('events').update({ is_past: true }).lt('event_date', today).eq('is_past', false);
-  await supabase.from('events').update({ is_past: false }).gte('event_date', today).eq('is_past', true);
+  await Promise.all([
+    supabase.from('events').update({ is_past: true }).lt('event_date', today).eq('is_past', false),
+    supabase.from('events').update({ is_past: false }).gte('event_date', today).eq('is_past', true),
+  ]);
 
-  let query = supabase.from('events').select('*').order('event_date', { ascending: false });
+  let query = supabase
+    .from('events')
+    .select('id, title, event_date, location, is_past, cover_image_url')
+    .order('event_date', { ascending: false });
   if (q) query = query.ilike('title', `%${q}%`);
   if (status === 'upcoming') query = query.eq('is_past', false);
   if (status === 'past') query = query.eq('is_past', true);
@@ -112,7 +117,7 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
             <tr className={tableHeadRowClass}>
               <th className={tableCellClass}>Title</th>
               <th className={tableCellClass}>Date</th>
-              <th className={tableCellClass}>Location</th>
+              <th className={`${tableCellClass} hidden sm:table-cell`}>Location</th>
               <th className={tableCellClass}>Status</th>
               <th className={tableCellClass}></th>
             </tr>
@@ -134,7 +139,7 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
                 <td className={`${tableCellClass} tabular-nums text-kiranam-muted`}>
                   {e.event_date ? new Date(e.event_date).toLocaleDateString('en-IN') : '—'}
                 </td>
-                <td className={`${tableCellClass} text-kiranam-muted`}>{e.location}</td>
+                <td className={`${tableCellClass} hidden text-kiranam-muted sm:table-cell`}>{e.location}</td>
                 <td className={tableCellClass}>
                   <span className={badgeClass(e.is_past ? 'neutral' : 'success')}>{e.is_past ? 'Past' : 'Upcoming'}</span>
                 </td>

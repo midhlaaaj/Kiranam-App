@@ -35,13 +35,13 @@ export function Modal({
       onClick={onClose}
     >
       <div
-        className={`w-full max-w-lg ${cardClass} p-6`}
+        className={`flex w-full max-w-lg max-h-[calc(100dvh-2rem)] flex-col ${cardClass} p-6`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex shrink-0 items-center justify-between">
           <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">{title}</h2>
           <button
             type="button"
@@ -52,7 +52,7 @@ export function Modal({
             <X size={18} strokeWidth={2.25} />
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto">{children}</div>
       </div>
     </div>
   );

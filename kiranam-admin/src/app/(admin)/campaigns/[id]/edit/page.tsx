@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { deleteCampaignImage, updateCampaign } from '../../actions';
 import { buttonPrimary, cardClass, formatMoney, inputClass, linkDanger } from '@/lib/ui';
+import { Form } from '@/components/Form';
 
 export default async function EditCampaignPage({
   params,
@@ -29,7 +30,7 @@ export default async function EditCampaignPage({
 
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-kiranam-ink">Edit Campaign</h1>
 
-      <form action={updateCampaign.bind(null, id)} className={`mt-6 grid max-w-xl gap-3 ${cardClass} p-5`}>
+      <Form action={updateCampaign.bind(null, id)} className={`mt-6 grid max-w-xl gap-3 ${cardClass} p-5`}>
         <input name="title" defaultValue={campaign.title} required className={inputClass} />
         <textarea name="description" defaultValue={campaign.description} className={inputClass} />
         <input name="goal" type="number" defaultValue={campaign.goal} required className={inputClass} />
@@ -76,7 +77,7 @@ export default async function EditCampaignPage({
         <button type="submit" className={buttonPrimary}>
           Save Changes
         </button>
-      </form>
+      </Form>
 
       {(images || []).length > 0 && (
         <>
