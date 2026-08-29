@@ -102,7 +102,10 @@ export async function assignVolunteer(contributorId: string, formData: FormData)
 
   const { error } = await supabase
     .from('contributor_assignments')
-    .insert({ volunteer_id: volunteerId, contributor_id: contributorId });
+    // Explicit 'admin' even though it's also the column default — this is
+    // the one non-referral path that writes this table, so it should say
+    // so rather than rely on a default that could change later.
+    .insert({ volunteer_id: volunteerId, contributor_id: contributorId, source: 'admin' });
   if (error) throw new Error(error.message);
 
   await logAction(admin.id, 'assign_contributor', 'contributor_assignments', contributorId, { volunteerId });
