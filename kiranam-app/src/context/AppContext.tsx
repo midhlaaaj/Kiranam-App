@@ -8,7 +8,7 @@ import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { formatMoney, formatDate, getDeviceLocale } from '@/utils/format';
 import { peekPendingReferralCode, clearPendingReferralCode } from '@/utils/referral';
-import { getEdgeFunctionErrorMessage } from '@/utils/errors';
+import { getEdgeFunctionErrorMessage, getRazorpayCheckoutErrorMessage } from '@/utils/errors';
 
 // Interfaces for our app types
 export interface Campaign {
@@ -984,11 +984,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCommitmentAmountState(amount);
       setHasCommitment(true);
       return { error: null };
-    } catch (err: any) {
+    } catch (err) {
       // Razorpay's native SDK rejects the promise (rather than resolving
-      // with an error field) when the user backs out of checkout — not a
-      // real failure, just "didn't finish authorizing."
-      return { error: err?.description || err?.message || 'Autopay setup was cancelled' };
+      // with an error field) on both a user-cancelled checkout and a real
+      // payment/authentication failure — getRazorpayCheckoutErrorMessage
+      // tells those apart and never surfaces the raw rejection payload.
+      return { error: getRazorpayCheckoutErrorMessage(err) };
     }
   };
 

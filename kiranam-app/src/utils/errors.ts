@@ -63,6 +63,27 @@ export function friendlyError(message: string): string {
 // already-human-written reason; falls back to the generic message
 // (still cleaned up by friendlyError's catch-all above) if anything about
 // that shape isn't as expected.
+// react-native-razorpay rejects checkout with a plain object, not an Error
+// instance — shape varies (flat `{ code, description }`, or a whole native
+// failure payload one level deeper under `error`), and `description` is
+// sometimes itself another JSON blob rather than human text. Never trust
+// it blindly; only use a candidate that reads like real prose, and default
+// to a safe generic message otherwise.
+export function getRazorpayCheckoutErrorMessage(err: unknown): string {
+  const e = err as Record<string, unknown> | null | undefined;
+  const inner = e?.error && typeof e.error === 'object' ? (e.error as Record<string, unknown>) : e;
+  const looksLikeProse = (value: unknown): value is string =>
+    typeof value === 'string' && !!value.trim() && value.trim() !== 'undefined' && !value.trim().startsWith('{');
+
+  for (const candidate of [inner?.description, inner?.reason, e?.description]) {
+    if (looksLikeProse(candidate)) return candidate;
+  }
+  if (e?.code === 'PAYMENT_CANCELLED' || inner?.code === 'PAYMENT_CANCELLED') {
+    return 'Autopay setup was cancelled.';
+  }
+  return 'The payment authorization could not be completed. Please try again or use a different payment method.';
+}
+
 export async function getEdgeFunctionErrorMessage(error: unknown): Promise<string> {
   const fallback = error instanceof Error ? error.message : 'Something went wrong';
   const context = (error as { context?: unknown } | null)?.context;
