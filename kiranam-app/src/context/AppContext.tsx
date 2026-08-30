@@ -8,6 +8,7 @@ import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { formatMoney, formatDate, getDeviceLocale } from '@/utils/format';
 import { peekPendingReferralCode, clearPendingReferralCode } from '@/utils/referral';
+import { getEdgeFunctionErrorMessage } from '@/utils/errors';
 
 // Interfaces for our app types
 export interface Campaign {
@@ -948,7 +949,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data: subData, error: subError } = await supabase.functions.invoke('create-razorpay-subscription', {
         body: { amount },
       });
-      if (subError || !subData) return { error: subError?.message || 'Could not create subscription' };
+      if (subError || !subData) {
+        return { error: subError ? await getEdgeFunctionErrorMessage(subError) : 'Could not create subscription' };
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const RazorpayCheckout = require('react-native-razorpay').default;
@@ -972,7 +975,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           razorpay_signature: checkoutResult.razorpay_signature,
         },
       });
-      if (verifyError || !verifyData?.record) return { error: verifyError?.message || 'Could not verify autopay' };
+      if (verifyError || !verifyData?.record) {
+        return { error: verifyError ? await getEdgeFunctionErrorMessage(verifyError) : 'Could not verify autopay' };
+      }
 
       setAutopayEnabledState(true);
       setMandateStatus('authenticated');
@@ -991,8 +996,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) return { error: 'Not signed in' };
     const { error } = await supabase.functions.invoke('cancel-razorpay-subscription', { body: {} });
     if (error) {
-      console.error('Failed to cancel autopay:', error.message);
-      return { error: error.message };
+      const message = await getEdgeFunctionErrorMessage(error);
+      console.error('Failed to cancel autopay:', message);
+      return { error: message };
     }
     setAutopayEnabledState(false);
     setMandateStatus('cancelled');
@@ -1006,8 +1012,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!session) return { error: 'Not signed in' };
     const { error } = await supabase.functions.invoke('set-contribution-paused', { body: { paused } });
     if (error) {
-      console.error('Failed to update contribution pause state:', error.message);
-      return { error: error.message };
+      const message = await getEdgeFunctionErrorMessage(error);
+      console.error('Failed to update contribution pause state:', message);
+      return { error: message };
     }
     setContributionPausedState(paused);
     if (paused) {
@@ -1247,10 +1254,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteAllNotifications = async () => {
+    if (!session) return;
+    // Optimistic clear, reverted below if the delete didn't actually take —
+    // otherwise a silent failure (e.g. an RLS policy gap, as happened here
+    // once already) leaves the UI showing "deleted" while the rows are
+    // still in the database, and they'd resurface on the very next refresh.
+    const previous = notifications;
     setNotifications([]);
-    if (session) {
-      const { error } = await supabase.from('notifications').delete().eq('profile_id', session.user.id);
-      if (error) console.error('Failed to delete notifications:', error.message);
+    const { error } = await supabase.from('notifications').delete().eq('profile_id', session.user.id);
+    if (error) {
+      console.error('Failed to delete notifications:', error.message);
+      setNotifications(previous);
     }
   };
 

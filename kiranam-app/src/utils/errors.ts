@@ -42,5 +42,36 @@ export function friendlyError(message: string): string {
     console.error('[friendlyError] Raw Postgres error leaked:', message);
     return "Something went wrong on our end. Please try again in a moment.";
   }
+  // supabase-js's generic wrapper whenever an Edge Function responds with a
+  // non-2xx status (create/verify/cancel-razorpay-subscription, etc.) —
+  // callers should prefer extracting the function's actual JSON error body
+  // (see getEdgeFunctionErrorMessage below) before falling back to this
+  // string, but this catch-all guarantees the raw wrapper text itself never
+  // reaches a user even if that extraction wasn't done or came back empty.
+  if (/edge function returned a non-2xx status code/i.test(message)) {
+    console.error('[friendlyError] Raw Edge Function wrapper error leaked:', message);
+    return "Something went wrong on our end. Please try again in a moment.";
+  }
   return message;
+}
+
+// supabase.functions.invoke()'s `error` is a FunctionsHttpError whose
+// `.message` is always the same generic "non-2xx status code" wrapper —
+// the function's own JSON body (`{ error: "..." }`, written by every
+// Kiranam Edge Function on a failure response) lives on `error.context`,
+// a Response object. Best-effort unwraps that for a more specific,
+// already-human-written reason; falls back to the generic message
+// (still cleaned up by friendlyError's catch-all above) if anything about
+// that shape isn't as expected.
+export async function getEdgeFunctionErrorMessage(error: unknown): Promise<string> {
+  const fallback = error instanceof Error ? error.message : 'Something went wrong';
+  const context = (error as { context?: unknown } | null)?.context;
+  if (!context || typeof context !== 'object' || !('json' in context)) return fallback;
+  try {
+    const body = await (context as Response).json();
+    if (body && typeof body.error === 'string') return body.error;
+  } catch {
+    // Response body already consumed, not JSON, etc. — fall back below.
+  }
+  return fallback;
 }
