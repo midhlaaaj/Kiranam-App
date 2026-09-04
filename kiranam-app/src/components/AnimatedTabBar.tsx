@@ -6,6 +6,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACTIVE_COLOR = '#EC2028';
 const INACTIVE_COLOR = '#9A968F';
@@ -19,6 +20,11 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
   const [layouts, setLayouts] = useState<Record<number, ItemLayout>>({});
   const indicatorX = useSharedValue(0);
   const indicatorWidth = useSharedValue(0);
+  // A hardcoded `bottom: 16` looked fine on the device this was designed
+  // on, but Android's system nav bar (3-button or gesture-pill) height
+  // varies by device/OEM/skin — without accounting for it, this floating
+  // bar either overlaps the system nav or sits inconsistently close to it.
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const layout = layouts[state.index];
@@ -35,7 +41,7 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
   }));
 
   return (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, { bottom: 16 + insets.bottom }]}>
       <Animated.View style={[styles.indicator, indicatorStyle]} />
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -127,7 +133,6 @@ function TabBarButton({
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    bottom: 16,
     left: 16,
     right: 16,
     height: 64,

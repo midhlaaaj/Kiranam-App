@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Platform, Animated, Easing, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Platform, Animated, Easing, RefreshControl, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useApp, EventRecord } from '@/context/AppContext';
@@ -82,6 +82,24 @@ export default function HomeScreen() {
   // Hiding Quick Pay whenever autopay is healthy removes that risk outright.
   const autopayHealthy = isAutopayEnabled && (mandateStatus === 'authenticated' || mandateStatus === 'active');
 
+  const handlePayAgain = () => {
+    Alert.alert(
+      'You already contributed this month',
+      `You've already paid ${formatMoney(commitmentAmount)} for this cycle. Do you want to contribute again?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          onPress: () =>
+            router.push({
+              pathname: '/secure-payment',
+              params: { amount: commitmentAmount, label: 'Monthly Contribution', allowRepeat: '1' },
+            }),
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
@@ -142,10 +160,15 @@ export default function HomeScreen() {
                 {isPaidThisCycle ? `Paid · Next due ${nextDueDate}` : `Next due ${nextDueDate}`}
               </Text>
               {isPaidThisCycle ? (
-                <View style={styles.paidBadgeButton}>
-                  <Check size={16} color="#FFFFFF" strokeWidth={3} />
-                  <Text style={styles.paidBadgeButtonText}>Paid for this cycle</Text>
-                </View>
+                <>
+                  <View style={styles.paidBadgeButton}>
+                    <Check size={16} color="#FFFFFF" strokeWidth={3} />
+                    <Text style={styles.paidBadgeButtonText}>Paid for this cycle</Text>
+                  </View>
+                  <TouchableOpacity onPress={handlePayAgain} activeOpacity={0.7} style={styles.payAgainLink}>
+                    <Text style={styles.payAgainLinkText}>Pay again</Text>
+                  </TouchableOpacity>
+                </>
               ) : autopayHealthy ? (
                 <View style={styles.autopayActiveBadge}>
                   <Check size={15} color="#FFFFFF" strokeWidth={3} />
@@ -530,6 +553,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
     color: '#FFFFFF',
+  },
+  payAgainLink: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  payAgainLinkText: {
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    textDecorationLine: 'underline',
   },
   autopayActiveBadge: {
     flexDirection: 'row',

@@ -16,13 +16,18 @@ export default function SecurePaymentScreen() {
   const amount = params.amount ? parseInt(params.amount as string, 10) : 500;
   const label = (params.label as string) || 'Monthly Contribution';
   const campaignId = params.campaignId as string | undefined;
+  // Set only by the "Pay again" flow (Home/Dashboard), which already
+  // warned the contributor they've paid this cycle and got an explicit
+  // "Continue" — lets this one request through the normal one-payment-
+  // per-cycle guard in makeRazorpayPayment.
+  const allowRepeat = params.allowRepeat === '1';
 
   const [loading, setLoading] = useState(false);
 
   const handlePayNow = async () => {
     setLoading(true);
     try {
-      const record = await makeRazorpayPayment(amount, label, campaignId);
+      const record = await makeRazorpayPayment(amount, label, campaignId, allowRepeat);
       setLoading(false);
       // Route to success receipt page
       router.replace({

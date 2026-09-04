@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, StatusBar, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
@@ -61,6 +61,23 @@ export default function VolunteerDashboardScreen() {
   const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
   const topMembers = volunteerMembers.slice(0, 3);
 
+  const handlePayAgain = () => {
+    Alert.alert(
+      'You already contributed this month',
+      `You've already paid ${formatMoney(commitmentAmount)} for this cycle. Do you want to contribute again?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          onPress: () =>
+            router.push({
+              pathname: '/secure-payment',
+              params: { amount: commitmentAmount, label: 'Monthly Contribution', allowRepeat: '1' },
+            }),
+        },
+      ]
+    );
+  };
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(myReferralCode);
@@ -138,10 +155,15 @@ export default function VolunteerDashboardScreen() {
                 {isPaidThisCycle ? `Paid · Next due ${nextDueDate}` : `Next due ${nextDueDate}`}
               </Text>
               {isPaidThisCycle ? (
-                <View style={styles.paidBadge}>
-                  <Check size={15} color="#22A559" strokeWidth={3} />
-                  <Text style={styles.paidBadgeText}>Paid for this cycle</Text>
-                </View>
+                <>
+                  <View style={styles.paidBadge}>
+                    <Check size={15} color="#22A559" strokeWidth={3} />
+                    <Text style={styles.paidBadgeText}>Paid for this cycle</Text>
+                  </View>
+                  <TouchableOpacity onPress={handlePayAgain} activeOpacity={0.7} style={styles.payAgainLink}>
+                    <Text style={styles.payAgainLinkText}>Pay again</Text>
+                  </TouchableOpacity>
+                </>
               ) : autopayHealthy ? (
                 <View style={styles.autopayBadge}>
                   <Check size={15} color="#FFFFFF" strokeWidth={3} />
@@ -285,11 +307,19 @@ export default function VolunteerDashboardScreen() {
         {/* Assigned Contributors preview */}
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Assigned Contributors</Text>
-          <TouchableOpacity onPress={() => router.push('/(volunteer-tabs)/contributors')} activeOpacity={0.7}>
-            <Text style={styles.seeAllText}>See all</Text>
-          </TouchableOpacity>
+          {topMembers.length > 0 && (
+            <TouchableOpacity onPress={() => router.push('/(volunteer-tabs)/contributors')} activeOpacity={0.7}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
+        {topMembers.length === 0 ? (
+          <View style={styles.emptyMembersCard}>
+            <Users size={22} color="#D8D5D0" strokeWidth={1.5} />
+            <Text style={styles.emptyMembersText}>No contributors assigned to you yet.</Text>
+          </View>
+        ) : (
         <View style={styles.membersPreviewContainer}>
           {topMembers.map((item, index) => {
             const meta = statusMeta(item.status);
@@ -316,6 +346,7 @@ export default function VolunteerDashboardScreen() {
             );
           })}
         </View>
+        )}
       </ScrollView>
 
       <EditReferralCodeModal
@@ -516,6 +547,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFFFFF',
   },
+  payAgainLink: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  payAgainLinkText: {
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    textDecorationLine: 'underline',
+  },
   autopayBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -685,6 +727,26 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 12,
     color: '#7A756E',
+  },
+  emptyMembersCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    paddingVertical: 32,
+    marginBottom: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+  emptyMembersText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#7A756E',
+    textAlign: 'center',
   },
   membersPreviewContainer: {
     backgroundColor: '#FFFFFF',

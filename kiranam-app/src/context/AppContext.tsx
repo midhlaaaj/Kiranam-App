@@ -142,7 +142,7 @@ interface AppContextType {
   campaignGiving: number;
 
   // App Actions
-  makeRazorpayPayment: (amount: number, label: string, campaignId?: string) => Promise<PaymentRecord>;
+  makeRazorpayPayment: (amount: number, label: string, campaignId?: string, allowRepeat?: boolean) => Promise<PaymentRecord>;
   recordOfflineContribution: (
     contributorId: string,
     amount: number,
@@ -1120,8 +1120,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // response is in flight. next_due_date is pushed a month out the moment a
   // Monthly Contribution payment succeeds, so "still in the future" reliably
   // means this cycle is already paid for.
-  const assertNotAlreadyPaidThisCycle = (label: string) => {
-    if (label !== 'Monthly Contribution') return;
+  const assertNotAlreadyPaidThisCycle = (label: string, allowRepeat?: boolean) => {
+    if (label !== 'Monthly Contribution' || allowRepeat) return;
     if (nextDueDateIso && new Date(nextDueDateIso).getTime() > Date.now()) {
       throw new Error(`You've already paid for this cycle. Next due ${formatDueDateLabel(nextDueDateIso)}.`);
     }
@@ -1129,9 +1129,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Action: real Razorpay payment — creates an order server-side, launches native
   // checkout, then verifies the signature server-side before recording the payment.
-  const makeRazorpayPayment = async (amount: number, label: string, campaignId?: string): Promise<PaymentRecord> => {
+  // `allowRepeat` bypasses the one-payment-per-cycle guard — only ever set by
+  // the "Pay again" flow (Home/Dashboard's "already paid this cycle" warning),
+  // which is the contributor deliberately confirming a second contribution.
+  const makeRazorpayPayment = async (amount: number, label: string, campaignId?: string, allowRepeat?: boolean): Promise<PaymentRecord> => {
     if (!session) throw new Error('Not signed in');
-    assertNotAlreadyPaidThisCycle(label);
+    assertNotAlreadyPaidThisCycle(label, allowRepeat);
 
     const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
       body: { amount, label, campaignId },
