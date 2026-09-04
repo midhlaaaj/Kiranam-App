@@ -76,13 +76,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'not_configured' }, { status: 500 })
   }
 
+  // account_id alone isn't unique on this table — a leftover row from a
+  // previous/never-finished connection attempt (status: 'pending') can sit
+  // alongside the real connected one, and .single() throws (not just
+  // returns null) when a query matches more than one row. That was
+  // surfacing to end users as "Unexpected status code returned from hook:
+  // 500" on login, for every phone number, regardless of anything about
+  // that number — filtering to status='connected' up front, plus
+  // maybeSingle() so this never throws even if duplicates recur, fixes it.
   const { data: config, error: configError } = await supabaseAdmin()
     .from('whatsapp_config')
     .select('phone_number_id, access_token, status')
     .eq('account_id', accountId)
-    .single()
+    .eq('status', 'connected')
+    .order('connected_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
-  if (configError || !config || config.status !== 'connected') {
+  if (configError || !config) {
     console.error('[send-sms-hook] no connected whatsapp_config for account', accountId, configError)
     return NextResponse.json({ error: 'whatsapp_not_connected' }, { status: 500 })
   }

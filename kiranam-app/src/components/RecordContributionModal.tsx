@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { X } from 'lucide-react-native';
 import type { Campaign } from '@/context/AppContext';
 import { validateAmount } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
+
+const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.75;
 
 interface RecordContributionModalProps {
   visible: boolean;
@@ -71,6 +73,12 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
           <View style={styles.sheet}>
+            <ScrollView
+              style={styles.sheetScroll}
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             <View style={styles.header}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.title}>Record Contribution</Text>
@@ -151,6 +159,7 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
             <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </View>
@@ -171,6 +180,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
+  },
+  sheetScroll: {
+    maxHeight: SHEET_MAX_HEIGHT,
+  },
+  sheetContent: {
     padding: 24,
     paddingBottom: 36,
   },

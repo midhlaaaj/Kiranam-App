@@ -154,7 +154,10 @@ export async function POST() {
       .from('whatsapp_config')
       .select('*')
       .eq('account_id', accountId)
-      .single()
+      .eq('status', 'connected')
+      .order('connected_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (configError || !config) {
       return NextResponse.json(

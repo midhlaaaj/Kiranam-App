@@ -111,11 +111,17 @@ export async function createBroadcast(
 
   // Config (fail fast + provides the audit trail owner already resolved
   // by the caller). Meta send needs phone_number_id + decrypted token.
+  // status='connected' + maybeSingle(), not .single() on account_id alone
+  // — a stale row from an earlier connection attempt can coexist with the
+  // real one, and .single() throws on more than one match.
   const { data: config, error: configError } = await db
     .from('whatsapp_config')
     .select('*')
     .eq('account_id', accountId)
-    .single();
+    .eq('status', 'connected')
+    .order('connected_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (configError || !config) {
     throw new BroadcastError(
       'whatsapp_not_configured',

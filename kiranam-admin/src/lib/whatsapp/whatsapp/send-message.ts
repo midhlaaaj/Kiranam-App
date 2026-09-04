@@ -247,12 +247,20 @@ export async function sendMessageToConversation(
     );
   }
 
-  // WhatsApp config, account-scoped.
+  // WhatsApp config, account-scoped. Filtered to status='connected' (not
+  // just account_id) since a stale row from an earlier, never-finished
+  // connection attempt can coexist with the real one — .single() throws
+  // (not just returns null) when a query matches more than one row, which
+  // was surfacing as a hard failure for every send, not just a graceful
+  // "not configured" — see the same fix in the Send SMS auth hook route.
   const { data: config, error: configError } = await db
     .from('whatsapp_config')
     .select('*')
     .eq('account_id', accountId)
-    .single();
+    .eq('status', 'connected')
+    .order('connected_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (configError || !config) {
     throw new SendMessageError(
