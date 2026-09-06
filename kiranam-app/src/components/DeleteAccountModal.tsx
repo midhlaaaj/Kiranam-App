@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, Dimensions } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { X } from 'lucide-react-native';
 import { friendlyError } from '@/utils/errors';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 
 const CONFIRM_PHRASE = 'delete my account';
-const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.75;
+const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.85;
 
 interface DeleteAccountModalProps {
   visible: boolean;
@@ -60,48 +61,47 @@ export function DeleteAccountModal({ visible, onClose, onConfirmed, onDeleted, d
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
-          <View style={styles.sheet}>
-            <ScrollView
-              style={styles.sheetScroll}
-              contentContainerStyle={styles.sheetContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.header}>
-                <Text style={styles.title}>Delete Account</Text>
-                <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
-                  <X size={18} color="#7A756E" />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.description}>{description}</Text>
-
-              <Text style={styles.instruction}>
-                To confirm, type <Text style={styles.instructionPhrase}>delete my account</Text> below.
-              </Text>
-              <Input
-                value={typed}
-                onChangeText={setTyped}
-                placeholder="delete my account"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-
-              <Button
-                title="Delete Account"
-                onPress={handleDeletePress}
-                disabled={!isMatch}
-                loading={deleting}
-                style={[styles.deleteButton, isMatch && styles.deleteButtonActive]}
-              />
-
-              <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+        <View style={styles.sheet}>
+          <KeyboardAwareScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bottomOffset={20}
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>Delete Account</Text>
+              <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
+                <X size={18} color="#7A756E" />
               </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+            </View>
+
+            <Text style={styles.description}>{description}</Text>
+
+            <Text style={styles.instruction}>
+              To confirm, type <Text style={styles.instructionPhrase}>delete my account</Text> below.
+            </Text>
+            <Input
+              value={typed}
+              onChangeText={setTyped}
+              placeholder="delete my account"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Button
+              title="Delete Account"
+              onPress={handleDeletePress}
+              disabled={!isMatch}
+              loading={deleting}
+              style={[styles.deleteButton, isMatch && styles.deleteButtonActive]}
+            />
+
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </KeyboardAwareScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -113,10 +113,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(12,12,13,0.5)',
     justifyContent: 'flex-end',
   },
-  sheetWrapper: {
-    width: '100%',
-  },
   sheet: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,

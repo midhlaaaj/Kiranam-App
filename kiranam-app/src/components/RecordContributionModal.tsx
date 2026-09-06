@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, Dimensions } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { X } from 'lucide-react-native';
 import type { Campaign } from '@/context/AppContext';
 import { validateAmount } from '@/utils/validators';
@@ -7,7 +8,7 @@ import { friendlyError } from '@/utils/errors';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 
-const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.75;
+const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.85;
 
 interface RecordContributionModalProps {
   visible: boolean;
@@ -71,14 +72,14 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
-          <View style={styles.sheet}>
-            <ScrollView
-              style={styles.sheetScroll}
-              contentContainerStyle={styles.sheetContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
+        <View style={styles.sheet}>
+          <KeyboardAwareScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bottomOffset={20}
+          >
             <View style={styles.header}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.title}>Record Contribution</Text>
@@ -159,9 +160,8 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
             <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -173,10 +173,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(12,12,13,0.5)',
     justifyContent: 'flex-end',
   },
-  sheetWrapper: {
-    width: '100%',
-  },
   sheet: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,

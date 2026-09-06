@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { X } from 'lucide-react-native';
 import { validateReferralCode } from '@/utils/validators';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
 
-const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.75;
+const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.85;
 
 interface EditReferralCodeModalProps {
   visible: boolean;
@@ -56,50 +57,49 @@ export function EditReferralCodeModal({ visible, onClose, currentCode, onSave }:
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.sheetWrapper}>
-          <View style={styles.sheet}>
-            <ScrollView
-              style={styles.sheetScroll}
-              contentContainerStyle={styles.sheetContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.header}>
-                <Text style={styles.title}>Edit Referral Code</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
-                  <X size={18} color="#7A756E" />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.hint}>
-                Letters and numbers only, 4-20 characters. New members enter this code when signing up.
-              </Text>
-
-              <Input
-                label="Referral Code"
-                value={code}
-                onChangeText={handleChange}
-                placeholder="YOURCODE"
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={20}
-                error={error}
-                inputStyle={styles.codeInputText}
-              />
-
-              <Button
-                title="Save Changes"
-                onPress={handleSave}
-                loading={saving}
-                style={styles.saveButton}
-              />
-
-              <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+        <View style={styles.sheet}>
+          <KeyboardAwareScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bottomOffset={20}
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>Edit Referral Code</Text>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+                <X size={18} color="#7A756E" />
               </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+            </View>
+
+            <Text style={styles.hint}>
+              Letters and numbers only, 4-20 characters. New members enter this code when signing up.
+            </Text>
+
+            <Input
+              label="Referral Code"
+              value={code}
+              onChangeText={handleChange}
+              placeholder="YOURCODE"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={20}
+              error={error}
+              inputStyle={styles.codeInputText}
+            />
+
+            <Button
+              title="Save Changes"
+              onPress={handleSave}
+              loading={saving}
+              style={styles.saveButton}
+            />
+
+            <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </KeyboardAwareScrollView>
+        </View>
       </View>
     </Modal>
   );
@@ -111,10 +111,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(12,12,13,0.5)',
     justifyContent: 'flex-end',
   },
-  sheetWrapper: {
-    width: '100%',
-  },
   sheet: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
