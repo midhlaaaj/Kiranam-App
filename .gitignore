@@ -23,3 +23,6 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .claude/
+
+# Secrets
+SEND SMS HOOK*.txt
