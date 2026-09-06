@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Clipboard, TouchableOpacity, ScrollView, StatusBar, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Print from 'expo-print';
@@ -101,19 +101,12 @@ export default function ReceiptScreen() {
   const handleDownloadReceipt = async () => {
     setDownloading(true);
     try {
-      const { uri, base64 } = await Print.printToFileAsync({ html: receiptHtml, base64: true });
+      const { uri } = await Print.printToFileAsync({ html: receiptHtml });
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: 'Save Receipt' });
       } else {
         Alert.alert('Receipt ready', `Saved to ${uri}`);
-      }
-
-      if (isEmailVerified && base64) {
-        emailReceipt({ txnId, amount, label, dateStr, pdfBase64: base64 }).catch(() => {
-          // Best-effort — downloading the PDF already succeeded, so a failed
-          // email send shouldn't block or alarm the user.
-        });
       }
     } catch {
       Alert.alert('Could not create receipt', 'Please try again.');
@@ -121,6 +114,30 @@ export default function ReceiptScreen() {
       setDownloading(false);
     }
   };
+
+  // Send the emailed receipt as soon as this success screen is shown, not
+  // gated behind the user remembering to tap "Download Receipt" — that was
+  // the actual reason receipts weren't going out. Guarded with a ref (not
+  // just the effect's dep array) so React StrictMode's double-invoke, or a
+  // re-render from unrelated state, can't fire a second send for the same
+  // payment.
+  const emailSentRef = useRef(false);
+  useEffect(() => {
+    if (!isEmailVerified || emailSentRef.current) return;
+    emailSentRef.current = true;
+    (async () => {
+      try {
+        const { base64 } = await Print.printToFileAsync({ html: receiptHtml, base64: true });
+        if (base64) {
+          await emailReceipt({ txnId, amount, label, dateStr, pdfBase64: base64 });
+        }
+      } catch {
+        // Best-effort — the on-screen success state and the download button
+        // already work regardless of whether this silent email goes out.
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmailVerified]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
