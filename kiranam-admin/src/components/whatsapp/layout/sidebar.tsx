@@ -193,9 +193,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-          <Link href="/whatsapp/dashboard" className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">
-              {t("title")}
+          <Link href="/whatsapp/dashboard" className="flex items-baseline gap-1.5">
+            <span className="text-lg font-extrabold tracking-tight text-primary">
+              Kiranam
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Comm Center
             </span>
           </Link>
           <button

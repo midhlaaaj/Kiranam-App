@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { useAuth } from '@/hooks/whatsapp/use-auth';
 import { useTheme } from '@/hooks/whatsapp/use-theme';
-import { THEMES } from '@/lib/whatsapp/themes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/whatsapp/ui/avatar';
 import { Card } from '@/components/whatsapp/ui/card';
 import { cn } from '@/lib/whatsapp/utils';
@@ -34,7 +33,7 @@ export function SettingsOverview({
   onSelect: (section: SettingsSection) => void;
 }) {
   const { user, profile, accountId, accountRole, canManageMembers } = useAuth();
-  const { mode, theme } = useTheme();
+  const { mode } = useTheme();
   const t = useTranslations('Settings.overview');
   const tRoles = useTranslations('roles');
   const tSections = useTranslations('Settings.sections');
@@ -128,7 +127,6 @@ export function SettingsOverview({
   const roleMeta = accountRole ? ROLE_META[accountRole] : null;
   const RoleIcon = roleMeta?.icon;
 
-  const themeName = THEMES.find((t) => t.id === theme)?.name ?? theme;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   // Per-tile loading + subtitle. `null` counts render as a graceful
@@ -178,7 +176,7 @@ export function SettingsOverview({
     {
       section: 'appearance',
       loading: false,
-      subtitle: t('appearance', { mode: cap(mode), theme: themeName }),
+      subtitle: t('appearance', { mode: cap(mode) }),
     },
   ];
 
