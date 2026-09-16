@@ -7,6 +7,7 @@ import { MobileToolbar } from '@/components/MobileToolbar';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { RegisterContributorForm } from './RegisterContributorForm';
+import { getAutoAssignKkNumber } from '@/lib/kkSettings';
 import { deriveContributorStatus, type ContributorStatus } from '@/lib/volunteerStats';
 import { PillTabs } from '@/components/PillTabs';
 import {
@@ -43,6 +44,8 @@ export default async function ContributorsPage({
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const { q, status } = await searchParams;
+
+  const autoAssignKkNumber = await getAutoAssignKkNumber();
 
   const filterPills = (
     <PillTabs
@@ -100,7 +103,7 @@ export default async function ContributorsPage({
         }
         mobileToolbar={<MobileToolbar filters={filterPills} search={searchForm} exportHref="/contributors/export" />}
       >
-        <RegisterContributorForm />
+        <RegisterContributorForm autoAssignKkNumber={autoAssignKkNumber} />
       </AddNewPanel>
 
       <Suspense fallback={<SkeletonTable rows={7} cols={4} />}>
@@ -115,7 +118,7 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
 
   let request = supabase
     .from('profiles')
-    .select('id, full_name, phone, email, created_at')
+    .select('id, full_name, phone, email, kk_number, created_at')
     .eq('role', 'contributor')
     .order('created_at', { ascending: false });
 
@@ -159,6 +162,7 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
           <thead>
             <tr className={tableHeadRowClass}>
               <th className={tableCellClass}>Name</th>
+              <th className={tableCellClass}>KK Number</th>
               <th className={tableCellClass}>Phone</th>
               <th className={tableCellClass}>Monthly Amount</th>
               <th className={tableCellClass}>Status</th>
@@ -172,6 +176,7 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
                     {c.full_name || 'Unnamed'}
                   </Link>
                 </td>
+                <td className={`${tableCellClass} text-kiranam-muted`}>{c.kk_number || '—'}</td>
                 <td className={`${tableCellClass} text-kiranam-muted`}>{c.phone}</td>
                 <td className={`${tableCellNumClass} text-kiranam-muted`}>
                   {c.monthlyAmount ? formatMoney(Number(c.monthlyAmount)) : '—'}

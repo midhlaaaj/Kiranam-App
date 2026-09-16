@@ -12,7 +12,13 @@ const initialState: RegisterState = {};
 // event) but has never opened the app. Pre-creates their login by phone
 // number — they claim it just by logging into kiranam-app with this same
 // number and completing the normal phone-OTP flow, same as anyone else.
-export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
+export function RegisterContributorForm({
+  onDone,
+  autoAssignKkNumber,
+}: {
+  onDone?: () => void;
+  autoAssignKkNumber: boolean;
+}) {
   const [state, formAction, pending] = useActionState(registerContributor, initialState);
   const lastState = useRef<RegisterState>(initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -54,13 +60,15 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
           className={`${inputClass} flex-1`}
         />
       </div>
+      {!autoAssignKkNumber && (
+        <input name="kk_number" placeholder="KK number (e.g. KK2001)" required className={inputClass} />
+      )}
       <input
         name="monthly_amount"
         type="number"
         min="1"
         step="1"
-        placeholder="Monthly amount (₹)"
-        required
+        placeholder="Monthly amount (₹) — optional"
         className={inputClass}
       />
       {state?.error && (

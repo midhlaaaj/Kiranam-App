@@ -78,6 +78,7 @@ export default async function ContributorDetailPage({
 
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-balance text-kiranam-ink">{profile.full_name || 'Unnamed'}</h1>
       <p className="text-sm text-kiranam-muted">
+        {profile.kk_number ? `${profile.kk_number} · ` : ''}
         {profile.phone ? `${profile.phone} · ` : ''}
         {profile.email || 'No email'}
       </p>

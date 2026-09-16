@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
 import { sendEmail } from '@/lib/email/resend';
 import { adminInviteEmail } from '@/lib/email/templates';
@@ -90,4 +91,51 @@ export async function revokeInvite(inviteId: string) {
 
   await logAction(admin.id, 'revoke_invite', 'admin_invites', inviteId);
   revalidatePath('/settings');
+}
+
+export async function setAutoAssignKkNumber(enabled: boolean) {
+  const admin = await verifyAdmin();
+  // app_settings has no client-facing RLS policies (service-role only, see
+  // 020_razorpay_recurring_autopay.sql) — same reason registerContributor
+  // reads it via the admin client rather than the session client.
+  const supabaseAdmin = createAdminClient();
+  const { error } = await supabaseAdmin
+    .from('app_settings')
+    .upsert({ key: 'auto_assign_kk_number', value: String(enabled), updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+
+  await logAction(admin.id, 'set_auto_assign_kk_number', 'app_settings', 'app_settings', { enabled });
+  revalidatePath('/settings');
+  revalidatePath('/contributors');
+}
+
+export interface KkCoverageState {
+  message?: string;
+  error?: string;
+}
+
+// Report-only: counts contributors missing a KK number so an admin can see
+// how much manual backfill is left before flipping auto-assign on. Doesn't
+// assign anything itself.
+export async function checkKkNumberCoverage(): Promise<KkCoverageState> {
+  await verifyAdmin();
+  const supabase = await createClient();
+
+  const { count: total, error: totalError } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'contributor');
+  if (totalError) return { error: totalError.message };
+
+  const { count: missing, error: missingError } = await supabase
+    .from('profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'contributor')
+    .is('kk_number', null);
+  if (missingError) return { error: missingError.message };
+
+  if (!missing) {
+    return { message: `All ${total ?? 0} contributors have a KK number assigned.` };
+  }
+  return { message: `${missing} of ${total ?? 0} contributors are missing a KK number.` };
 }

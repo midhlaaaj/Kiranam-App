@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
+import { getAutoAssignKkNumber } from '@/lib/kkSettings';
 
 export interface RegisterState {
   message?: string;
@@ -18,15 +19,27 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const fullName = String(formData.get('full_name') || '').trim();
   const dialCode = String(formData.get('dial_code') || '91').replace(/\D/g, '') || '91';
   const phoneDigits = String(formData.get('phone') || '').replace(/\D/g, '');
-  const monthlyAmount = Number(formData.get('monthly_amount') || 0);
+  const monthlyAmountRaw = String(formData.get('monthly_amount') || '').trim();
+  const monthlyAmount = monthlyAmountRaw ? Number(monthlyAmountRaw) : null;
+  const kkNumberInput = String(formData.get('kk_number') || '').trim();
 
   if (!fullName) return { error: 'Full name is required.' };
   if (dialCode === '91' && phoneDigits.length !== 10) return { error: 'Enter a valid 10-digit phone number.' };
   if (phoneDigits.length < 4 || phoneDigits.length > 14) return { error: 'Enter a valid phone number.' };
-  if (!(monthlyAmount > 0)) return { error: 'Monthly amount must be greater than zero.' };
+  if (monthlyAmount !== null && !(monthlyAmount > 0)) return { error: 'Monthly amount must be greater than zero.' };
 
   const phoneE164 = `+${dialCode}${phoneDigits}`;
   const supabaseAdmin = createAdminClient();
+  const autoAssignKkNumber = await getAutoAssignKkNumber();
+
+  let kkNumber: string;
+  if (autoAssignKkNumber) {
+    kkNumber = await nextKkNumber(supabaseAdmin);
+  } else {
+    if (!kkNumberInput) return { error: 'KK number is required.' };
+    if (!/^KK\d+$/i.test(kkNumberInput)) return { error: 'KK number must look like KK2001.' };
+    kkNumber = kkNumberInput.toUpperCase();
+  }
 
   // Phone is the auth identity, matching kiranam-app's phone-OTP login — no
   // password is set (phone accounts authenticate via OTP, not a password),
@@ -65,25 +78,51 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   // and skip straight past /register the first time they actually log in.
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ full_name: fullName })
+    .update({ full_name: fullName, kk_number: kkNumber })
     .eq('id', contributorId);
-  if (profileError) return { error: 'Contributor was created, but saving their name failed. Please edit it manually.' };
+  if (profileError) {
+    const message = /duplicate key|unique/i.test(profileError.message)
+      ? `Contributor was created, but ${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
+      : 'Contributor was created, but saving their name failed. Please edit it manually.';
+    return { error: message };
+  }
 
   // Autopay defaults off — a manually-registered contributor has no payment
   // method on file yet, so autopay can't actually run for them until they
-  // (or an admin) sets one up.
+  // (or an admin) sets one up. monthly_amount is left out entirely when the
+  // admin doesn't have it yet — the commitments table defaults it to ₹500
+  // and it can be set later once the real commitment is known.
   const { error: commitmentError } = await supabaseAdmin.from('commitments').insert({
     contributor_id: contributorId,
-    monthly_amount: monthlyAmount,
+    ...(monthlyAmount !== null ? { monthly_amount: monthlyAmount } : {}),
     autopay_enabled: false,
   });
   if (commitmentError) {
     return { error: 'Contributor was created, but saving their commitment failed. Please add it manually.' };
   }
 
-  await logAction(admin.id, 'register_contributor', 'profiles', contributorId, { fullName, monthlyAmount });
+  await logAction(admin.id, 'register_contributor', 'profiles', contributorId, { fullName, monthlyAmount, kkNumber });
   revalidatePath('/contributors');
   return { message: `${fullName} has been registered as a contributor. They can log in with this phone number.` };
+}
+
+// Highest KK number currently in use, +1. profiles.kk_number is a free-form
+// "KK" + digits string (not a DB sequence), so this reads the max numeric
+// suffix directly rather than relying on a counter — safe under this admin
+// panel's low write concurrency for contributor registration.
+async function nextKkNumber(supabaseAdmin: ReturnType<typeof createAdminClient>): Promise<string> {
+  const { data } = await supabaseAdmin
+    .from('profiles')
+    .select('kk_number')
+    .not('kk_number', 'is', null)
+    .ilike('kk_number', 'KK%');
+
+  let max = 0;
+  for (const row of data || []) {
+    const match = /^KK(\d+)$/i.exec(row.kk_number ?? '');
+    if (match) max = Math.max(max, parseInt(match[1], 10));
+  }
+  return `KK${max + 1}`;
 }
 
 export async function assignVolunteer(contributorId: string, formData: FormData) {

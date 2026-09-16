@@ -2,6 +2,8 @@ import { MailPlus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { revokeInvite } from './actions';
 import { InviteAdminForm } from './InviteAdminForm';
+import { KkNumberSettings } from './KkNumberSettings';
+import { getAutoAssignKkNumber } from '@/lib/kkSettings';
 import { PageHeading } from '@/components/PageHeading';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
@@ -32,6 +34,8 @@ export default async function SettingsPage() {
     .select('id, email, used_at, created_at, expires_at')
     .order('created_at', { ascending: false });
 
+  const autoAssignKkNumber = await getAutoAssignKkNumber();
+
   return (
     <div>
       <PageHeading title="Settings" />
@@ -54,6 +58,8 @@ export default async function SettingsPage() {
           <InviteAdminForm />
         </AddNewPanel>
       </div>
+
+      <KkNumberSettings autoAssignEnabled={autoAssignKkNumber} />
 
       <div className={`mt-6 ${tableWrapClass}`}>
         {(invites || []).length === 0 ? (
