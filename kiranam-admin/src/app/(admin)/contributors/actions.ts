@@ -7,6 +7,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { getAutoAssignKkNumber } from '@/lib/kkSettings';
+import { validatePhoneNumber } from '@/lib/phone';
+import { COUNTRIES } from '@/lib/countries';
+import type { CountryCode } from 'libphonenumber-js/min';
 
 export interface RegisterState {
   message?: string;
@@ -24,8 +27,16 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const kkNumberInput = String(formData.get('kk_number') || '').trim();
 
   if (!fullName) return { error: 'Full name is required.' };
-  if (dialCode === '91' && phoneDigits.length !== 10) return { error: 'Enter a valid 10-digit phone number.' };
-  if (phoneDigits.length < 4 || phoneDigits.length > 14) return { error: 'Enter a valid phone number.' };
+
+  // dial_code alone is ambiguous (+1 is both US and Canada, etc.) — fall back
+  // to the first country matching this dial code, same choice the <select>
+  // options list presents in that order.
+  const country = COUNTRIES.find((c) => c.dialCode === dialCode);
+  const phoneError = country
+    ? validatePhoneNumber(phoneDigits, country.iso2 as CountryCode)
+    : 'Enter a valid phone number.';
+  if (phoneError) return { error: phoneError };
+
   if (monthlyAmount !== null && !(monthlyAmount > 0)) return { error: 'Monthly amount must be greater than zero.' };
 
   const phoneE164 = `+${dialCode}${phoneDigits}`;

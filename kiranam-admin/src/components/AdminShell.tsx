@@ -1,26 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Menu, X, LogOut, Bell } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
 import { SidebarNav } from '@/components/SidebarNav';
 
 function SidebarContent({
   initials,
   email,
-  unreadCount,
   onLogout,
   onNavigate,
   onClose,
-  showBell = true,
 }: {
   initials: string;
   email: string;
-  unreadCount: number;
   onLogout: React.ReactNode;
   onNavigate?: () => void;
   onClose?: () => void;
-  showBell?: boolean;
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -28,33 +23,16 @@ function SidebarContent({
         <div className="min-w-0">
           <p className="text-3xl leading-none font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          {showBell && (
-            <Link
-              href="/my-notifications"
-              onClick={onNavigate}
-              aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-              className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
-            >
-              <Bell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-kiranam-primary px-1 text-[9px] font-bold text-white">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </Link>
-          )}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close navigation"
-              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink lg:hidden"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close navigation"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink lg:hidden"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       <SidebarNav onNavigate={onNavigate} />
@@ -73,13 +51,11 @@ function SidebarContent({
 export function AdminShell({
   initials,
   email,
-  unreadCount,
   logoutButton,
   children,
 }: {
   initials: string;
   email: string;
-  unreadCount: number;
   logoutButton: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -102,7 +78,7 @@ export function AdminShell({
     <div className="flex min-h-dvh bg-kiranam-bg">
       {/* Desktop sidebar — pinned, never scrolls */}
       <aside className="hidden h-dvh w-64 shrink-0 flex-col overflow-hidden border-r border-kiranam-border bg-kiranam-surface lg:sticky lg:top-0 lg:flex">
-        <SidebarContent initials={initials} email={email} unreadCount={unreadCount} onLogout={logoutButton} />
+        <SidebarContent initials={initials} email={email} onLogout={logoutButton} />
       </aside>
 
       {/* Mobile drawer */}
@@ -124,42 +100,26 @@ export function AdminShell({
         <SidebarContent
           initials={initials}
           email={email}
-          unreadCount={unreadCount}
           onLogout={logoutButton}
           onNavigate={() => setDrawerOpen(false)}
           onClose={() => setDrawerOpen(false)}
-          showBell={false}
         />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile top bar — logo matches the sidebar's; notifications live
-            here (top right) instead of inside the drawer, so they're
-            reachable without opening the menu first. */}
-        <div className="flex items-center justify-between gap-3 border-b border-kiranam-border bg-kiranam-surface px-4 py-3 lg:hidden">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open navigation"
-              className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-kiranam-ink transition hover:bg-kiranam-surface-alt"
-            >
-              <Menu size={20} />
-            </button>
-            <p className="text-3xl leading-none font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
-          </div>
-          <Link
-            href="/my-notifications"
-            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-            className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+        {/* Mobile top bar — hamburger + logo only. Notifications now live
+            inline in each page's own header (PageHeading / AddNewPanel),
+            beside that page's other actions, rather than in a separate bar. */}
+        <div className="flex items-center gap-3 border-b border-kiranam-border bg-kiranam-surface px-4 py-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open navigation"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-kiranam-ink transition hover:bg-kiranam-surface-alt"
           >
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-kiranam-primary px-1 text-[9px] font-bold text-white">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </Link>
+            <Menu size={20} />
+          </button>
+          <p className="text-3xl leading-none font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
         </div>
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>

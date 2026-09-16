@@ -1,6 +1,5 @@
 import { verifyAdmin } from '@/lib/dal';
 import { logout } from '@/lib/actions/auth';
-import { createClient } from '@/lib/supabase/server';
 import { AdminShell, LogoutIcon } from '@/components/AdminShell';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -11,13 +10,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .join('')
     .toUpperCase()
     .slice(0, 2);
-
-  const supabase = await createClient();
-  const { count: unreadCount } = await supabase
-    .from('notifications')
-    .select('id', { count: 'exact', head: true })
-    .eq('profile_id', admin.id)
-    .eq('is_read', false);
 
   const logoutButton = (
     <form action={logout}>
@@ -32,7 +24,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   );
 
   return (
-    <AdminShell initials={initials} email={admin.email || ''} logoutButton={logoutButton} unreadCount={unreadCount || 0}>
+    <AdminShell initials={initials} email={admin.email || ''} logoutButton={logoutButton}>
       {children}
     </AdminShell>
   );

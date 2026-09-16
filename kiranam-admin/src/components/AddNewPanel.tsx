@@ -23,6 +23,7 @@ export function AddNewPanel({
   title,
   description,
   label,
+  bell,
   filters,
   search,
   mobileToolbar,
@@ -32,6 +33,10 @@ export function AddNewPanel({
   title: string;
   description?: React.ReactNode;
   label: string;
+  /** Notification bell, rendered beside the create button — pass
+   * `<NotificationBell />` (a Server Component, so it can't be built inside
+   * this Client Component and has to come in as a prop from the page). */
+  bell?: React.ReactNode;
   /** Left side of the toolbar row (status pills, tabs, etc). */
   filters?: React.ReactNode;
   /** Right side of the toolbar row (search box + button). */
@@ -51,6 +56,14 @@ export function AddNewPanel({
       ? cloneElement(children as React.ReactElement<{ onDone?: () => void }>, { onDone: close })
       : children;
 
+  const hasToolbar = !!(filters || search);
+  const button = (
+    <button type="button" onClick={() => setOpen((o) => (modal ? true : !o))} className={buttonPrimary}>
+      {!modal && open ? <X size={16} strokeWidth={2.25} /> : <Plus size={16} strokeWidth={2.25} />}
+      {!modal && open ? 'Close' : label}
+    </button>
+  );
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-kiranam-border pb-5 mb-6">
@@ -58,18 +71,25 @@ export function AddNewPanel({
           <h1 className="text-2xl font-bold tracking-tight text-balance text-kiranam-ink">{title}</h1>
           {description && <p className="mt-1 text-sm text-kiranam-muted">{description}</p>}
         </div>
-        <button type="button" onClick={() => setOpen((o) => (modal ? true : !o))} className={buttonPrimary}>
-          {!modal && open ? <X size={16} strokeWidth={2.25} /> : <Plus size={16} strokeWidth={2.25} />}
-          {!modal && open ? 'Close' : label}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {/* No toolbar row at all (Notifications, Settings' invite panel) — button stays here.
+              With a toolbar, it moves down beside Search; on mobileToolbar pages (where the real
+              toolbar row hides below sm) it still needs a home on small screens, hence sm:hidden here. */}
+          {!hasToolbar && button}
+          {hasToolbar && mobileToolbar && <span className="sm:hidden">{button}</span>}
+          {bell}
+        </div>
       </div>
 
-      {(filters || search) && (
+      {hasToolbar && (
         <div
           className={`mb-6 flex-wrap items-center justify-between gap-3 ${mobileToolbar ? 'hidden sm:flex' : 'flex'}`}
         >
           <div className="flex flex-wrap items-center gap-3">{filters}</div>
-          <div className="flex flex-wrap items-center gap-3">{search}</div>
+          <div className="flex flex-wrap items-center gap-3">
+            {search}
+            {button}
+          </div>
         </div>
       )}
       {mobileToolbar}

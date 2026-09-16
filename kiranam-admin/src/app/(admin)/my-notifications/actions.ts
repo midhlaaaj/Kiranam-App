@@ -27,3 +27,12 @@ export async function markAllNotificationsRead() {
   revalidatePath('/my-notifications');
   revalidatePath('/', 'layout');
 }
+
+export async function clearAllNotifications() {
+  const admin = await verifyAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from('notifications').delete().eq('profile_id', admin.id);
+  if (error) throw new Error(error.message);
+  revalidatePath('/my-notifications');
+  revalidatePath('/', 'layout');
+}

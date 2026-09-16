@@ -3,6 +3,7 @@ import { History } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
+import { NotificationBell } from '@/components/NotificationBell';
 import { NotificationsForm } from './NotificationsForm';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PillTabs } from '@/components/PillTabs';
@@ -70,6 +71,7 @@ export default async function NotificationsPage({
         title="Notifications"
         description="Compose a message and send it as an in-app notification to all contributors or all volunteers."
         label="Send new"
+        bell={<NotificationBell />}
       >
         <NotificationsForm />
       </AddNewPanel>

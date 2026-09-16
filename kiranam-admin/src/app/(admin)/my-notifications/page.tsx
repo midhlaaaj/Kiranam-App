@@ -2,8 +2,9 @@ import { Bell } from 'lucide-react';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/EmptyState';
-import { buttonSecondary, cardClass } from '@/lib/ui';
-import { markNotificationRead, markAllNotificationsRead } from './actions';
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { buttonSecondary, linkDanger, cardClass } from '@/lib/ui';
+import { markNotificationRead, markAllNotificationsRead, clearAllNotifications } from './actions';
 
 // Admins work from this website, not the mobile app — so system-generated
 // notifications directed at an admin (new volunteer applications, a
@@ -21,18 +22,33 @@ export default async function MyNotificationsPage() {
     .limit(100);
 
   const hasUnread = (notifications || []).some((n) => !n.is_read);
+  const hasAny = (notifications || []).length > 0;
 
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-bold tracking-tight text-kiranam-ink">Notifications</h1>
-        {hasUnread && (
-          <form action={markAllNotificationsRead}>
-            <button type="submit" className={buttonSecondary}>
-              Mark all as read
-            </button>
-          </form>
-        )}
+        <div className="flex items-center gap-4">
+          {hasUnread && (
+            <form action={markAllNotificationsRead}>
+              <button type="submit" className={buttonSecondary}>
+                Mark all as read
+              </button>
+            </form>
+          )}
+          {hasAny && (
+            <ConfirmSubmitButton
+              action={clearAllNotifications}
+              label="Clear all"
+              title="Clear all notifications?"
+              description="This permanently deletes every notification in this list. This can't be undone."
+              confirmLabel="Clear all"
+              successMessage="Notifications cleared."
+              pendingMessage="Clearing…"
+              className={linkDanger}
+            />
+          )}
+        </div>
       </div>
 
       <div className={`${cardClass} divide-y divide-kiranam-border`}>

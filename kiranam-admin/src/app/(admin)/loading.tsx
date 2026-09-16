@@ -1,10 +1,9 @@
-import { PageHeading } from '@/components/PageHeading';
-import { SkeletonChart, SkeletonStatRow } from '@/components/Skeleton';
+import { SkeletonChart, SkeletonPageHeading, SkeletonStatRow } from '@/components/Skeleton';
 
 export default function Loading() {
   return (
     <div>
-      <PageHeading title="Overview" />
+      <SkeletonPageHeading titleWidth="w-36" />
       <div className="mt-6">
         <SkeletonStatRow count={5} />
       </div>

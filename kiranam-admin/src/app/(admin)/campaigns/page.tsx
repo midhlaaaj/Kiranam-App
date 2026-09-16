@@ -6,6 +6,7 @@ import { deleteCampaign } from './actions';
 import { CreateCampaignForm } from './CreateCampaignForm';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
+import { NotificationBell } from '@/components/NotificationBell';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PillTabs } from '@/components/PillTabs';
@@ -33,6 +34,7 @@ export default async function CampaignsPage({
       <AddNewPanel
         title="Campaigns"
         label="Add new campaign"
+        bell={<NotificationBell />}
         modal
         filters={
           <PillTabs

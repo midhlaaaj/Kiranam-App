@@ -26,6 +26,8 @@ export const inputClass =
 
 export const cardClass = 'rounded-lg border border-kiranam-border bg-kiranam-surface shadow-elevation-md';
 
+export const fileInputClass = `${inputClass} cursor-pointer file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`;
+
 export const tableWrapClass = `${cardClass} overflow-x-auto`;
 
 export const tableHeadRowClass =

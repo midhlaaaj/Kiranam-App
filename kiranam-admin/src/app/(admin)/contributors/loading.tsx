@@ -1,15 +1,17 @@
-import { PageHeading } from '@/components/PageHeading';
-import { Skeleton, SkeletonTable } from '@/components/Skeleton';
+import { Skeleton, SkeletonPageHeading, SkeletonTable } from '@/components/Skeleton';
 
 export default function Loading() {
   return (
     <div>
-      <PageHeading title="Contributors" />
+      <SkeletonPageHeading titleWidth="w-40" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Skeleton className="h-9 w-64 rounded-full" />
-        <Skeleton className="h-9 w-64 rounded-lg" />
+        <div className="flex flex-wrap items-center gap-3">
+          <Skeleton className="h-9 w-64 rounded-lg" />
+          <Skeleton className="h-10 w-44 rounded-lg" />
+        </div>
       </div>
-      <SkeletonTable rows={7} cols={4} />
+      <SkeletonTable rows={7} cols={5} />
     </div>
   );
 }

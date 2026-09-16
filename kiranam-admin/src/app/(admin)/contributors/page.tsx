@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Search, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { AddNewPanel } from '@/components/AddNewPanel';
+import { NotificationBell } from '@/components/NotificationBell';
 import { MobileToolbar } from '@/components/MobileToolbar';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -91,6 +92,7 @@ export default async function ContributorsPage({
         title="Contributors"
         label="Register contributor"
         description="For a contributor who committed offline and hasn't signed up in the app yet."
+        bell={<NotificationBell />}
         modal
         filters={filterPills}
         search={

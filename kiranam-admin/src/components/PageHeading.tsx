@@ -1,3 +1,5 @@
+import { NotificationBell } from './NotificationBell';
+
 export function PageHeading({
   title,
   description,
@@ -13,7 +15,10 @@ export function PageHeading({
         <h1 className="text-2xl font-bold tracking-tight text-balance text-kiranam-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-kiranam-muted">{description}</p>}
       </div>
-      {action}
+      <div className="flex shrink-0 items-center gap-2">
+        {action}
+        <NotificationBell />
+      </div>
     </div>
   );
 }

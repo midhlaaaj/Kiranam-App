@@ -15,6 +15,17 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* Hides the native up/down stepper on <input type="number"> without
+     touching every number input app-wide — opt in per-field. */
+  .no-spinner {
+    -moz-appearance: textfield;
+  }
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
 :root {
