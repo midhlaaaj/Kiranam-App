@@ -6,6 +6,8 @@ import { deleteEventImage, updateEvent } from '../../actions';
 import { buttonPrimary, cardClass, inputClass, linkDanger } from '@/lib/ui';
 import { Form } from '@/components/Form';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { FieldGroup, Field } from '@/components/FormField';
+import { ImageCropField, COVER_CROP, GALLERY_CROP } from '@/components/ImageCropField';
 
 export default async function EditEventPage({
   params,
@@ -31,43 +33,53 @@ export default async function EditEventPage({
 
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-kiranam-ink">Edit Event</h1>
 
-      <Form action={updateEvent.bind(null, id)} className={`mt-6 grid max-w-xl gap-3 ${cardClass} p-5`}>
-        <input name="title" defaultValue={event.title} required className={inputClass} />
-        <textarea name="description" defaultValue={event.description} className={inputClass} />
-        <input name="event_date" type="date" defaultValue={event.event_date ?? ''} className={inputClass} />
-        <input name="time_label" defaultValue={event.time_label ?? ''} className={inputClass} />
-        <input name="location" defaultValue={event.location ?? ''} className={inputClass} />
-        <label className="flex items-center gap-2 text-sm text-kiranam-ink">
-          <input type="checkbox" name="is_past" defaultChecked={event.is_past} className="accent-kiranam-primary" />
-          Mark as past event
-        </label>
+      <Form action={updateEvent.bind(null, id)} className={`mt-6 max-w-xl ${cardClass} p-5`}>
+        <FieldGroup label="Event details">
+          <Field label="Title" htmlFor="title">
+            <input id="title" name="title" defaultValue={event.title} required className={inputClass} />
+          </Field>
+          <Field label="Description">
+            <textarea id="description" name="description" rows={3} defaultValue={event.description} className={inputClass} />
+          </Field>
+        </FieldGroup>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image</label>
-          {event.cover_image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={event.cover_image_url} alt="" className="mb-2 h-28 w-full rounded-lg object-cover" />
-          )}
-          <input
-            name="cover"
-            type="file"
-            accept="image/*"
-            className={`${inputClass} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`}
-          />
-        </div>
+        <FieldGroup label="Schedule & location">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Date" htmlFor="event_date">
+              <input id="event_date" name="event_date" type="date" defaultValue={event.event_date ?? ''} className={inputClass} />
+            </Field>
+            <Field label="Time" htmlFor="time_label" hint='Free text, e.g. "6:00 PM onwards"'>
+              <input id="time_label" name="time_label" defaultValue={event.time_label ?? ''} className={inputClass} />
+            </Field>
+          </div>
+          <Field label="Location" htmlFor="location">
+            <input id="location" name="location" defaultValue={event.location ?? ''} className={inputClass} />
+          </Field>
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-kiranam-ink select-none">
+            <input
+              type="checkbox"
+              name="is_past"
+              defaultChecked={event.is_past}
+              className="size-4 cursor-pointer accent-kiranam-primary"
+            />
+            Mark as past event
+          </label>
+        </FieldGroup>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Add gallery images</label>
-          <input
-            name="gallery"
-            type="file"
-            accept="image/*"
-            multiple
-            className={`${inputClass} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`}
-          />
-        </div>
+        <FieldGroup label="Media" last>
+          <Field label="Cover image">
+            {event.cover_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={event.cover_image_url} alt="" className="mb-2 h-28 w-full rounded-lg object-cover" />
+            )}
+            <ImageCropField name="cover" crop={COVER_CROP} />
+          </Field>
+          <Field label="Add gallery images">
+            <ImageCropField name="gallery" crop={GALLERY_CROP} multiple />
+          </Field>
+        </FieldGroup>
 
-        <button type="submit" className={buttonPrimary}>
+        <button type="submit" className={`${buttonPrimary} mt-5 w-full`}>
           Save Changes
         </button>
       </Form>

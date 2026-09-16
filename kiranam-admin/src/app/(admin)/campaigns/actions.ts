@@ -62,6 +62,7 @@ export async function updateCampaign(id: string, formData: FormData) {
       // `raised` is intentionally NOT written here — it's auto-incremented by the
       // bump_campaign_raised DB trigger on successful contributions. Editing it
       // here would desync the displayed total from the real contribution sum.
+      // For manually closing out a campaign, use markCampaignFullyRaised instead.
       end_date: String(formData.get('end_date') || '') || null,
       status: String(formData.get('status') || 'active'),
     })
@@ -83,6 +84,32 @@ export async function updateCampaign(id: string, formData: FormData) {
   await logAction(admin.id, 'update_campaign', 'campaigns', id);
   revalidatePath('/campaigns');
   redirect(`/campaigns/${id}/edit`);
+}
+
+// One-click alternative to editing `raised` directly: sets it to the full
+// goal and marks the campaign Completed in one step, for when a campaign's
+// goal was reached through means this system doesn't track (e.g. offline
+// pledges settled outside the app) and an admin wants to close it out.
+export async function markCampaignFullyRaised(id: string) {
+  const admin = await verifyAdmin();
+  const supabase = await createClient();
+
+  const { data: campaign, error: fetchError } = await supabase
+    .from('campaigns')
+    .select('goal')
+    .eq('id', id)
+    .single();
+  if (fetchError || !campaign) throw new Error(fetchError?.message || 'Campaign not found.');
+
+  const { error } = await supabase
+    .from('campaigns')
+    .update({ raised: campaign.goal, status: 'completed' })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+
+  await logAction(admin.id, 'mark_campaign_fully_raised', 'campaigns', id, { goal: campaign.goal });
+  revalidatePath('/campaigns');
+  revalidatePath(`/campaigns/${id}/edit`);
 }
 
 export async function deleteCampaignImage(imageId: string, campaignId: string) {

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { createCampaign, type CreateCampaignState } from './actions';
 import { buttonPrimary, cardClass, inputClass } from '@/lib/ui';
 import { Form } from '@/components/Form';
+import { ImageCropField, COVER_CROP } from '@/components/ImageCropField';
 
 const initialState: CreateCampaignState = {};
 
@@ -36,12 +37,7 @@ export function CreateCampaignForm({ onDone }: { onDone?: () => void }) {
       </div>
       <div className="sm:col-span-2">
         <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image (optional)</label>
-        <input
-          name="cover"
-          type="file"
-          accept="image/*"
-          className={`${inputClass} file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`}
-        />
+        <ImageCropField name="cover" crop={COVER_CROP} />
       </div>
 
       {state?.error && <p className="text-sm text-kiranam-danger sm:col-span-2" role="alert">{state.error}</p>}
