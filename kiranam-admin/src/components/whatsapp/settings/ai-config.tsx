@@ -24,6 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/whatsapp/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/whatsapp/ui/dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { AiKnowledgeCard } from './ai-knowledge';
 import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/whatsapp/ai/defaults';
@@ -56,6 +64,7 @@ export function AiConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
 
   const [configured, setConfigured] = useState(false);
@@ -222,6 +231,7 @@ export function AiConfig() {
         setAutoReplyEnabled(false);
         setSystemPrompt('');
         setHandoffAgentId('');
+        setRemoveConfirmOpen(false);
       } else {
         const data = await res.json();
         toast.error(data.error ?? t('removeFailed'));
@@ -503,7 +513,7 @@ export function AiConfig() {
           {configured ? (
             <Button
               variant="ghost"
-              onClick={handleRemove}
+              onClick={() => setRemoveConfirmOpen(true)}
               disabled={!canEdit || removing}
               className="text-destructive hover:text-destructive"
             >
@@ -524,6 +534,30 @@ export function AiConfig() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('removeDialogTitle')}</DialogTitle>
+            <DialogDescription>{t('removeDialogDesc')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveConfirmOpen(false)}>
+              {t('cancel')}
+            </Button>
+            <Button onClick={handleRemove} disabled={removing} className="bg-red-600 text-white hover:bg-red-700">
+              {removing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('removing')}
+                </>
+              ) : (
+                t('removeBtn')
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

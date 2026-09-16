@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { deleteEventImage, updateEvent } from '../../actions';
 import { buttonPrimary, cardClass, inputClass, linkDanger } from '@/lib/ui';
 import { Form } from '@/components/Form';
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 
 export default async function EditEventPage({
   params,
@@ -79,11 +80,16 @@ export default async function EditEventPage({
               <div key={img.id} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={img.image_url} alt="" className="h-24 w-full rounded-lg object-cover" />
-                <form action={deleteEventImage.bind(null, img.id, id)} className="mt-1">
-                  <button type="submit" className={linkDanger}>
-                    Delete
-                  </button>
-                </form>
+                <ConfirmSubmitButton
+                  action={deleteEventImage.bind(null, img.id, id)}
+                  label="Delete"
+                  title="Delete this image?"
+                  description="This gallery image will be permanently removed from the event."
+                  confirmLabel="Delete"
+                  successMessage="Image deleted."
+                  pendingMessage="Deleting image…"
+                  className={`mt-1 ${linkDanger}`}
+                />
               </div>
             ))}
           </div>

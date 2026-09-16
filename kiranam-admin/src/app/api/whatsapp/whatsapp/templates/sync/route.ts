@@ -3,6 +3,7 @@ import { createClient } from '@/lib/whatsapp/supabase/server'
 import { decrypt } from '@/lib/whatsapp/whatsapp/encryption'
 import { normalizeStatus } from '@/lib/whatsapp/whatsapp/template-status-normalize'
 import type { TemplateButton, TemplateSampleValues } from '@/types/whatsapp'
+import { hasMinRole, isAccountRole } from '@/lib/whatsapp/auth/roles'
 
 /**
  * Sync message templates from Meta → local message_templates table.
@@ -139,13 +140,21 @@ export async function POST() {
     // the message_templates we sync into are account-scoped.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('account_id')
+      .select('account_id, account_role')
       .eq('user_id', user.id)
       .maybeSingle()
     const accountId = profile?.account_id as string | undefined
+    const accountRole = profile?.account_role
     if (!accountId) {
       return NextResponse.json(
         { error: 'Your profile is not linked to an account.' },
+        { status: 403 },
+      )
+    }
+    // Syncing writes template rows locally — admin+ capability (canEditSettings).
+    if (!isAccountRole(accountRole) || !hasMinRole(accountRole, 'admin')) {
+      return NextResponse.json(
+        { error: "This action requires the 'admin' role or higher" },
         { status: 403 },
       )
     }

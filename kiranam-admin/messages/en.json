@@ -410,6 +410,7 @@
       "toastNoteAdded": "Note added",
       "toastNoteDeleteFailed": "Failed to delete note",
       "toastNoteDeleted": "Note deleted",
+      "confirmDeleteNote": "Delete this note?",
       "toastCustomFieldsSaved": "Custom fields saved",
       "toastCustomFieldsFailed": "Failed to save custom fields",
       "toastTemplateSent": "Template \"{name}\" sent",
@@ -572,7 +573,10 @@
       "toastMoveOrDeleteDeals": "Move or delete deals in this stage first",
       "toastFailedDeleteStage": "Failed to delete stage",
       "toastFailedDeletePipeline": "Failed to delete pipeline",
-      "toastDeleted": "Pipeline deleted"
+      "toastDeleted": "Pipeline deleted",
+      "deleteStage": "Delete stage?",
+      "deleteStageDesc": "\"{name}\" will be permanently removed from this pipeline. This cannot be undone.",
+      "deleteStageBtn": "Delete Stage"
     },
     "analytics": {
       "totalDeals": "Total Deals",
@@ -1246,11 +1250,19 @@
       "expired": "expired",
       "revoke": "Revoke",
       "revokedToast": "Invitation revoked",
+      "revokeDialogTitle": "Revoke this invitation?",
+      "revokeDialogDesc": "<bold>{label}</bold> will no longer be able to use this invite link to join the account.",
+      "revoking": "Revoking...",
+      "revokeBtn": "Revoke invitation",
       "removeDialogTitle": "Remove member",
       "removeDialogDesc": "Remove <bold>{name}</bold> from the account? They'll be signed out of this account and given a fresh personal account on their next sign-in. Their login isn't deleted.",
       "cancel": "Cancel",
       "removing": "Removing...",
-      "removeBtn": "Remove member"
+      "removeBtn": "Remove member",
+      "roleChangeDialogTitle": "Change this member's role?",
+      "roleChangeDialogDesc": "<bold>{name}</bold>'s role will change from <bold>{fromRole}</bold> to <bold>{toRole}</bold>, changing what they can do in this account.",
+      "changing": "Changing...",
+      "roleChangeBtn": "Change role"
     },
     "invite": {
       "inviteCreated": "Invite created",
@@ -1593,6 +1605,8 @@
       "neverUsed": "never used",
       "expires": "expires {date}",
       "revoke": "Revoke",
+      "revokeConfirmTitle": "Revoke this API key?",
+      "revokeConfirmDesc": "\"{name}\" will stop working immediately. Any integration using it will break. This cannot be undone.",
       "revokeSuccess": "Revoked \"{name}\"",
       "revokeFailed": "Failed to revoke key",
       "loadFailed": "Failed to load API keys",
@@ -1666,7 +1680,12 @@
       "saveSuccess": "AI assistant saved.",
       "saveFailed": "Failed to save.",
       "removeSuccess": "AI configuration removed.",
-      "removeFailed": "Failed to remove."
+      "removeFailed": "Failed to remove.",
+      "removeDialogTitle": "Remove AI assistant configuration?",
+      "removeDialogDesc": "This deletes the API key, prompt, and auto-reply settings for this account. The assistant will stop working until it's set up again. This cannot be undone.",
+      "cancel": "Cancel",
+      "removing": "Removing...",
+      "removeBtn": "Remove configuration"
     },
     "aiKnowledge": {
       "loadFailed": "Failed to load knowledge base",
@@ -1677,6 +1696,10 @@
       "saveFailed": "Failed to save.",
       "removeSuccess": "Document removed.",
       "removeFailed": "Failed to remove.",
+      "removeDialogTitle": "Delete this document?",
+      "removeDialogDesc": "\"{title}\" will be permanently removed from the knowledge base. This cannot be undone.",
+      "removing": "Removing...",
+      "removeBtn": "Delete document",
       "reindexSuccess": "Reindexed {count} document(s).",
       "reindexFailed": "Reindex failed.",
       "title": "Knowledge base",

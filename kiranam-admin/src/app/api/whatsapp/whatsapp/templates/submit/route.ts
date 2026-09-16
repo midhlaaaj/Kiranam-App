@@ -10,6 +10,7 @@ import {
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/whatsapp/template-components'
 import { ensureImageHeaderHandle } from '@/lib/whatsapp/whatsapp/template-header-handle'
 import { normalizeStatus } from '@/lib/whatsapp/whatsapp/template-status-normalize'
+import { hasMinRole, isAccountRole } from '@/lib/whatsapp/auth/roles'
 
 /**
  * Shared upsert payload builder — both the Meta-failure path and the
@@ -101,13 +102,21 @@ export async function POST(request: Request) {
     // message_templates row are account-scoped post-multi-user.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('account_id')
+      .select('account_id, account_role')
       .eq('user_id', user.id)
       .maybeSingle()
     const accountId = profile?.account_id as string | undefined
+    const accountRole = profile?.account_role
     if (!accountId) {
       return NextResponse.json(
         { error: 'Your profile is not linked to an account.' },
+        { status: 403 },
+      )
+    }
+    // Submitting a new template is an admin+ capability (canEditSettings).
+    if (!isAccountRole(accountRole) || !hasMinRole(accountRole, 'admin')) {
+      return NextResponse.json(
+        { error: "This action requires the 'admin' role or higher" },
         { status: 403 },
       )
     }

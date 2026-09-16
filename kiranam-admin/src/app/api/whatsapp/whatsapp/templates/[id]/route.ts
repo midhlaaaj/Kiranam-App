@@ -11,6 +11,7 @@ import {
 } from '@/lib/whatsapp/whatsapp/template-validators'
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/whatsapp/template-components'
 import { ensureImageHeaderHandle } from '@/lib/whatsapp/whatsapp/template-header-handle'
+import { hasMinRole, isAccountRole } from '@/lib/whatsapp/auth/roles'
 
 /**
  * Per-template lifecycle endpoint.
@@ -69,13 +70,21 @@ export async function PATCH(
     // lookups work for teammates who didn't author the row.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('account_id')
+      .select('account_id, account_role')
       .eq('user_id', user.id)
       .maybeSingle()
     const accountId = profile?.account_id as string | undefined
+    const accountRole = profile?.account_role
     if (!accountId) {
       return NextResponse.json(
         { error: 'Your profile is not linked to an account.' },
+        { status: 403 },
+      )
+    }
+    // Editing templates is an admin+ capability (canEditSettings).
+    if (!isAccountRole(accountRole) || !hasMinRole(accountRole, 'admin')) {
+      return NextResponse.json(
+        { error: "This action requires the 'admin' role or higher" },
         { status: 403 },
       )
     }
@@ -259,13 +268,21 @@ export async function DELETE(
     // the shared whatsapp_config.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('account_id')
+      .select('account_id, account_role')
       .eq('user_id', user.id)
       .maybeSingle()
     const accountId = profile?.account_id as string | undefined
+    const accountRole = profile?.account_role
     if (!accountId) {
       return NextResponse.json(
         { error: 'Your profile is not linked to an account.' },
+        { status: 403 },
+      )
+    }
+    // Deleting templates is an admin+ capability (canEditSettings).
+    if (!isAccountRole(accountRole) || !hasMinRole(accountRole, 'admin')) {
+      return NextResponse.json(
+        { error: "This action requires the 'admin' role or higher" },
         { status: 403 },
       )
     }

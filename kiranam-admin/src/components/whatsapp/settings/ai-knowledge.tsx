@@ -14,6 +14,14 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/whatsapp/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/whatsapp/ui/dialog';
 import { useTranslations } from 'next-intl';
 
 interface DocSummary {
@@ -41,6 +49,8 @@ export function AiKnowledgeCard({
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
   const [reindexing, setReindexing] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<DocSummary | null>(null);
+  const [removing, setRemoving] = useState(false);
   const loadedAccountIdRef = useRef<string | null>(null);
   const t = useTranslations('Settings.aiKnowledge');
 
@@ -129,17 +139,21 @@ export function AiKnowledgeCard({
   };
 
   const remove = async (id: string) => {
+    setRemoving(true);
     try {
       const res = await fetch(`/api/whatsapp/ai/knowledge/${id}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success(t('removeSuccess'));
         setDocs((d) => d.filter((x) => x.id !== id));
+        setDocToDelete(null);
       } else {
         const data = await res.json();
         toast.error(data.error ?? t('removeFailed'));
       }
     } catch {
       toast.error(t('removeFailed'));
+    } finally {
+      setRemoving(false);
     }
   };
 
@@ -161,6 +175,7 @@ export function AiKnowledgeCard({
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
@@ -210,7 +225,7 @@ export function AiKnowledgeCard({
                           variant="ghost"
                           size="sm"
                           className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          onClick={() => void remove(doc.id)}
+                          onClick={() => setDocToDelete(doc)}
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -284,5 +299,36 @@ export function AiKnowledgeCard({
         )}
       </CardContent>
     </Card>
+
+    <Dialog open={docToDelete !== null} onOpenChange={(open) => !open && setDocToDelete(null)}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t('removeDialogTitle')}</DialogTitle>
+          <DialogDescription>
+            {t('removeDialogDesc', { title: docToDelete?.title ?? '' })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDocToDelete(null)}>
+            {t('cancel')}
+          </Button>
+          <Button
+            onClick={() => docToDelete && void remove(docToDelete.id)}
+            disabled={removing}
+            className="bg-red-600 text-white hover:bg-red-700"
+          >
+            {removing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t('removing')}
+              </>
+            ) : (
+              t('removeBtn')
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

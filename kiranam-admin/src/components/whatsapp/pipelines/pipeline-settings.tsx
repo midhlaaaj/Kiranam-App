@@ -79,6 +79,8 @@ export function PipelineSettings({
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [stageToDelete, setStageToDelete] = useState<PipelineStage | null>(null);
+  const [deletingStage, setDeletingStage] = useState(false);
 
   // Reset form state when the dialog opens or its prop inputs change
   // — legitimate prop-driven sync.
@@ -87,6 +89,7 @@ export function PipelineSettings({
     setName(pipeline.name);
     setLocalStages([...stages].sort((a, b) => a.position - b.position));
     setShowDeleteConfirm(false);
+    setStageToDelete(null);
   }, [open, pipeline, stages]);
 
   const sensors = useSensors(
@@ -169,15 +172,18 @@ export function PipelineSettings({
       toast.error(t("toastMoveOrDeleteDeals"));
       return;
     }
+    setDeletingStage(true);
     const { error } = await supabase
       .from("pipeline_stages")
       .delete()
       .eq("id", stageId);
+    setDeletingStage(false);
     if (error) {
       toast.error(t("toastFailedDeleteStage"));
       return;
     }
     setLocalStages(localStages.filter((s) => s.id !== stageId));
+    setStageToDelete(null);
   }
 
   async function handleDeletePipeline() {
@@ -198,7 +204,8 @@ export function PipelineSettings({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-popover border-border max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-popover-foreground">{t("managePipeline")}</DialogTitle>
@@ -272,7 +279,7 @@ export function PipelineSettings({
                             updated[index] = { ...updated[index], color: v };
                             setLocalStages(updated);
                           }}
-                          onRemove={() => handleRemoveStage(stage.id)}
+                          onRemove={() => setStageToDelete(stage)}
                           colors={STAGE_COLORS}
                           t={t}
                         />
@@ -359,7 +366,35 @@ export function PipelineSettings({
           </>
         )}
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <Dialog open={!!stageToDelete} onOpenChange={(o) => !o && setStageToDelete(null)}>
+        <DialogContent className="sm:max-w-sm bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{t("deleteStage")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("deleteStageDesc", { name: stageToDelete?.name ?? "" })}
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setStageToDelete(null)}
+              className="border-border bg-transparent text-muted-foreground hover:bg-muted"
+            >
+              {t("cancel")}
+            </Button>
+            <Button
+              onClick={() => stageToDelete && handleRemoveStage(stageToDelete.id)}
+              disabled={deletingStage}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deletingStage ? t("deleting") : t("deleteStageBtn")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

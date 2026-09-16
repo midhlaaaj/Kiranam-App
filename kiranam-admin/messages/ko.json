@@ -409,6 +409,7 @@
       "toastNoteAdded": "메모가 추가되었습니다",
       "toastNoteDeleteFailed": "메모를 삭제하지 못했습니다",
       "toastNoteDeleted": "메모가 삭제되었습니다",
+      "confirmDeleteNote": "이 메모를 삭제하시겠습니까?",
       "toastCustomFieldsSaved": "커스텀 필드가 저장되었습니다",
       "toastCustomFieldsFailed": "커스텀 필드를 저장하지 못했습니다",
       "toastTemplateSent": "\"{name}\" 템플릿을 보냈습니다",
@@ -571,7 +572,10 @@
       "toastMoveOrDeleteDeals": "먼저 이 단계의 딜을 이동하거나 삭제하세요",
       "toastFailedDeleteStage": "단계를 삭제하지 못했습니다",
       "toastFailedDeletePipeline": "파이프라인을 삭제하지 못했습니다",
-      "toastDeleted": "파이프라인이 삭제되었습니다"
+      "toastDeleted": "파이프라인이 삭제되었습니다",
+      "deleteStage": "단계를 삭제하시겠습니까?",
+      "deleteStageDesc": "\"{name}\" 단계가 이 파이프라인에서 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "deleteStageBtn": "단계 삭제"
     },
     "analytics": {
       "totalDeals": "전체 딜",
@@ -1245,11 +1249,19 @@
       "expired": "만료됨",
       "revoke": "취소",
       "revokedToast": "초대가 취소되었습니다",
+      "revokeDialogTitle": "이 초대를 취소하시겠습니까?",
+      "revokeDialogDesc": "<bold>{label}</bold>이(가) 더 이상 이 초대 링크로 계정에 참여할 수 없습니다.",
+      "revoking": "취소하는 중...",
+      "revokeBtn": "초대 취소",
       "removeDialogTitle": "멤버 제거",
       "removeDialogDesc": "<bold>{name}</bold>을(를) 이 계정에서 제거하시겠습니까? 이 계정에서 로그아웃되며 다음 로그인 시 새로운 개인 계정이 발급됩니다. 로그인 정보 자체는 삭제되지 않습니다.",
       "cancel": "취소",
       "removing": "제거 중...",
-      "removeBtn": "멤버 제거"
+      "removeBtn": "멤버 제거",
+      "roleChangeDialogTitle": "이 멤버의 역할을 변경하시겠습니까?",
+      "roleChangeDialogDesc": "<bold>{name}</bold>의 역할이 <bold>{fromRole}</bold>에서 <bold>{toRole}</bold>(으)로 변경되어 이 계정에서 할 수 있는 작업이 바뀝니다.",
+      "changing": "변경하는 중...",
+      "roleChangeBtn": "역할 변경"
     },
     "invite": {
       "inviteCreated": "초대가 생성되었습니다",
@@ -1591,6 +1603,8 @@
       "neverUsed": "사용한 적 없음",
       "expires": "{date} 만료",
       "revoke": "취소",
+      "revokeConfirmTitle": "이 API 키를 취소하시겠습니까?",
+      "revokeConfirmDesc": "\"{name}\" 키가 즉시 작동을 멈춥니다. 이 키를 사용하는 모든 연동이 중단됩니다. 이 작업은 되돌릴 수 없습니다.",
       "revokeSuccess": "\"{name}\"을(를) 취소했습니다",
       "revokeFailed": "키를 취소하지 못했습니다",
       "loadFailed": "API 키를 불러오지 못했습니다",
@@ -1664,7 +1678,12 @@
       "saveSuccess": "AI 어시스턴트가 저장되었습니다.",
       "saveFailed": "저장하지 못했습니다.",
       "removeSuccess": "AI 설정이 제거되었습니다.",
-      "removeFailed": "제거하지 못했습니다."
+      "removeFailed": "제거하지 못했습니다.",
+      "removeDialogTitle": "AI 어시스턴트 설정을 제거하시겠습니까?",
+      "removeDialogDesc": "이 계정의 API 키, 프롬프트, 자동 응답 설정이 삭제됩니다. 다시 설정할 때까지 어시스턴트가 작동하지 않습니다. 이 작업은 되돌릴 수 없습니다.",
+      "cancel": "취소",
+      "removing": "제거하는 중...",
+      "removeBtn": "설정 제거"
     },
     "aiKnowledge": {
       "loadFailed": "지식베이스를 불러오지 못했습니다",
@@ -1675,6 +1694,10 @@
       "saveFailed": "저장하지 못했습니다.",
       "removeSuccess": "문서가 제거되었습니다.",
       "removeFailed": "제거하지 못했습니다.",
+      "removeDialogTitle": "이 문서를 삭제하시겠습니까?",
+      "removeDialogDesc": "\"{title}\" 문서가 지식베이스에서 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+      "removing": "삭제하는 중...",
+      "removeBtn": "문서 삭제",
       "reindexSuccess": "문서 {count}개를 재색인했습니다.",
       "reindexFailed": "재색인에 실패했습니다.",
       "title": "지식베이스",

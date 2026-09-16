@@ -136,6 +136,12 @@ export function MembersTab() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
+  const [revokingInvite, setRevokingInvite] = useState<Invitation | null>(null);
+  const [revokingInviteBusy, setRevokingInviteBusy] = useState(false);
+  const [pendingRoleChange, setPendingRoleChange] = useState<{
+    member: Member;
+    nextRole: AccountRole;
+  } | null>(null);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
     null,
   );
@@ -255,6 +261,7 @@ export function MembersTab() {
   }
 
   async function handleRevoke(invite: Invitation) {
+    setRevokingInviteBusy(true);
     try {
       const res = await fetch(`/api/whatsapp/account/invitations/${invite.id}`, {
         method: 'DELETE',
@@ -266,9 +273,12 @@ export function MembersTab() {
       }
       toast.success(t('revokedToast'));
       setInvitations((prev) => prev.filter((i) => i.id !== invite.id));
+      setRevokingInvite(null);
     } catch (err) {
       console.error('[MembersTab] revoke error:', err);
       toast.error('Could not reach the server');
+    } finally {
+      setRevokingInviteBusy(false);
     }
   }
 
@@ -421,7 +431,7 @@ export function MembersTab() {
                           // don't expose a clear affordance, so the
                           // guard is defensive — but the typed
                           // signature requires it.
-                          v && handleRoleChange(member, v as AccountRole)
+                          v && setPendingRoleChange({ member, nextRole: v as AccountRole })
                         }
                       >
                         <SelectTrigger
@@ -544,7 +554,7 @@ export function MembersTab() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleRevoke(inv)}
+                        onClick={() => setRevokingInvite(inv)}
                         className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
                       >
                         <MailX className="size-4" />
@@ -606,6 +616,95 @@ export function MembersTab() {
               ) : (
                 t('removeBtn')
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={revokingInvite !== null}
+        onOpenChange={(open) => {
+          if (!open) setRevokingInvite(null);
+        }}
+      >
+        <DialogContent className="bg-popover border-border sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-popover-foreground">
+              <AlertTriangle className="size-4 text-amber-400" />
+              {t('revokeDialogTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {t.rich('revokeDialogDesc', {
+                label: revokingInvite?.label || t('untitledInvite'),
+                bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="bg-popover border-border">
+            <Button
+              variant="outline"
+              onClick={() => setRevokingInvite(null)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={() => revokingInvite && handleRevoke(revokingInvite)}
+              disabled={revokingInviteBusy}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {revokingInviteBusy ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  {t('revoking')}
+                </>
+              ) : (
+                t('revokeBtn')
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={pendingRoleChange !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRoleChange(null);
+        }}
+      >
+        <DialogContent className="bg-popover border-border sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t('roleChangeDialogTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {pendingRoleChange &&
+                t.rich('roleChangeDialogDesc', {
+                  name: pendingRoleChange.member.full_name || t('unnamed'),
+                  fromRole: tRoles(pendingRoleChange.member.role),
+                  toRole: tRoles(pendingRoleChange.nextRole),
+                  bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
+                })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="bg-popover border-border">
+            <Button
+              variant="outline"
+              onClick={() => setPendingRoleChange(null)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                if (!pendingRoleChange) return;
+                const { member, nextRole } = pendingRoleChange;
+                setPendingRoleChange(null);
+                void handleRoleChange(member, nextRole);
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {t('roleChangeBtn')}
             </Button>
           </DialogFooter>
         </DialogContent>

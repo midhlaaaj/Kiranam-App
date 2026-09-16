@@ -7,6 +7,7 @@ import {
   verifyPhoneNumber,
 } from '@/lib/whatsapp/whatsapp/meta-api'
 import { encrypt, decrypt } from '@/lib/whatsapp/whatsapp/encryption'
+import { hasMinRole, isAccountRole, type AccountRole } from '@/lib/whatsapp/auth/roles'
 
 /**
  * Resolve the caller's account_id from their profile. Inlined here
@@ -29,6 +30,22 @@ async function resolveAccountId(
     .maybeSingle()
   if (error || !data?.account_id) return null
   return data.account_id as string
+}
+
+// Like resolveAccountId, but also returns the caller's account role — for
+// mutating endpoints (POST/DELETE) that require admin+ (canEditSettings),
+// not just any authenticated account member.
+async function resolveAccountIdAndRole(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+): Promise<{ accountId: string; role: AccountRole } | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('account_id, account_role')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error || !data?.account_id || !isAccountRole(data.account_role)) return null
+  return { accountId: data.account_id as string, role: data.account_role }
 }
 
 // Lazy-initialised service-role client. We need it to detect a
@@ -187,13 +204,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const accountId = await resolveAccountId(supabase, user.id)
-    if (!accountId) {
+    const accountCtx = await resolveAccountIdAndRole(supabase, user.id)
+    if (!accountCtx) {
       return NextResponse.json(
         { error: 'Your profile is not linked to an account.' },
         { status: 403 },
       )
     }
+    // Editing the WhatsApp connection is an admin+ capability (canEditSettings).
+    if (!hasMinRole(accountCtx.role, 'admin')) {
+      return NextResponse.json(
+        { error: "This action requires the 'admin' role or higher" },
+        { status: 403 },
+      )
+    }
+    const accountId = accountCtx.accountId
 
     const body = await request.json()
     const { phone_number_id, waba_id, access_token, verify_token, pin } = body
@@ -498,13 +523,20 @@ export async function DELETE() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const accountId = await resolveAccountId(supabase, user.id)
-    if (!accountId) {
+    const accountCtx = await resolveAccountIdAndRole(supabase, user.id)
+    if (!accountCtx) {
       return NextResponse.json(
         { error: 'Your profile is not linked to an account.' },
         { status: 403 },
       )
     }
+    if (!hasMinRole(accountCtx.role, 'admin')) {
+      return NextResponse.json(
+        { error: "This action requires the 'admin' role or higher" },
+        { status: 403 },
+      )
+    }
+    const accountId = accountCtx.accountId
 
     const { error: deleteError } = await supabase
       .from('whatsapp_config')

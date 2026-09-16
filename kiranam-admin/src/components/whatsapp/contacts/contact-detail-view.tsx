@@ -275,6 +275,7 @@ export function ContactDetailView({
   }
 
   async function deleteNote(noteId: string) {
+    if (!window.confirm(t('confirmDeleteNote'))) return;
     const { error } = await supabase
       .from('contact_notes')
       .delete()

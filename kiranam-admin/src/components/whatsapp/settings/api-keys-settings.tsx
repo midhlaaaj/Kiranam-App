@@ -77,6 +77,7 @@ export function ApiKeysSettings() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [revoking, setRevoking] = useState<string | null>(null);
+  const [keyToRevoke, setKeyToRevoke] = useState<ApiKey | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -121,6 +122,7 @@ export function ApiKeysSettings() {
           k.id === key.id ? { ...k, revoked_at: new Date().toISOString() } : k
         )
       );
+      setKeyToRevoke(null);
     } catch (err) {
       console.error('[ApiKeysSettings] revoke error:', err);
       toast.error(t('networkError'));
@@ -249,7 +251,7 @@ export function ApiKeysSettings() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRevoke(k)}
+                          onClick={() => setKeyToRevoke(k)}
                           disabled={revoking === k.id}
                           className="self-start border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200 sm:self-auto"
                         >
@@ -275,6 +277,40 @@ export function ApiKeysSettings() {
         onOpenChange={setCreateOpen}
         onCreated={load}
       />
+
+      <Dialog open={!!keyToRevoke} onOpenChange={(o) => !o && setKeyToRevoke(null)}>
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t('revokeConfirmTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {t('revokeConfirmDesc', { name: keyToRevoke?.name ?? '' })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setKeyToRevoke(null)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={() => keyToRevoke && handleRevoke(keyToRevoke)}
+              disabled={!!revoking}
+              className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+            >
+              {revoking === keyToRevoke?.id ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Trash2 className="size-4" />
+              )}
+              {t('revoke')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
