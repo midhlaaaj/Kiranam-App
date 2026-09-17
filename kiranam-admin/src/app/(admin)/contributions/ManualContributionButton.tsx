@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-import { recordManualContribution, type OfflinePaymentState } from './actions';
+import { getManualContributionOptions, recordManualContribution, type OfflinePaymentState } from './actions';
 import { Modal } from '@/components/Modal';
 import { buttonPrimary, inputClass } from '@/lib/ui';
 
@@ -30,19 +30,26 @@ function formatMoney(amount: number) {
  * Contributions list — same underlying action as a contributor's own
  * "Record Offline Payment" form, just with a contributor picker up front
  * since this page isn't scoped to one contributor. */
-export function ManualContributionButton({
-  contributors,
-  campaigns,
-}: {
-  contributors: ContributorOption[];
-  campaigns: CampaignOption[];
-}) {
+export function ManualContributionButton() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<ContributorOption | null>(null);
   const [state, formAction, pending] = useActionState(recordManualContribution, initialState);
   const lastState = useRef<OfflinePaymentState>(initialState);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Fetched on mount instead of being awaited by the Contributions page
+  // (a Server Component) — that page no longer blocks its title/action
+  // button on these DB round-trips. The modal starts closed, so this
+  // resolves well before anyone could plausibly open it.
+  const [contributors, setContributors] = useState<ContributorOption[]>([]);
+  const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
+  useEffect(() => {
+    getManualContributionOptions().then((opts) => {
+      setContributors(opts.contributors);
+      setCampaigns(opts.campaigns);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (state === lastState.current) return;

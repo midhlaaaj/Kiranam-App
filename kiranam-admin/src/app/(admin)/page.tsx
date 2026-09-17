@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { Clock3, HeartHandshake, Megaphone, Users, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
@@ -13,6 +14,7 @@ import { deriveContributorStatus } from '@/lib/volunteerStats';
 import { bucketKey, bucketLabel, getBucketsForPage, type Granularity } from '@/lib/timeBuckets';
 import { cardClass, formatMoney } from '@/lib/ui';
 import { PillTabs } from '@/components/PillTabs';
+import { SkeletonChart, SkeletonStatRow } from '@/components/Skeleton';
 
 async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?: string, cgTo?: string) {
   const supabase = await createClient();
@@ -176,6 +178,51 @@ export default async function OverviewPage({
   const page = Math.max(0, parseInt(pageStr || '0', 10) || 0);
   const contributorGranularity: 'weekly' | 'monthly' = cgRange === 'monthly' ? 'monthly' : 'weekly';
 
+  return (
+    <div>
+      <PageHeading title="Overview" />
+      <Suspense
+        fallback={
+          <div>
+            <SkeletonStatRow count={5} />
+            <div className="mt-6">
+              <SkeletonChart />
+            </div>
+            <div className="mt-6 grid gap-6 lg:grid-cols-2">
+              <SkeletonChart />
+              <SkeletonChart />
+            </div>
+            <div className="mt-6">
+              <SkeletonChart />
+            </div>
+          </div>
+        }
+      >
+        <DashboardBody
+          granularity={granularity}
+          page={page}
+          contributorGranularity={contributorGranularity}
+          cgFrom={cgFrom}
+          cgTo={cgTo}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+async function DashboardBody({
+  granularity,
+  page,
+  contributorGranularity,
+  cgFrom,
+  cgTo,
+}: {
+  granularity: Granularity;
+  page: number;
+  contributorGranularity: 'weekly' | 'monthly';
+  cgFrom?: string;
+  cgTo?: string;
+}) {
   const [data, contributorGrowth] = await Promise.all([
     getDashboard(granularity, page),
     getContributorGrowth(contributorGranularity, cgFrom, cgTo),
@@ -190,8 +237,7 @@ export default async function OverviewPage({
   ];
 
   return (
-    <div>
-      <PageHeading title="Overview" />
+    <>
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         {cards.map((card, i) => (
           <StatCard key={card.label} label={card.label} value={card.value} icon={card.icon} index={i} href={card.href} />
@@ -299,6 +345,6 @@ export default async function OverviewPage({
           <VolunteerGrowthChart data={data.volunteerGrowth} />
         </div>
       </div>
-    </div>
+    </>
   );
 }
