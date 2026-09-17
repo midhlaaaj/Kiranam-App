@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { MailPlus, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { revokeInvite } from './actions';
@@ -8,9 +9,11 @@ import { PageHeading } from '@/components/PageHeading';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { Skeleton, SkeletonTable } from '@/components/Skeleton';
 import { SettingsTabs } from './SettingsTabs';
 import {
   badgeClass,
+  cardClass,
   staggerDelay,
   tableCellClass,
   tableHeadRowClass,
@@ -27,15 +30,7 @@ function inviteStatus(invite: { used_at: string | null; expires_at: string }): '
   return 'pending';
 }
 
-export default async function SettingsPage() {
-  const supabase = await createClient();
-  const { data: invites } = await supabase
-    .from('admin_invites')
-    .select('id, email, used_at, created_at, expires_at')
-    .order('created_at', { ascending: false });
-
-  const autoAssignKkNumber = await getAutoAssignKkNumber();
-
+export default function SettingsPage() {
   return (
     <div>
       <PageHeading title="Settings" />
@@ -59,6 +54,37 @@ export default async function SettingsPage() {
         </AddNewPanel>
       </div>
 
+      <Suspense
+        fallback={
+          <>
+            <div className={`mt-6 grid gap-4 ${cardClass} p-5`}>
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-10 w-52 rounded-lg" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <div className="mt-6">
+              <SkeletonTable rows={4} cols={4} />
+            </div>
+          </>
+        }
+      >
+        <SettingsBody />
+      </Suspense>
+    </div>
+  );
+}
+
+async function SettingsBody() {
+  const supabase = await createClient();
+  const { data: invites } = await supabase
+    .from('admin_invites')
+    .select('id, email, used_at, created_at, expires_at')
+    .order('created_at', { ascending: false });
+
+  const autoAssignKkNumber = await getAutoAssignKkNumber();
+
+  return (
+    <>
       <KkNumberSettings autoAssignEnabled={autoAssignKkNumber} />
 
       <div className={`mt-6 ${tableWrapClass}`}>
@@ -118,6 +144,6 @@ export default async function SettingsPage() {
           </table>
         )}
       </div>
-    </div>
+    </>
   );
 }

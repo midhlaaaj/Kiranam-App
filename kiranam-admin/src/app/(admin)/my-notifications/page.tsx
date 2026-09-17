@@ -1,8 +1,10 @@
+import { Suspense } from 'react';
 import { Bell } from 'lucide-react';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { Skeleton } from '@/components/Skeleton';
 import { buttonSecondary, linkDanger, cardClass } from '@/lib/ui';
 import { markNotificationRead, markAllNotificationsRead, clearAllNotifications } from './actions';
 
@@ -11,7 +13,29 @@ import { markNotificationRead, markAllNotificationsRead, clearAllNotifications }
 // campaign hitting its goal, a large contribution) land here instead of as
 // a phone push. See notify() in the database: it skips the push fan-out
 // entirely for role = 'admin' recipients.
-export default async function MyNotificationsPage() {
+export default function MyNotificationsPage() {
+  return (
+    <div>
+      <h1 className="mb-5 text-xl font-bold tracking-tight text-kiranam-ink">Notifications</h1>
+      <Suspense
+        fallback={
+          <div className={`${cardClass} divide-y divide-kiranam-border p-5`}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={i === 0 ? undefined : 'pt-4'}>
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="mt-2 h-3 w-full max-w-sm" />
+              </div>
+            ))}
+          </div>
+        }
+      >
+        <NotificationsBody />
+      </Suspense>
+    </div>
+  );
+}
+
+async function NotificationsBody() {
   const admin = await verifyAdmin();
   const supabase = await createClient();
   const { data: notifications } = await supabase
@@ -25,10 +49,9 @@ export default async function MyNotificationsPage() {
   const hasAny = (notifications || []).length > 0;
 
   return (
-    <div>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-bold tracking-tight text-kiranam-ink">Notifications</h1>
-        <div className="flex items-center gap-4">
+    <>
+      {(hasUnread || hasAny) && (
+        <div className="mb-5 flex flex-wrap items-center justify-end gap-4">
           {hasUnread && (
             <form action={markAllNotificationsRead}>
               <button type="submit" className={buttonSecondary}>
@@ -49,7 +72,7 @@ export default async function MyNotificationsPage() {
             />
           )}
         </div>
-      </div>
+      )}
 
       <div className={`${cardClass} divide-y divide-kiranam-border`}>
         {!notifications || notifications.length === 0 ? (
@@ -74,6 +97,6 @@ export default async function MyNotificationsPage() {
           ))
         )}
       </div>
-    </div>
+    </>
   );
 }

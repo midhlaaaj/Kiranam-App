@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
@@ -5,6 +6,7 @@ import { revokeAdmin } from './actions';
 import { PageHeading } from '@/components/PageHeading';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { SkeletonTable } from '@/components/Skeleton';
 import { SettingsTabs } from '../SettingsTabs';
 import { staggerDelay, tableCellClass, tableHeadRowClass, tableRowClass, tableWrapClass } from '@/lib/ui';
 
@@ -16,12 +18,7 @@ interface AdminRow {
   last_sign_in_at: string | null;
 }
 
-export default async function AdminUsersPage() {
-  const currentAdmin = await verifyAdmin();
-  const supabase = await createClient();
-  const { data } = await supabase.rpc('admin_directory');
-  const admins = (data || []) as AdminRow[];
-
+export default function AdminUsersPage() {
   return (
     <div>
       <PageHeading title="Settings" />
@@ -29,7 +26,23 @@ export default async function AdminUsersPage() {
         <SettingsTabs active="admin-users" />
       </div>
 
-      <div className={`mt-6 ${tableWrapClass}`}>
+      <div className="mt-6">
+        <Suspense fallback={<SkeletonTable rows={5} cols={5} />}>
+          <AdminUsersTable />
+        </Suspense>
+      </div>
+    </div>
+  );
+}
+
+async function AdminUsersTable() {
+  const currentAdmin = await verifyAdmin();
+  const supabase = await createClient();
+  const { data } = await supabase.rpc('admin_directory');
+  const admins = (data || []) as AdminRow[];
+
+  return (
+    <div className={tableWrapClass}>
         {admins.length === 0 ? (
           <EmptyState icon={ShieldCheck} title="No admins found" />
         ) : (
@@ -74,7 +87,6 @@ export default async function AdminUsersPage() {
             </tbody>
           </table>
         )}
-      </div>
     </div>
   );
 }
