@@ -2,20 +2,26 @@
 
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { checkKkNumberCoverage, setAutoAssignKkNumber } from './actions';
+import { checkKkNumberCoverage, setAutoAssignKkNumber, type MissingKkContributor } from './actions';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { buttonSecondary, cardClass } from '@/lib/ui';
+import { KkCoverageModal } from './KkCoverageModal';
 
 export function KkNumberSettings({ autoAssignEnabled }: { autoAssignEnabled: boolean }) {
   const [checking, startCheck] = useTransition();
   const [toggling, startToggle] = useTransition();
   const [enabled, setEnabled] = useState(autoAssignEnabled);
+  const [missing, setMissing] = useState<MissingKkContributor[] | null>(null);
 
   function handleCheck() {
     startCheck(async () => {
       const result = await checkKkNumberCoverage();
-      if (result.error) toast.error(friendlyErrorMessage(result.error));
-      else if (result.message) toast(result.message);
+      if (result.error) {
+        toast.error(friendlyErrorMessage(result.error));
+      } else {
+        if (result.message) toast(result.message);
+        setMissing(result.missing ?? []);
+      }
     });
   }
 
@@ -62,6 +68,14 @@ export function KkNumberSettings({ autoAssignEnabled }: { autoAssignEnabled: boo
         When on, the KK Number field disappears from Register Contributor and each new contributor is
         automatically given the next KK number after the highest one currently in use.
       </p>
+
+      {missing !== null && (
+        <KkCoverageModal
+          contributors={missing}
+          onClose={() => setMissing(null)}
+          onAssigned={(id) => setMissing((prev) => (prev ? prev.filter((c) => c.id !== id) : prev))}
+        />
+      )}
     </div>
   );
 }

@@ -109,14 +109,23 @@ export async function setAutoAssignKkNumber(enabled: boolean) {
   revalidatePath('/contributors');
 }
 
+export interface MissingKkContributor {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+}
+
 export interface KkCoverageState {
   message?: string;
   error?: string;
+  missing?: MissingKkContributor[];
+  total?: number;
 }
 
-// Report-only: counts contributors missing a KK number so an admin can see
-// how much manual backfill is left before flipping auto-assign on. Doesn't
-// assign anything itself.
+// Report-only: lists contributors missing a KK number so an admin can see
+// (and immediately backfill) how much manual work is left before flipping
+// auto-assign on. Doesn't assign anything itself — see assignKkNumber in
+// contributors/actions.ts for that.
 export async function checkKkNumberCoverage(): Promise<KkCoverageState> {
   await verifyAdmin();
   const supabase = await createClient();
@@ -127,15 +136,20 @@ export async function checkKkNumberCoverage(): Promise<KkCoverageState> {
     .eq('role', 'contributor');
   if (totalError) return { error: totalError.message };
 
-  const { count: missing, error: missingError } = await supabase
+  const { data: missing, error: missingError } = await supabase
     .from('profiles')
-    .select('id', { count: 'exact', head: true })
+    .select('id, full_name, phone')
     .eq('role', 'contributor')
-    .is('kk_number', null);
+    .is('kk_number', null)
+    .order('full_name', { ascending: true });
   if (missingError) return { error: missingError.message };
 
-  if (!missing) {
-    return { message: `All ${total ?? 0} contributors have a KK number assigned.` };
+  if (!missing || missing.length === 0) {
+    return { message: `All ${total ?? 0} contributors have a KK number assigned.`, missing: [], total: total ?? 0 };
   }
-  return { message: `${missing} of ${total ?? 0} contributors are missing a KK number.` };
+  return {
+    message: `${missing.length} of ${total ?? 0} contributors are missing a KK number.`,
+    missing,
+    total: total ?? 0,
+  };
 }

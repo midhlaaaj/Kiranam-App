@@ -1,9 +1,10 @@
 'use client';
 
-import { cloneElement, isValidElement, useState } from 'react';
+import { cloneElement, isValidElement, Suspense, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { buttonPrimary } from '@/lib/ui';
 import { Modal } from './Modal';
+import { SkeletonBell } from './Skeleton';
 
 /** Page header + "create" form, used by list pages that support inline
  * creation (Campaigns, Events, Notifications, Contributors). Renders the
@@ -77,7 +78,9 @@ export function AddNewPanel({
               toolbar row hides below sm) it still needs a home on small screens, hence sm:hidden here. */}
           {!hasToolbar && button}
           {hasToolbar && mobileToolbar && <span className="sm:hidden">{button}</span>}
-          {bell}
+          {/* Own Suspense boundary so this async DB-backed component never
+              blocks the title/toolbar above from rendering immediately. */}
+          {bell && <Suspense fallback={<SkeletonBell />}>{bell}</Suspense>}
         </div>
       </div>
 

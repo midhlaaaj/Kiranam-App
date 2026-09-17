@@ -10,19 +10,39 @@ export function Skeleton({ className = '', style }: { className?: string; style?
   );
 }
 
+/** Placeholder for the circular NotificationBell while it streams in behind
+ * its own Suspense boundary (see PageHeading / AddNewPanel) — kept as a
+ * standalone export so loading.tsx files can match its exact dimensions. */
+export function SkeletonBell() {
+  return <Skeleton className="h-10 w-10 rounded-full" />;
+}
+
 /** Matches PageHeading / AddNewPanel's title row (title + optional action
- * button + the red circular NotificationBell) so loading.tsx files don't
- * shift layout once the real header mounts. Deliberately NOT the real
- * PageHeading — that component now renders <NotificationBell />, an async
- * Server Component that hits the database, which would defeat the point of
- * an instant loading skeleton. */
-export function SkeletonPageHeading({ titleWidth = 'w-40', withAction = false }: { titleWidth?: string; withAction?: boolean }) {
+ * button + the red circular NotificationBell) for the brief window before
+ * the real page.tsx itself has returned anything — once it has, the title
+ * and toolbar render immediately and only NotificationBell (Suspense-wrapped
+ * in PageHeading/AddNewPanel) shows this bell placeholder on its own. */
+export function SkeletonPageHeading({
+  titleWidth = 'w-40',
+  withAction = false,
+  descriptionWidth,
+}: {
+  titleWidth?: string;
+  withAction?: boolean;
+  /** Set when the real AddNewPanel/PageHeading on this page passes a
+   * `description` — otherwise the title bar is a row shorter than the real
+   * one and the header height jumps once it mounts. */
+  descriptionWidth?: string;
+}) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 border-b border-kiranam-border pb-5 mb-6">
-      <Skeleton className={`h-8 ${titleWidth}`} />
+      <div>
+        <Skeleton className={`h-8 ${titleWidth}`} />
+        {descriptionWidth && <Skeleton className={`mt-2 h-4 ${descriptionWidth}`} />}
+      </div>
       <div className="flex shrink-0 items-center gap-2">
         {withAction && <Skeleton className="h-10 w-36 rounded-lg" />}
-        <Skeleton className="h-10 w-10 rounded-full" />
+        <SkeletonBell />
       </div>
     </div>
   );

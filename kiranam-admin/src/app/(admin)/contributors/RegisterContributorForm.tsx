@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { registerContributor, type RegisterState } from './actions';
+import { getAutoAssignKkNumberSetting, registerContributor, type RegisterState } from './actions';
 import { buttonPrimary, cardClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
@@ -23,13 +23,7 @@ const nativeControlClass =
 // event) but has never opened the app. Pre-creates their login by phone
 // number — they claim it just by logging into kiranam-app with this same
 // number and completing the normal phone-OTP flow, same as anyone else.
-export function RegisterContributorForm({
-  onDone,
-  autoAssignKkNumber,
-}: {
-  onDone?: () => void;
-  autoAssignKkNumber: boolean;
-}) {
+export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
   const [state, formAction, pending] = useActionState(registerContributor, initialState);
   const lastState = useRef<RegisterState>(initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -37,6 +31,15 @@ export function RegisterContributorForm({
   const [dialCode, setDialCode] = useState('91');
   const [phone, setPhone] = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
+
+  // Fetched on mount instead of being passed down from the Contributors page
+  // (a Server Component) — that page no longer awaits this DB round-trip
+  // itself so its title/toolbar can render immediately. The modal starts
+  // closed, so this resolves well before anyone actually sees the form.
+  const [autoAssignKkNumber, setAutoAssignKkNumber] = useState(false);
+  useEffect(() => {
+    getAutoAssignKkNumberSetting().then(setAutoAssignKkNumber).catch(() => {});
+  }, []);
 
   const country = useMemo(() => COUNTRIES.find((c) => c.dialCode === dialCode), [dialCode]);
   const phoneError = useMemo(
@@ -84,7 +87,7 @@ export function RegisterContributorForm({
           <input
             id="full_name"
             name="full_name"
-            placeholder="e.g. Anjali Menon"
+            placeholder="Enter full name"
             required
             className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
           />
@@ -122,7 +125,7 @@ export function RegisterContributorForm({
               name="phone"
               type="tel"
               inputMode="numeric"
-              placeholder="98471 85479"
+              placeholder="0000000000"
               required
               maxLength={15}
               value={phone}

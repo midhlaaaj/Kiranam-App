@@ -1,4 +1,6 @@
+import { Suspense } from 'react';
 import { NotificationBell } from './NotificationBell';
+import { SkeletonBell } from './Skeleton';
 
 export function PageHeading({
   title,
@@ -17,7 +19,11 @@ export function PageHeading({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {action}
-        <NotificationBell />
+        {/* Own Suspense boundary so this async DB-backed component never
+            blocks the title/action above from rendering immediately. */}
+        <Suspense fallback={<SkeletonBell />}>
+          <NotificationBell />
+        </Suspense>
       </div>
     </div>
   );

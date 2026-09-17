@@ -16,6 +16,33 @@ export interface RegisterState {
   error?: string;
 }
 
+// Fetched client-side by RegisterContributorForm on mount rather than
+// awaited in the Contributors page itself, so the page's title/toolbar can
+// render immediately instead of waiting on this DB round-trip.
+export async function getAutoAssignKkNumberSetting(): Promise<boolean> {
+  await verifyAdmin();
+  return getAutoAssignKkNumber();
+}
+
+// Backfills a KK number for a contributor who was registered (in this system
+// or offline, before it existed) without one — used by the "Check KK number
+// coverage" list on the Settings page.
+export async function assignKkNumber(contributorId: string, kkNumberInput: string) {
+  const admin = await verifyAdmin();
+
+  const kkNumber = kkNumberInput.trim().toUpperCase();
+  if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK2001.');
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', contributorId);
+  if (error) throw new Error(friendlyErrorMessage(error.message));
+
+  await logAction(admin.id, 'assign_kk_number', 'profiles', contributorId, { kkNumber });
+  revalidatePath('/contributors');
+  revalidatePath(`/contributors/${contributorId}`);
+  revalidatePath('/settings');
+}
+
 export async function registerContributor(_prevState: RegisterState, formData: FormData): Promise<RegisterState> {
   const admin = await verifyAdmin();
 

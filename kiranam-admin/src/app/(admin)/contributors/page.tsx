@@ -8,7 +8,6 @@ import { MobileToolbar } from '@/components/MobileToolbar';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { RegisterContributorForm } from './RegisterContributorForm';
-import { getAutoAssignKkNumber } from '@/lib/kkSettings';
 import { deriveContributorStatus, type ContributorStatus } from '@/lib/volunteerStats';
 import { PillTabs } from '@/components/PillTabs';
 import {
@@ -45,8 +44,6 @@ export default async function ContributorsPage({
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const { q, status } = await searchParams;
-
-  const autoAssignKkNumber = await getAutoAssignKkNumber();
 
   const filterPills = (
     <PillTabs
@@ -105,7 +102,7 @@ export default async function ContributorsPage({
         }
         mobileToolbar={<MobileToolbar filters={filterPills} search={searchForm} exportHref="/contributors/export" />}
       >
-        <RegisterContributorForm autoAssignKkNumber={autoAssignKkNumber} />
+        <RegisterContributorForm />
       </AddNewPanel>
 
       <Suspense fallback={<SkeletonTable rows={7} cols={4} />}>
