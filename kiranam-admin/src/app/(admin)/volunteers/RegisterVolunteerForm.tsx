@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
@@ -9,7 +9,7 @@ import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplic
 import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
-import { VolunteerQuickViewModal } from './VolunteerQuickViewModal';
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 
 const initialState: RegisterVolunteerState = {};
 
@@ -23,7 +23,16 @@ const nativeControlClass =
 // their login by phone number — they claim it just by logging into
 // kiranam-app with this same number. Any contributors already assigned to
 // them offline are added afterwards from this volunteer's detail page.
-export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
+export function RegisterVolunteerForm({
+  onDone,
+  onEditExisting,
+}: {
+  onDone?: () => void;
+  /** Called instead of opening a quick-view modal locally, so the caller can
+   * close this registration panel first (it would otherwise unmount along
+   * with any modal it rendered itself, since it's the AddNewPanel's content). */
+  onEditExisting: (match: PhoneDuplicateMatch) => void;
+}) {
   const [state, formAction, pending] = useActionState(registerVolunteer, initialState);
   const lastState = useRef<RegisterVolunteerState>(initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -45,7 +54,6 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
   // — same as on the Contributors registration form.
   const [duplicate, setDuplicate] = useState<PhoneDuplicateMatch | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
-  const [quickViewId, setQuickViewId] = useState<string | null>(null);
   const checkSeq = useRef(0);
 
   async function checkDuplicate() {
@@ -85,28 +93,16 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
     }
   }, [state, onDone]);
 
-  const [upgrading, startUpgrade] = useTransition();
-  function handleUpgrade() {
-    if (!duplicate) return;
-    const kkNumberInput = String(new FormData(formRef.current ?? undefined).get('kk_number') || '');
-    startUpgrade(async () => {
-      try {
-        const { fullName } = await upgradeContributorToVolunteer(duplicate.id, kkNumberInput);
-        toast.success(`${fullName || 'Contributor'} has been upgraded to volunteer.`);
-        formRef.current?.reset();
-        setPhone('');
-        setDialCode('91');
-        setPhoneTouched(false);
-        setDuplicate(null);
-        onDone?.();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not upgrade this contributor.');
-      }
-    });
+  function resetAfterUpgrade() {
+    formRef.current?.reset();
+    setPhone('');
+    setDialCode('91');
+    setPhoneTouched(false);
+    setDuplicate(null);
+    onDone?.();
   }
 
   return (
-    <>
     <form
       ref={formRef}
       action={formAction}
@@ -193,12 +189,24 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
               {duplicate.role === 'admin' ? 'staff account' : duplicate.role}.
             </p>
             {duplicate.role === 'contributor' && (
-              <button type="button" disabled={upgrading} onClick={handleUpgrade} className={`${buttonSecondary} shrink-0`}>
-                {upgrading ? 'Upgrading…' : 'Upgrade to volunteer'}
-              </button>
+              <ConfirmSubmitButton
+                action={async () => {
+                  const kkNumberInput = String(new FormData(formRef.current ?? undefined).get('kk_number') || '');
+                  await upgradeContributorToVolunteer(duplicate.id, kkNumberInput);
+                }}
+                label="Upgrade to volunteer"
+                title="Upgrade to volunteer?"
+                description={`${duplicate.fullName || 'This contributor'} will become a volunteer and keep their existing contributor history. This can be reversed later.`}
+                confirmLabel="Upgrade"
+                pendingMessage="Upgrading…"
+                successMessage={`${duplicate.fullName || 'Contributor'} has been upgraded to volunteer.`}
+                onSuccess={resetAfterUpgrade}
+                destructive={false}
+                className={`${buttonSecondary} shrink-0`}
+              />
             )}
             {duplicate.role === 'volunteer' && (
-              <button type="button" onClick={() => setQuickViewId(duplicate.id)} className={`${buttonSecondary} shrink-0`}>
+              <button type="button" onClick={() => onEditExisting(duplicate)} className={`${buttonSecondary} shrink-0`}>
                 Edit profile
               </button>
             )}
@@ -247,10 +255,5 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
         </button>
       )}
     </form>
-
-    {duplicate?.role === 'volunteer' && (
-      <VolunteerQuickViewModal volunteerId={quickViewId} onClose={() => setQuickViewId(null)} initialEditing />
-    )}
-    </>
   );
 }

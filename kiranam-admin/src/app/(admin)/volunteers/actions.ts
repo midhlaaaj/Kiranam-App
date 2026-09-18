@@ -147,6 +147,38 @@ export async function upgradeContributorToVolunteer(contributorId: string, kkNum
   return { fullName: profile.full_name as string | null };
 }
 
+// Reverses upgradeContributorToVolunteer — puts a volunteer back to a plain
+// contributor. Their assigned contributors are unassigned first: a
+// contributor role has no business still showing up as someone else's
+// volunteer. Their own commitment/contributions (if any survive from before
+// they were a volunteer) are untouched.
+export async function demoteVolunteerToContributor(volunteerId: string) {
+  const admin = await verifyAdmin();
+  const supabase = await createClient();
+
+  const { data: profile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', volunteerId)
+    .single();
+  if (fetchError) throw new Error(friendlyErrorMessage(fetchError.message));
+
+  const { error: unassignError } = await supabase
+    .from('contributor_assignments')
+    .delete()
+    .eq('volunteer_id', volunteerId);
+  if (unassignError) throw new Error(friendlyErrorMessage(unassignError.message));
+
+  const { error } = await supabase.from('profiles').update({ role: 'contributor' }).eq('id', volunteerId);
+  if (error) throw new Error(friendlyErrorMessage(error.message));
+
+  await logAction(admin.id, 'demote_volunteer_to_contributor', 'profiles', volunteerId, {});
+  revalidatePath('/volunteers');
+  revalidatePath('/contributors');
+  revalidatePath(`/volunteers/${volunteerId}`);
+  return { fullName: profile.full_name as string | null };
+}
+
 // Fetched by VolunteerQuickViewModal — a compact view/edit popup opened from
 // a Volunteers table row or from a duplicate-phone match surfaced while
 // registering, as an alternative to the full detail page.

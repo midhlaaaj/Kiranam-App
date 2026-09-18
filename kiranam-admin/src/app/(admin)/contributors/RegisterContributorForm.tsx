@@ -10,8 +10,6 @@ import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
 import { PersonCombobox } from '@/components/PersonCombobox';
-import { ContributorQuickViewModal } from './ContributorQuickViewModal';
-import { VolunteerQuickViewModal } from '../volunteers/VolunteerQuickViewModal';
 
 const initialState: RegisterState = {};
 
@@ -27,7 +25,16 @@ const nativeControlClass =
 // event) but has never opened the app. Pre-creates their login by phone
 // number — they claim it just by logging into kiranam-app with this same
 // number and completing the normal phone-OTP flow, same as anyone else.
-export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
+export function RegisterContributorForm({
+  onDone,
+  onEditExisting,
+}: {
+  onDone?: () => void;
+  /** Called instead of opening a quick-view modal locally, so the caller can
+   * close this registration panel first (it would otherwise unmount along
+   * with any modal it rendered itself, since it's the AddNewPanel's content). */
+  onEditExisting: (match: PhoneDuplicateMatch) => void;
+}) {
   const [state, formAction, pending] = useActionState(registerContributor, initialState);
   const lastState = useRef<RegisterState>(initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -66,7 +73,6 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
   // keystroke, since the backend runs on a free tier.
   const [duplicate, setDuplicate] = useState<PhoneDuplicateMatch | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
-  const [quickViewId, setQuickViewId] = useState<string | null>(null);
   const checkSeq = useRef(0);
 
   async function checkDuplicate() {
@@ -103,7 +109,6 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
   }, [state, onDone]);
 
   return (
-    <>
     <form
       ref={formRef}
       action={formAction}
@@ -192,7 +197,7 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
             {duplicate.role !== 'admin' && (
               <button
                 type="button"
-                onClick={() => setQuickViewId(duplicate.id)}
+                onClick={() => onEditExisting(duplicate)}
                 className={`${buttonSecondary} shrink-0`}
               >
                 Edit profile
@@ -279,13 +284,5 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
         </button>
       )}
     </form>
-
-    {duplicate?.role === 'contributor' && (
-      <ContributorQuickViewModal contributorId={quickViewId} onClose={() => setQuickViewId(null)} initialEditing />
-    )}
-    {duplicate?.role === 'volunteer' && (
-      <VolunteerQuickViewModal volunteerId={quickViewId} onClose={() => setQuickViewId(null)} initialEditing />
-    )}
-    </>
   );
 }

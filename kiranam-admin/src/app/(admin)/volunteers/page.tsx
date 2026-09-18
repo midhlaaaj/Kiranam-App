@@ -1,11 +1,10 @@
 import { Suspense } from 'react';
 import { Search, UserRoundCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { AddNewPanel } from '@/components/AddNewPanel';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PendingApplicantRow } from './PendingApplicantRow';
-import { RegisterVolunteerForm } from './RegisterVolunteerForm';
+import { VolunteersRegisterPanel } from './VolunteersRegisterPanel';
 import { VolunteersTableClient } from './VolunteersTableClient';
 import { PillTabs } from '@/components/PillTabs';
 import { buttonPrimary, inputClass, tableCellClass, tableHeadRowClass, tableWrapClass } from '@/lib/ui';
@@ -119,16 +118,7 @@ export default async function VolunteersPage({
 
   return (
     <div>
-      <AddNewPanel
-        title="Volunteers"
-        label="Register volunteer"
-        description="For someone recruited offline who hasn't applied in the app yet."
-        modal
-        filters={filterPills}
-        search={searchForm}
-      >
-        <RegisterVolunteerForm />
-      </AddNewPanel>
+      <VolunteersRegisterPanel filters={filterPills} search={searchForm} />
 
       <Suspense fallback={<SkeletonTable rows={7} cols={4} />}>
         <VolunteersTable activeTab={activeTab} q={q} />

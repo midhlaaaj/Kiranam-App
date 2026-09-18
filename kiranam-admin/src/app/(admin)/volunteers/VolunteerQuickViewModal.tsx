@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 import { Modal } from '@/components/Modal';
-import { getVolunteerQuickView, updateVolunteerKkNumber } from './actions';
+import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { demoteVolunteerToContributor, getVolunteerQuickView, updateVolunteerKkNumber } from './actions';
 import { buttonPrimary, buttonSecondary } from '@/lib/ui';
 
 const fieldLabelClass = 'text-xs font-semibold text-kiranam-muted';
@@ -145,9 +146,24 @@ export function VolunteerQuickViewModal({
             </div>
           </div>
 
-          <Link href={`/volunteers/${data.id}`} className="text-sm font-medium text-kiranam-primary hover:underline">
-            View full details →
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link href={`/volunteers/${data.id}`} className="text-sm font-medium text-kiranam-primary hover:underline">
+              View full details →
+            </Link>
+            <ConfirmSubmitButton
+              action={async () => {
+                await demoteVolunteerToContributor(data.id);
+              }}
+              label="Demote to contributor"
+              title="Demote to contributor?"
+              description={`${data.full_name || 'This volunteer'} will become a plain contributor again. Any contributors currently assigned to them will be unassigned first.`}
+              confirmLabel="Demote"
+              pendingMessage="Demoting…"
+              successMessage={`${data.full_name || 'Volunteer'} has been demoted to contributor.`}
+              onSuccess={onClose}
+              className="text-sm font-medium text-kiranam-danger hover:underline"
+            />
+          </div>
         </div>
       )}
     </Modal>

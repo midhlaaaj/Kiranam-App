@@ -2,11 +2,10 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { Search } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { AddNewPanel } from '@/components/AddNewPanel';
 import { NotificationBell } from '@/components/NotificationBell';
 import { MobileToolbar } from '@/components/MobileToolbar';
 import { SkeletonTable } from '@/components/Skeleton';
-import { RegisterContributorForm } from './RegisterContributorForm';
+import { ContributorsRegisterPanel } from './ContributorsRegisterPanel';
 import { ContributorsTableClient } from './ContributorsTableClient';
 import { deriveContributorStatus, type ContributorStatus } from '@/lib/volunteerStats';
 import { PillTabs } from '@/components/PillTabs';
@@ -66,12 +65,8 @@ export default async function ContributorsPage({
 
   return (
     <div>
-      <AddNewPanel
-        title="Contributors"
-        label="Register contributor"
-        description="For a contributor who committed offline and hasn't signed up in the app yet."
+      <ContributorsRegisterPanel
         bell={<NotificationBell />}
-        modal
         filters={filterPills}
         search={
           <div className="flex flex-wrap items-center gap-3">
@@ -82,9 +77,7 @@ export default async function ContributorsPage({
           </div>
         }
         mobileToolbar={<MobileToolbar filters={filterPills} search={searchForm} exportHref="/contributors/export" />}
-      >
-        <RegisterContributorForm />
-      </AddNewPanel>
+      />
 
       <Suspense fallback={<SkeletonTable rows={7} cols={4} />}>
         <ContributorsTable q={q} status={status} />

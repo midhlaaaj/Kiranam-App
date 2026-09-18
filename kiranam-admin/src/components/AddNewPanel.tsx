@@ -30,6 +30,8 @@ export function AddNewPanel({
   mobileToolbar,
   children,
   modal = false,
+  open: openProp,
+  onOpenChange,
 }: {
   title: string;
   description?: React.ReactNode;
@@ -49,8 +51,17 @@ export function AddNewPanel({
   children: React.ReactNode;
   /** Render the create form in a popup instead of expanding it inline. */
   modal?: boolean;
+  /** Controls the open state externally instead of managing it internally —
+   * for a caller that needs to close this panel from outside (e.g. a
+   * duplicate-match "Edit profile" action that closes registration to show
+   * a different modal in its place). Omit both for the default,
+   * self-contained behavior. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const close = () => setOpen(false);
   const content =
     modal && isValidElement(children)
@@ -59,7 +70,7 @@ export function AddNewPanel({
 
   const hasToolbar = !!(filters || search);
   const button = (
-    <button type="button" onClick={() => setOpen((o) => (modal ? true : !o))} className={buttonPrimary}>
+    <button type="button" onClick={() => setOpen(modal ? true : !open)} className={buttonPrimary}>
       {!modal && open ? <X size={16} strokeWidth={2.25} /> : <Plus size={16} strokeWidth={2.25} />}
       {!modal && open ? 'Close' : label}
     </button>
