@@ -3,10 +3,13 @@ import { Skeleton, SkeletonPageHeading, SkeletonTable } from '@/components/Skele
 export default function Loading() {
   return (
     <div>
-      <SkeletonPageHeading titleWidth="w-32" />
+      <SkeletonPageHeading titleWidth="w-32" descriptionWidth="w-80" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Skeleton className="h-9 w-40 rounded-full" />
-        <Skeleton className="h-9 w-64 rounded-lg" />
+        <div className="flex flex-wrap items-center gap-3">
+          <Skeleton className="h-9 w-64 rounded-lg" />
+          <Skeleton className="h-10 w-40 rounded-lg" />
+        </div>
       </div>
       <SkeletonTable rows={7} cols={4} />
     </div>
