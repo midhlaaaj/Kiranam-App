@@ -131,3 +131,26 @@ export async function deleteCampaign(id: string) {
   await logAction(admin.id, 'delete_campaign', 'campaigns', id);
   revalidatePath('/campaigns');
 }
+
+// Alternative to deleting — takes a campaign off the default list without
+// losing the record itself (goal, images, per-campaign totals) or touching
+// its contributions. Also hidden from the mobile app's own campaigns query.
+export async function archiveCampaign(id: string) {
+  const admin = await verifyAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from('campaigns').update({ archived: true }).eq('id', id);
+  if (error) throw new Error(error.message);
+
+  await logAction(admin.id, 'archive_campaign', 'campaigns', id);
+  revalidatePath('/campaigns');
+}
+
+export async function unarchiveCampaign(id: string) {
+  const admin = await verifyAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase.from('campaigns').update({ archived: false }).eq('id', id);
+  if (error) throw new Error(error.message);
+
+  await logAction(admin.id, 'unarchive_campaign', 'campaigns', id);
+  revalidatePath('/campaigns');
+}

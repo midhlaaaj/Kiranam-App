@@ -381,7 +381,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load public campaign/event data regardless of auth state
   const refreshCampaigns = useCallback(async () => {
-    const { data } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase.from('campaigns').select('*').eq('archived', false).order('created_at', { ascending: false });
     if (!data) return;
     const ids = data.map((c) => c.id);
     const { data: images } = ids.length

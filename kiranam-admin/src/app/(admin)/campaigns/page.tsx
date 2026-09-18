@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Megaphone, Pencil, Search, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Megaphone, Pencil, Search, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { deleteCampaign } from './actions';
+import { archiveCampaign, deleteCampaign, unarchiveCampaign } from './actions';
 import { CreateCampaignForm } from './CreateCampaignForm';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
@@ -57,6 +57,12 @@ export default async function CampaignsPage({
                 href: `/campaigns?status=completed${q ? `&q=${encodeURIComponent(q)}` : ''}`,
                 active: status === 'completed',
               },
+              {
+                key: 'archived',
+                label: 'Archived',
+                href: `/campaigns?status=archived${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+                active: status === 'archived',
+              },
             ]}
           />
         }
@@ -97,9 +103,15 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
   // conditions the mobile app already checks client-side.
   await supabase.rpc('self_heal_campaign_completion');
 
+  // Archived campaigns are hidden everywhere except the dedicated Archived
+  // tab — including under All/Ongoing/Completed, which otherwise filter on
+  // `status` alone and know nothing about archival.
+  const showArchived = status === 'archived';
+
   let query = supabase
     .from('campaigns')
-    .select('id, title, status, raised, goal, cover_image_url')
+    .select('id, title, status, raised, goal, cover_image_url, archived')
+    .eq('archived', showArchived)
     .order('created_at', { ascending: false });
   if (q) query = query.ilike('title', `%${q}%`);
   if (status === 'active' || status === 'completed') query = query.eq('status', status);
@@ -109,7 +121,11 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
   return (
     <div className={tableWrapClass}>
       {(campaigns || []).length === 0 ? (
-        <EmptyState icon={Megaphone} title="No campaigns yet" description="Create your first campaign above." />
+        <EmptyState
+          icon={Megaphone}
+          title={showArchived ? 'No archived campaigns' : 'No campaigns yet'}
+          description={showArchived ? undefined : 'Create your first campaign above.'}
+        />
       ) : (
         <table className="w-full text-sm">
           <thead>
@@ -161,6 +177,33 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
                     >
                       <Pencil size={16} strokeWidth={2} />
                     </Link>
+                    {c.archived ? (
+                      <ConfirmSubmitButton
+                        action={unarchiveCampaign.bind(null, c.id)}
+                        label={<ArchiveRestore size={16} strokeWidth={2} />}
+                        title="Unarchive this campaign?"
+                        description={`"${c.title}" will reappear in the main campaigns list${c.status === 'active' ? ' and to contributors in the app' : ''}.`}
+                        confirmLabel="Unarchive"
+                        successMessage="Campaign unarchived."
+                        pendingMessage="Unarchiving…"
+                        destructive={false}
+                        className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+                        aria-label="Unarchive campaign"
+                      />
+                    ) : (
+                      <ConfirmSubmitButton
+                        action={archiveCampaign.bind(null, c.id)}
+                        label={<Archive size={16} strokeWidth={2} />}
+                        title="Archive this campaign?"
+                        description={`"${c.title}" will be hidden from the main list and from contributors in the app, but its record and contribution history stay intact. You can unarchive it later.`}
+                        confirmLabel="Archive"
+                        successMessage="Campaign archived."
+                        pendingMessage="Archiving…"
+                        destructive={false}
+                        className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
+                        aria-label="Archive campaign"
+                      />
+                    )}
                     <ConfirmSubmitButton
                       action={deleteCampaign.bind(null, c.id)}
                       label={<Trash2 size={16} strokeWidth={2} />}
