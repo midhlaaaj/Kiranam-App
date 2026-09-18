@@ -80,7 +80,7 @@ function ContributorRow({
               handleAdd();
             }
           }}
-          placeholder="e.g. KK2001"
+          placeholder="e.g. KK1"
           disabled={pending}
           className={`${inputClass} w-32`}
         />

@@ -2,10 +2,11 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { HeartHandshake, Search, UserRoundCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { PageHeading } from '@/components/PageHeading';
+import { AddNewPanel } from '@/components/AddNewPanel';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PendingApplicantRow } from './PendingApplicantRow';
+import { RegisterVolunteerForm } from './RegisterVolunteerForm';
 import { PillTabs } from '@/components/PillTabs';
 import {
   buttonPrimary,
@@ -86,45 +87,56 @@ export default async function VolunteersPage({
   const { tab, q } = await searchParams;
   const activeTab = tab === 'pending' ? 'pending' : 'approved';
 
+  const filterPills = (
+    <PillTabs
+      items={[
+        {
+          key: 'approved',
+          label: 'Approved',
+          href: `/volunteers?tab=approved${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+          active: activeTab === 'approved',
+        },
+        {
+          key: 'pending',
+          label: 'Pending',
+          href: `/volunteers?tab=pending${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+          active: activeTab === 'pending',
+        },
+      ]}
+    />
+  );
+
+  const searchForm = (
+    <form className="flex flex-wrap items-center gap-3">
+      <div className="relative">
+        <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
+        <input
+          type="search"
+          name="q"
+          defaultValue={q}
+          placeholder="Search by name or phone…"
+          className={`${inputClass} w-64 pl-9`}
+        />
+      </div>
+      {tab && <input type="hidden" name="tab" value={tab} />}
+      <button type="submit" className={buttonPrimary}>
+        Search
+      </button>
+    </form>
+  );
+
   return (
     <div>
-      <PageHeading title="Volunteers" />
-
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PillTabs
-          items={[
-            {
-              key: 'approved',
-              label: 'Approved',
-              href: `/volunteers?tab=approved${q ? `&q=${encodeURIComponent(q)}` : ''}`,
-              active: activeTab === 'approved',
-            },
-            {
-              key: 'pending',
-              label: 'Pending',
-              href: `/volunteers?tab=pending${q ? `&q=${encodeURIComponent(q)}` : ''}`,
-              active: activeTab === 'pending',
-            },
-          ]}
-        />
-
-        <form className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
-            <input
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Search by name or phone…"
-              className={`${inputClass} w-64 pl-9`}
-            />
-          </div>
-          {tab && <input type="hidden" name="tab" value={tab} />}
-          <button type="submit" className={buttonPrimary}>
-            Search
-          </button>
-        </form>
-      </div>
+      <AddNewPanel
+        title="Volunteers"
+        label="Register volunteer"
+        description="For someone recruited offline who hasn't applied in the app yet."
+        modal
+        filters={filterPills}
+        search={searchForm}
+      >
+        <RegisterVolunteerForm />
+      </AddNewPanel>
 
       <Suspense fallback={<SkeletonTable rows={7} cols={4} />}>
         <VolunteersTable activeTab={activeTab} q={q} />

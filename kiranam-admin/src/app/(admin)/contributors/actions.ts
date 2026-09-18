@@ -24,6 +24,20 @@ export async function getAutoAssignKkNumberSetting(): Promise<boolean> {
   return getAutoAssignKkNumber();
 }
 
+// Fetched client-side by RegisterContributorForm on mount, same reasoning as
+// getAutoAssignKkNumberSetting above — lets the volunteer-assignment combobox
+// populate without the Contributors page itself waiting on this query.
+export async function getVolunteersForAssignment() {
+  await verifyAdmin();
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, full_name, phone')
+    .eq('role', 'volunteer')
+    .order('full_name', { ascending: true });
+  return data || [];
+}
+
 // Backfills a KK number for a contributor who was registered (in this system
 // or offline, before it existed) without one — used by the "Check KK number
 // coverage" list on the Settings page.
@@ -31,7 +45,7 @@ export async function assignKkNumber(contributorId: string, kkNumberInput: strin
   const admin = await verifyAdmin();
 
   const kkNumber = kkNumberInput.trim().toUpperCase();
-  if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK2001.');
+  if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK1.');
 
   const supabase = await createClient();
   const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', contributorId);
@@ -52,6 +66,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const monthlyAmountRaw = String(formData.get('monthly_amount') || '').trim();
   const monthlyAmount = monthlyAmountRaw ? Number(monthlyAmountRaw) : null;
   const kkNumberInput = String(formData.get('kk_number') || '').trim();
+  const volunteerId = String(formData.get('volunteerId') || '').trim();
 
   if (!fullName) return { error: 'Full name is required.' };
 
@@ -75,7 +90,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     kkNumber = await nextKkNumber(supabaseAdmin);
   } else {
     if (!kkNumberInput) return { error: 'KK number is required.' };
-    if (!/^KK\d+$/i.test(kkNumberInput)) return { error: 'KK number must look like KK2001.' };
+    if (!/^KK\d+$/i.test(kkNumberInput)) return { error: 'KK number must look like KK1.' };
     kkNumber = kkNumberInput.toUpperCase();
   }
 
@@ -139,7 +154,16 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     return { error: 'Contributor was created, but saving their commitment failed. Please add it manually.' };
   }
 
-  await logAction(admin.id, 'register_contributor', 'profiles', contributorId, { fullName, monthlyAmount, kkNumber });
+  if (volunteerId) {
+    const { error: assignError } = await supabaseAdmin
+      .from('contributor_assignments')
+      .insert({ volunteer_id: volunteerId, contributor_id: contributorId, source: 'admin' });
+    if (assignError) {
+      return { error: 'Contributor was created, but assigning their volunteer failed. Please assign it manually.' };
+    }
+  }
+
+  await logAction(admin.id, 'register_contributor', 'profiles', contributorId, { fullName, monthlyAmount, kkNumber, volunteerId: volunteerId || null });
   revalidatePath('/contributors');
   return { message: `${fullName} has been registered as a contributor. They can log in with this phone number.` };
 }

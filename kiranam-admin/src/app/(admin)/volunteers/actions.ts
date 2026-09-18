@@ -3,7 +3,90 @@
 import { revalidatePath } from 'next/cache';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
+import { friendlyErrorMessage } from '@/lib/errors';
+import { validatePhoneNumber } from '@/lib/phone';
+import { COUNTRIES } from '@/lib/countries';
+import type { CountryCode } from 'libphonenumber-js/min';
+
+export interface RegisterVolunteerState {
+  message?: string;
+  error?: string;
+}
+
+// For a volunteer who was recruited/working offline (before this system, or
+// outside the in-app application flow) but has never opened the app.
+// Pre-creates their login by phone number, same pattern as registering a
+// contributor — they claim it by logging into kiranam-app with this same
+// phone number. Any of their existing contributors are assigned afterwards
+// from this volunteer's detail page, not here.
+export async function registerVolunteer(
+  _prevState: RegisterVolunteerState,
+  formData: FormData
+): Promise<RegisterVolunteerState> {
+  const admin = await verifyAdmin();
+
+  const fullName = String(formData.get('full_name') || '').trim();
+  const dialCode = String(formData.get('dial_code') || '91').replace(/\D/g, '') || '91';
+  const phoneDigits = String(formData.get('phone') || '').replace(/\D/g, '');
+  const kkNumberInput = String(formData.get('kk_number') || '').trim();
+
+  if (!fullName) return { error: 'Full name is required.' };
+
+  const country = COUNTRIES.find((c) => c.dialCode === dialCode);
+  const phoneError = country
+    ? validatePhoneNumber(phoneDigits, country.iso2 as CountryCode)
+    : 'Enter a valid phone number.';
+  if (phoneError) return { error: phoneError };
+
+  let kkNumber: string | null = null;
+  if (kkNumberInput) {
+    if (!/^KK\d+$/i.test(kkNumberInput)) return { error: 'KK number must look like KK1.' };
+    kkNumber = kkNumberInput.toUpperCase();
+  }
+
+  const phoneE164 = `+${dialCode}${phoneDigits}`;
+  const supabaseAdmin = createAdminClient();
+
+  const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    phone: phoneE164,
+    phone_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+
+  if (createError || !created.user) {
+    const isDuplicate =
+      createError?.code === 'phone_exists' ||
+      createError?.code === 'user_already_exists' ||
+      createError?.status === 422 ||
+      /already exists|already been registered|already registered/i.test(createError?.message || '');
+
+    if (createError) console.error('registerVolunteer: createUser failed:', createError);
+
+    const message = isDuplicate
+      ? `A volunteer with this phone number already exists.`
+      : 'Could not register this volunteer. Please try again.';
+    return { error: message };
+  }
+
+  const volunteerId = created.user.id;
+
+  const { error: profileError } = await supabaseAdmin
+    .from('profiles')
+    .update({ full_name: fullName, role: 'volunteer', ...(kkNumber ? { kk_number: kkNumber } : {}) })
+    .eq('id', volunteerId);
+  if (profileError) {
+    const message = /duplicate key|unique/i.test(profileError.message)
+      ? `Volunteer was created, but ${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
+      : friendlyErrorMessage(profileError.message);
+    return { error: message };
+  }
+
+  await logAction(admin.id, 'register_volunteer', 'profiles', volunteerId, { fullName, kkNumber });
+  revalidatePath('/volunteers');
+  return { message: `${fullName} has been registered as a volunteer. They can log in with this phone number.` };
+}
 
 export async function assignContributor(volunteerId: string, formData: FormData) {
   const admin = await verifyAdmin();
