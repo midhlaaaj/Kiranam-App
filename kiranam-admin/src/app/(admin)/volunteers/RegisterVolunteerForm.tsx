@@ -38,10 +38,11 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
     [phoneTouched, country, phone]
   );
 
-  // Checked as soon as the phone number is entered, before the rest of the
-  // form is filled in. A contributor match offers "upgrade to volunteer"; a
-  // volunteer match offers a quick view/edit — same as on the Contributors
-  // registration form.
+  // Checked on phone-field blur — before the rest of the form is filled in,
+  // rather than only on submit. A single request rather than one per
+  // keystroke, since the backend runs on a free tier. A contributor match
+  // offers "upgrade to volunteer"; a volunteer match offers a quick view/edit
+  // — same as on the Contributors registration form.
   const [duplicate, setDuplicate] = useState<PhoneDuplicateMatch | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const [quickViewId, setQuickViewId] = useState<string | null>(null);

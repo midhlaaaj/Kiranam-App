@@ -61,9 +61,9 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
     [phoneTouched, country, phone]
   );
 
-  // Checked as soon as the phone number is entered — before the admin fills
-  // in the rest of the form — rather than only surfacing on submit, which
-  // used to mean a duplicate was only caught after everything was filled in.
+  // Checked on phone-field blur — before the admin fills in the rest of the
+  // form, rather than only on submit. A single request rather than one per
+  // keystroke, since the backend runs on a free tier.
   const [duplicate, setDuplicate] = useState<PhoneDuplicateMatch | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
   const [quickViewId, setQuickViewId] = useState<string | null>(null);

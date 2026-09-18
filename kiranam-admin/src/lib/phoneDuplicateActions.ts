@@ -9,10 +9,10 @@ export interface PhoneDuplicateMatch {
   role: 'contributor' | 'volunteer' | 'admin';
 }
 
-// Checked on phone-field blur by RegisterContributorForm and
-// RegisterVolunteerForm, before the rest of the form is even filled in —
-// service-role client because ordinary admin RLS on profiles doesn't expose
-// arbitrary phone lookups across all roles.
+// Checked while the phone field is being typed into (debounced) by
+// RegisterContributorForm and RegisterVolunteerForm, before the rest of the
+// form is even filled in — service-role client because ordinary admin RLS on
+// profiles doesn't expose arbitrary phone lookups across all roles.
 export async function checkPhoneDuplicate(dialCode: string, phoneDigits: string): Promise<PhoneDuplicateMatch | null> {
   await verifyAdmin();
 
@@ -20,12 +20,16 @@ export async function checkPhoneDuplicate(dialCode: string, phoneDigits: string)
   const code = dialCode.replace(/\D/g, '') || '91';
   if (!digits) return null;
 
-  const phoneE164 = `+${code}${digits}`;
+  // Supabase Auth stores profiles.phone without the leading "+" (e.g.
+  // "918086623316"), but the rest of this codebase's own createUser() calls
+  // pass it WITH one — matching both here is cheap insurance against either
+  // format actually being on a row.
+  const plain = `${code}${digits}`;
   const supabaseAdmin = createAdminClient();
   const { data } = await supabaseAdmin
     .from('profiles')
     .select('id, full_name, role')
-    .eq('phone', phoneE164)
+    .or(`phone.eq.${plain},phone.eq.+${plain}`)
     .maybeSingle();
 
   if (!data) return null;

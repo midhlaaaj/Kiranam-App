@@ -69,10 +69,12 @@ export async function registerVolunteer(
     if (createError) console.error('registerVolunteer: createUser failed:', createError);
 
     if (isDuplicate) {
+      // profiles.phone is stored without the leading "+" (Supabase Auth's
+      // own normalization) even though phoneE164 above has one — match both.
       const { data: existing } = await supabaseAdmin
         .from('profiles')
         .select('id, full_name, role')
-        .eq('phone', phoneE164)
+        .or(`phone.eq.${dialCode}${phoneDigits},phone.eq.${phoneE164}`)
         .maybeSingle();
 
       if (existing && existing.role === 'contributor') {
