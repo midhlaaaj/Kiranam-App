@@ -1,11 +1,11 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { registerVolunteer, type RegisterVolunteerState } from './actions';
-import { buttonPrimary, cardClass } from '@/lib/ui';
+import { registerVolunteer, upgradeContributorToVolunteer, type RegisterVolunteerState } from './actions';
+import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
 
@@ -49,6 +49,25 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
       onDone?.();
     }
   }, [state, onDone]);
+
+  const [upgrading, startUpgrade] = useTransition();
+  function handleUpgrade() {
+    if (!state.existingContributor) return;
+    const kkNumberInput = String(new FormData(formRef.current ?? undefined).get('kk_number') || '');
+    startUpgrade(async () => {
+      try {
+        const { fullName } = await upgradeContributorToVolunteer(state.existingContributor!.id, kkNumberInput);
+        toast.success(`${fullName || 'Contributor'} has been upgraded to volunteer.`);
+        formRef.current?.reset();
+        setPhone('');
+        setDialCode('91');
+        setPhoneTouched(false);
+        onDone?.();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not upgrade this contributor.');
+      }
+    });
+  }
 
   return (
     <form
@@ -150,6 +169,22 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
         <p className="mt-4 text-sm text-kiranam-danger" role="alert">
           {state.error}
         </p>
+      )}
+
+      {state?.existingContributor && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-kiranam-border-strong bg-kiranam-surface-alt px-3.5 py-2.5">
+          <p className="text-sm text-kiranam-ink">
+            Upgrade {state.existingContributor.fullName || 'this contributor'} to a volunteer instead?
+          </p>
+          <button
+            type="button"
+            disabled={upgrading}
+            onClick={handleUpgrade}
+            className={`${buttonSecondary} shrink-0`}
+          >
+            {upgrading ? 'Upgrading…' : 'Upgrade to volunteer'}
+          </button>
+        </div>
       )}
 
       <button type="submit" disabled={pending} className={`${buttonPrimary} mt-5 w-full`}>

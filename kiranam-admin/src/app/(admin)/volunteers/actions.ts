@@ -13,6 +13,10 @@ import type { CountryCode } from 'libphonenumber-js/min';
 export interface RegisterVolunteerState {
   message?: string;
   error?: string;
+  /** Set when registration failed because this phone number already belongs
+   * to an existing contributor — lets the form offer "upgrade to volunteer"
+   * instead of a dead-end error. */
+  existingContributor?: { id: string; fullName: string | null };
 }
 
 // For a volunteer who was recruited/working offline (before this system, or
@@ -64,10 +68,24 @@ export async function registerVolunteer(
 
     if (createError) console.error('registerVolunteer: createUser failed:', createError);
 
-    const message = isDuplicate
-      ? `A volunteer with this phone number already exists.`
-      : 'Could not register this volunteer. Please try again.';
-    return { error: message };
+    if (isDuplicate) {
+      const { data: existing } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('phone', phoneE164)
+        .maybeSingle();
+
+      if (existing && existing.role === 'contributor') {
+        return {
+          error: `${existing.full_name || 'This contributor'} is already registered with this phone number as a contributor.`,
+          existingContributor: { id: existing.id, fullName: existing.full_name },
+        };
+      }
+
+      return { error: 'A volunteer with this phone number already exists.' };
+    }
+
+    return { error: 'Could not register this volunteer. Please try again.' };
   }
 
   const volunteerId = created.user.id;
@@ -86,6 +104,45 @@ export async function registerVolunteer(
   await logAction(admin.id, 'register_volunteer', 'profiles', volunteerId, { fullName, kkNumber });
   revalidatePath('/volunteers');
   return { message: `${fullName} has been registered as a volunteer. They can log in with this phone number.` };
+}
+
+// Promotes an existing contributor to volunteer in place, rather than
+// failing registration outright when the phone number they'd register with
+// already belongs to a contributor account — offered from
+// RegisterVolunteerForm after that duplicate-phone error.
+export async function upgradeContributorToVolunteer(contributorId: string, kkNumberInput?: string) {
+  const admin = await verifyAdmin();
+
+  let kkNumber: string | null = null;
+  if (kkNumberInput?.trim()) {
+    kkNumber = kkNumberInput.trim().toUpperCase();
+    if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK1.');
+  }
+
+  const supabase = await createClient();
+  const { data: profile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('full_name, kk_number')
+    .eq('id', contributorId)
+    .single();
+  if (fetchError) throw new Error(friendlyErrorMessage(fetchError.message));
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ role: 'volunteer', ...(kkNumber && !profile.kk_number ? { kk_number: kkNumber } : {}) })
+    .eq('id', contributorId);
+  if (error) {
+    const message = /duplicate key|unique/i.test(error.message)
+      ? `${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
+      : friendlyErrorMessage(error.message);
+    throw new Error(message);
+  }
+
+  await logAction(admin.id, 'upgrade_contributor_to_volunteer', 'profiles', contributorId, { kkNumber });
+  revalidatePath('/volunteers');
+  revalidatePath('/contributors');
+  revalidatePath(`/contributors/${contributorId}`);
+  return { fullName: profile.full_name as string | null };
 }
 
 export async function assignContributor(volunteerId: string, formData: FormData) {
