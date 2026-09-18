@@ -5,10 +5,13 @@ import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
 import { getAutoAssignKkNumberSetting, getVolunteersForAssignment, registerContributor, type RegisterState } from './actions';
-import { buttonPrimary, cardClass } from '@/lib/ui';
+import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
+import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
 import { PersonCombobox } from '@/components/PersonCombobox';
+import { ContributorQuickViewModal } from './ContributorQuickViewModal';
+import { VolunteerQuickViewModal } from '../volunteers/VolunteerQuickViewModal';
 
 const initialState: RegisterState = {};
 
@@ -58,6 +61,31 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
     [phoneTouched, country, phone]
   );
 
+  // Checked as soon as the phone number is entered — before the admin fills
+  // in the rest of the form — rather than only surfacing on submit, which
+  // used to mean a duplicate was only caught after everything was filled in.
+  const [duplicate, setDuplicate] = useState<PhoneDuplicateMatch | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [quickViewId, setQuickViewId] = useState<string | null>(null);
+  const checkSeq = useRef(0);
+
+  async function checkDuplicate() {
+    if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode)) {
+      setDuplicate(null);
+      return;
+    }
+    const seq = ++checkSeq.current;
+    setCheckingDuplicate(true);
+    try {
+      const match = await checkPhoneDuplicate(dialCode, phone);
+      if (seq === checkSeq.current) setDuplicate(match);
+    } catch {
+      // Non-blocking — registration will still catch a real duplicate on submit.
+    } finally {
+      if (seq === checkSeq.current) setCheckingDuplicate(false);
+    }
+  }
+
   useEffect(() => {
     if (state === lastState.current) return;
     lastState.current = state;
@@ -69,17 +97,19 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
       setDialCode('91');
       setPhoneTouched(false);
       setComboboxResetKey((k) => k + 1);
+      setDuplicate(null);
       onDone?.();
     }
   }, [state, onDone]);
 
   return (
+    <>
     <form
       ref={formRef}
       action={formAction}
       onSubmit={(e) => {
         setPhoneTouched(true);
-        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode)) e.preventDefault();
+        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate) e.preventDefault();
       }}
       className={`${cardClass} p-5`}
     >
@@ -92,19 +122,6 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <label htmlFor="full_name" className={fieldLabelClass}>
-            Full name
-          </label>
-          <input
-            id="full_name"
-            name="full_name"
-            placeholder="Enter full name"
-            required
-            className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
-          />
-        </div>
-
         <fieldset className="flex flex-col gap-1.5 sm:col-span-2">
           <legend className={`${fieldLabelClass} mb-1.5 float-left w-full p-0`}>Phone number</legend>
           <div
@@ -118,7 +135,10 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
               <select
                 name="dial_code"
                 value={dialCode}
-                onChange={(e) => setDialCode(e.target.value)}
+                onChange={(e) => {
+                  setDialCode(e.target.value);
+                  setDuplicate(null);
+                }}
                 aria-label="Country code"
                 className={`${nativeControlClass} w-[5.75rem] cursor-pointer appearance-none py-2.5 pl-3.5 pr-7`}
               >
@@ -141,8 +161,14 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
               required
               maxLength={15}
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^\d ]/g, ''))}
-              onBlur={() => setPhoneTouched(true)}
+              onChange={(e) => {
+                setPhone(e.target.value.replace(/[^\d ]/g, ''));
+                setDuplicate(null);
+              }}
+              onBlur={() => {
+                setPhoneTouched(true);
+                checkDuplicate();
+              }}
               aria-label="Phone number"
               aria-invalid={!!phoneError}
               aria-describedby={phoneError ? 'phone-error' : undefined}
@@ -154,55 +180,91 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
               {phoneError}
             </p>
           )}
+          {checkingDuplicate && <p className="text-xs text-kiranam-muted">Checking…</p>}
         </fieldset>
 
-        {!autoAssignKkNumber && (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="kk_number" className={fieldLabelClass}>
-              KK number
-            </label>
-            <input
-              id="kk_number"
-              name="kk_number"
-              placeholder="e.g. KK1"
-              required
-              className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
-            />
+        {duplicate && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-kiranam-border-strong bg-kiranam-surface-alt px-3.5 py-2.5 sm:col-span-2">
+            <p className="text-sm text-kiranam-ink">
+              {duplicate.fullName || 'Someone'} is already registered with this number as a{' '}
+              {duplicate.role === 'admin' ? 'staff account' : duplicate.role}.
+            </p>
+            {duplicate.role !== 'admin' && (
+              <button
+                type="button"
+                onClick={() => setQuickViewId(duplicate.id)}
+                className={`${buttonSecondary} shrink-0`}
+              >
+                Edit profile
+              </button>
+            )}
           </div>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="monthly_amount" className={fieldLabelClass}>
-            Monthly amount <span className="font-normal text-kiranam-muted-2">— optional</span>
-          </label>
-          <div className="flex items-center rounded-lg border border-kiranam-border-strong bg-kiranam-surface pl-3.5 transition duration-150 focus-within:border-kiranam-primary">
-            <span aria-hidden className="text-sm text-kiranam-muted">
-              ₹
-            </span>
-            <input
-              id="monthly_amount"
-              name="monthly_amount"
-              type="number"
-              min="1"
-              step="1"
-              placeholder="500"
-              className={`no-spinner ${nativeControlClass} px-2 py-2.5`}
-            />
-          </div>
-        </div>
+        {!duplicate && (
+          <>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <label htmlFor="full_name" className={fieldLabelClass}>
+                Full name
+              </label>
+              <input
+                id="full_name"
+                name="full_name"
+                placeholder="Enter full name"
+                required
+                className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+              />
+            </div>
 
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <label className={fieldLabelClass}>
-            Assign volunteer <span className="font-normal text-kiranam-muted-2">— optional</span>
-          </label>
-          <PersonCombobox
-            key={comboboxResetKey}
-            people={volunteers}
-            name="volunteerId"
-            placeholder="Search volunteers by name or phone…"
-            emptyLabel="No volunteers match."
-          />
-        </div>
+            {!autoAssignKkNumber && (
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="kk_number" className={fieldLabelClass}>
+                  KK number
+                </label>
+                <input
+                  id="kk_number"
+                  name="kk_number"
+                  placeholder="e.g. KK1"
+                  required
+                  className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="monthly_amount" className={fieldLabelClass}>
+                Monthly amount <span className="font-normal text-kiranam-muted-2">— optional</span>
+              </label>
+              <div className="flex items-center rounded-lg border border-kiranam-border-strong bg-kiranam-surface pl-3.5 transition duration-150 focus-within:border-kiranam-primary">
+                <span aria-hidden className="text-sm text-kiranam-muted">
+                  ₹
+                </span>
+                <input
+                  id="monthly_amount"
+                  name="monthly_amount"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="500"
+                  className={`no-spinner ${nativeControlClass} px-2 py-2.5`}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <label className={fieldLabelClass}>
+                Assign volunteer <span className="font-normal text-kiranam-muted-2">— optional</span>
+              </label>
+              <PersonCombobox
+                key={comboboxResetKey}
+                people={volunteers}
+                name="volunteerId"
+                placeholder="Search volunteers by name or phone…"
+                emptyLabel="No volunteers match."
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {state?.error && (
@@ -211,9 +273,19 @@ export function RegisterContributorForm({ onDone }: { onDone?: () => void }) {
         </p>
       )}
 
-      <button type="submit" disabled={pending} className={`${buttonPrimary} mt-5 w-full`}>
-        {pending ? 'Registering…' : 'Register Contributor'}
-      </button>
+      {!duplicate && (
+        <button type="submit" disabled={pending} className={`${buttonPrimary} mt-5 w-full`}>
+          {pending ? 'Registering…' : 'Register Contributor'}
+        </button>
+      )}
     </form>
+
+    {duplicate?.role === 'contributor' && (
+      <ContributorQuickViewModal contributorId={quickViewId} onClose={() => setQuickViewId(null)} initialEditing />
+    )}
+    {duplicate?.role === 'volunteer' && (
+      <VolunteerQuickViewModal volunteerId={quickViewId} onClose={() => setQuickViewId(null)} initialEditing />
+    )}
+    </>
   );
 }

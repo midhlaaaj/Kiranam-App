@@ -1,22 +1,14 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
-import { HeartHandshake, Search, UserRoundCheck } from 'lucide-react';
+import { Search, UserRoundCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PendingApplicantRow } from './PendingApplicantRow';
 import { RegisterVolunteerForm } from './RegisterVolunteerForm';
+import { VolunteersTableClient } from './VolunteersTableClient';
 import { PillTabs } from '@/components/PillTabs';
-import {
-  buttonPrimary,
-  inputClass,
-  staggerDelay,
-  tableCellClass,
-  tableHeadRowClass,
-  tableRowClass,
-  tableWrapClass,
-} from '@/lib/ui';
+import { buttonPrimary, inputClass, tableCellClass, tableHeadRowClass, tableWrapClass } from '@/lib/ui';
 
 async function getApprovedVolunteers(query: string) {
   const supabase = await createClient();
@@ -148,42 +140,19 @@ export default async function VolunteersPage({
 async function VolunteersTable({ activeTab, q }: { activeTab: 'approved' | 'pending'; q?: string }) {
   const [volunteers, applicants] = await Promise.all([getApprovedVolunteers(q || ''), getPendingApplicants(q || '')]);
 
+  if (activeTab === 'approved') {
+    return (
+      <VolunteersTableClient
+        volunteers={volunteers}
+        emptyTitle={q ? 'No approved volunteers match your search' : 'No approved volunteers yet'}
+        emptyDescription={q ? 'Try a different name or phone number.' : undefined}
+      />
+    );
+  }
+
   return (
     <div className={tableWrapClass}>
-      {activeTab === 'approved' ? (
-        volunteers.length === 0 ? (
-          <EmptyState
-            icon={HeartHandshake}
-            title={q ? 'No approved volunteers match your search' : 'No approved volunteers yet'}
-            description={q ? 'Try a different name or phone number.' : undefined}
-          />
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className={tableHeadRowClass}>
-                <th className={tableCellClass}>Name</th>
-                <th className={tableCellClass}>Phone</th>
-                <th className={tableCellClass}>Referral Code</th>
-                <th className={tableCellClass}>Assigned Contributors</th>
-              </tr>
-            </thead>
-            <tbody>
-              {volunteers.map((v, i) => (
-                <tr key={v.id} className={tableRowClass} style={staggerDelay(i)}>
-                  <td className={tableCellClass}>
-                    <Link href={`/volunteers/${v.id}`} className="font-semibold text-kiranam-ink hover:text-kiranam-primary hover:underline">
-                      {v.full_name || 'Unnamed'}
-                    </Link>
-                  </td>
-                  <td className={`${tableCellClass} text-kiranam-muted`}>{v.phone}</td>
-                  <td className={`${tableCellClass} font-mono text-kiranam-muted`}>{v.referralCode}</td>
-                  <td className={`${tableCellClass} text-kiranam-muted tabular-nums`}>{v.assignedCount}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )
-      ) : applicants.length === 0 ? (
+      {applicants.length === 0 ? (
         <EmptyState
           icon={UserRoundCheck}
           title={q ? 'No pending applications match your search' : 'No pending applications'}

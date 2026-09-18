@@ -145,6 +145,51 @@ export async function upgradeContributorToVolunteer(contributorId: string, kkNum
   return { fullName: profile.full_name as string | null };
 }
 
+// Fetched by VolunteerQuickViewModal — a compact view/edit popup opened from
+// a Volunteers table row or from a duplicate-phone match surfaced while
+// registering, as an alternative to the full detail page.
+export async function getVolunteerQuickView(volunteerId: string) {
+  await verifyAdmin();
+  const supabase = await createClient();
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, phone, kk_number')
+    .eq('id', volunteerId)
+    .single();
+  if (error || !profile) throw new Error('Volunteer not found.');
+
+  const { count } = await supabase
+    .from('contributor_assignments')
+    .select('*', { count: 'exact', head: true })
+    .eq('volunteer_id', volunteerId);
+
+  return { ...profile, assignedCount: count || 0 };
+}
+
+// KK number is the only field VolunteerQuickViewModal lets an admin edit —
+// same update as assignKkNumber in contributors/actions.ts (profiles.kk_number
+// isn't role-specific), duplicated here rather than imported so this file
+// doesn't reach into a sibling route's actions module.
+export async function updateVolunteerKkNumber(volunteerId: string, kkNumberInput: string) {
+  const admin = await verifyAdmin();
+
+  const kkNumber = kkNumberInput.trim().toUpperCase();
+  if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK1.');
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', volunteerId);
+  if (error) {
+    const message = /duplicate key|unique/i.test(error.message)
+      ? `${kkNumber} is already assigned to someone else.`
+      : friendlyErrorMessage(error.message);
+    throw new Error(message);
+  }
+
+  await logAction(admin.id, 'assign_kk_number', 'profiles', volunteerId, { kkNumber });
+  revalidatePath('/volunteers');
+}
+
 export async function assignContributor(volunteerId: string, formData: FormData) {
   const admin = await verifyAdmin();
   const contributorId = String(formData.get('contributorId') || '');

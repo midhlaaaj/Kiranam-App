@@ -38,6 +38,39 @@ export async function getVolunteersForAssignment() {
   return data || [];
 }
 
+// Fetched by ContributorQuickViewModal — a compact view/edit popup opened
+// from a Contributors table row or from a duplicate-phone match surfaced
+// while registering, as an alternative to the full detail page.
+export async function getContributorQuickView(contributorId: string) {
+  await verifyAdmin();
+  const supabase = await createClient();
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, phone, kk_number')
+    .eq('id', contributorId)
+    .single();
+  if (error || !profile) throw new Error('Contributor not found.');
+
+  const { data: assignment } = await supabase
+    .from('contributor_assignments')
+    .select('volunteer_id')
+    .eq('contributor_id', contributorId)
+    .maybeSingle();
+
+  let volunteer: { id: string; full_name: string | null; phone: string | null } | null = null;
+  if (assignment?.volunteer_id) {
+    const { data: vol } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone')
+      .eq('id', assignment.volunteer_id)
+      .maybeSingle();
+    volunteer = vol;
+  }
+
+  return { ...profile, volunteer };
+}
+
 // Backfills a KK number for a contributor who was registered (in this system
 // or offline, before it existed) without one — used by the "Check KK number
 // coverage" list on the Settings page.

@@ -1,41 +1,22 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Search, Users } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { AddNewPanel } from '@/components/AddNewPanel';
 import { NotificationBell } from '@/components/NotificationBell';
 import { MobileToolbar } from '@/components/MobileToolbar';
-import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { RegisterContributorForm } from './RegisterContributorForm';
+import { ContributorsTableClient } from './ContributorsTableClient';
 import { deriveContributorStatus, type ContributorStatus } from '@/lib/volunteerStats';
 import { PillTabs } from '@/components/PillTabs';
-import {
-  badgeClass,
-  buttonPrimary,
-  buttonSecondary,
-  formatMoney,
-  inputClass,
-  staggerDelay,
-  tableCellClass,
-  tableCellNumClass,
-  tableHeadRowClass,
-  tableRowClass,
-  tableWrapClass,
-} from '@/lib/ui';
+import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
 
 const STATUS_LABEL: Record<ContributorStatus, string> = {
   active: 'Active',
   due: 'Due',
   overdue: 'Overdue',
   inactive: 'Inactive',
-};
-
-const STATUS_TONE: Record<ContributorStatus, 'success' | 'warning' | 'danger' | 'neutral'> = {
-  active: 'success',
-  due: 'warning',
-  overdue: 'danger',
-  inactive: 'neutral',
 };
 
 export default async function ContributorsPage({
@@ -149,45 +130,10 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
   const contributors = status ? allContributors.filter((c) => c.status === status) : allContributors;
 
   return (
-    <div className={tableWrapClass}>
-      {contributors.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title={q || status ? 'No contributors match these filters' : 'No contributors yet'}
-          description={q || status ? 'Try a different search or status filter.' : undefined}
-        />
-      ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className={tableHeadRowClass}>
-              <th className={tableCellClass}>Name</th>
-              <th className={tableCellClass}>KK Number</th>
-              <th className={tableCellClass}>Phone</th>
-              <th className={tableCellClass}>Monthly Amount</th>
-              <th className={tableCellClass}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contributors.map((c, i) => (
-              <tr key={c.id} className={tableRowClass} style={staggerDelay(i)}>
-                <td className={tableCellClass}>
-                  <Link href={`/contributors/${c.id}`} className="font-semibold text-kiranam-ink hover:text-kiranam-primary hover:underline">
-                    {c.full_name || 'Unnamed'}
-                  </Link>
-                </td>
-                <td className={`${tableCellClass} text-kiranam-muted`}>{c.kk_number || '—'}</td>
-                <td className={`${tableCellClass} text-kiranam-muted`}>{c.phone}</td>
-                <td className={`${tableCellNumClass} text-kiranam-muted`}>
-                  {c.monthlyAmount ? formatMoney(Number(c.monthlyAmount)) : '—'}
-                </td>
-                <td className={tableCellClass}>
-                  <span className={badgeClass(STATUS_TONE[c.status])}>{STATUS_LABEL[c.status]}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    <ContributorsTableClient
+      contributors={contributors}
+      emptyTitle={q || status ? 'No contributors match these filters' : 'No contributors yet'}
+      emptyDescription={q || status ? 'Try a different search or status filter.' : undefined}
+    />
   );
 }

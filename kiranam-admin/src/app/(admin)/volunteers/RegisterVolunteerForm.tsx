@@ -5,9 +5,11 @@ import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
 import { registerVolunteer, upgradeContributorToVolunteer, type RegisterVolunteerState } from './actions';
+import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
 import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
+import { VolunteerQuickViewModal } from './VolunteerQuickViewModal';
 
 const initialState: RegisterVolunteerState = {};
 
@@ -36,32 +38,65 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
     [phoneTouched, country, phone]
   );
 
+  // Checked as soon as the phone number is entered, before the rest of the
+  // form is filled in. A contributor match offers "upgrade to volunteer"; a
+  // volunteer match offers a quick view/edit — same as on the Contributors
+  // registration form.
+  const [duplicate, setDuplicate] = useState<PhoneDuplicateMatch | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [quickViewId, setQuickViewId] = useState<string | null>(null);
+  const checkSeq = useRef(0);
+
+  async function checkDuplicate() {
+    if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode)) {
+      setDuplicate(null);
+      return;
+    }
+    const seq = ++checkSeq.current;
+    setCheckingDuplicate(true);
+    try {
+      const match = await checkPhoneDuplicate(dialCode, phone);
+      if (seq === checkSeq.current) setDuplicate(match);
+    } catch {
+      // Non-blocking — registration will still catch a real duplicate on submit.
+    } finally {
+      if (seq === checkSeq.current) setCheckingDuplicate(false);
+    }
+  }
+
   useEffect(() => {
     if (state === lastState.current) return;
     lastState.current = state;
     if (state.error) toast.error(state.error);
+    // Submit-time fallback (a duplicate created between the blur check and
+    // submit) — surfaces the same upgrade banner as the earlier client check.
+    if (state.existingContributor) {
+      setDuplicate({ id: state.existingContributor.id, fullName: state.existingContributor.fullName, role: 'contributor' });
+    }
     if (state.message) {
       toast.success(state.message);
       formRef.current?.reset();
       setPhone('');
       setDialCode('91');
       setPhoneTouched(false);
+      setDuplicate(null);
       onDone?.();
     }
   }, [state, onDone]);
 
   const [upgrading, startUpgrade] = useTransition();
   function handleUpgrade() {
-    if (!state.existingContributor) return;
+    if (!duplicate) return;
     const kkNumberInput = String(new FormData(formRef.current ?? undefined).get('kk_number') || '');
     startUpgrade(async () => {
       try {
-        const { fullName } = await upgradeContributorToVolunteer(state.existingContributor!.id, kkNumberInput);
+        const { fullName } = await upgradeContributorToVolunteer(duplicate.id, kkNumberInput);
         toast.success(`${fullName || 'Contributor'} has been upgraded to volunteer.`);
         formRef.current?.reset();
         setPhone('');
         setDialCode('91');
         setPhoneTouched(false);
+        setDuplicate(null);
         onDone?.();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : 'Could not upgrade this contributor.');
@@ -70,12 +105,13 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
   }
 
   return (
+    <>
     <form
       ref={formRef}
       action={formAction}
       onSubmit={(e) => {
         setPhoneTouched(true);
-        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode)) e.preventDefault();
+        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate) e.preventDefault();
       }}
       className={`${cardClass} p-5`}
     >
@@ -88,19 +124,6 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <label htmlFor="v_full_name" className={fieldLabelClass}>
-            Full name
-          </label>
-          <input
-            id="v_full_name"
-            name="full_name"
-            placeholder="Enter full name"
-            required
-            className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
-          />
-        </div>
-
         <fieldset className="flex flex-col gap-1.5 sm:col-span-2">
           <legend className={`${fieldLabelClass} mb-1.5 float-left w-full p-0`}>Phone number</legend>
           <div
@@ -114,7 +137,10 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
               <select
                 name="dial_code"
                 value={dialCode}
-                onChange={(e) => setDialCode(e.target.value)}
+                onChange={(e) => {
+                  setDialCode(e.target.value);
+                  setDuplicate(null);
+                }}
                 aria-label="Country code"
                 className={`${nativeControlClass} w-[5.75rem] cursor-pointer appearance-none py-2.5 pl-3.5 pr-7`}
               >
@@ -137,8 +163,14 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
               required
               maxLength={15}
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^\d ]/g, ''))}
-              onBlur={() => setPhoneTouched(true)}
+              onChange={(e) => {
+                setPhone(e.target.value.replace(/[^\d ]/g, ''));
+                setDuplicate(null);
+              }}
+              onBlur={() => {
+                setPhoneTouched(true);
+                checkDuplicate();
+              }}
               aria-label="Phone number"
               aria-invalid={!!phoneError}
               aria-describedby={phoneError ? 'v-phone-error' : undefined}
@@ -150,19 +182,56 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
               {phoneError}
             </p>
           )}
+          {checkingDuplicate && <p className="text-xs text-kiranam-muted">Checking…</p>}
         </fieldset>
 
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <label htmlFor="v_kk_number" className={fieldLabelClass}>
-            KK number <span className="font-normal text-kiranam-muted-2">— optional</span>
-          </label>
-          <input
-            id="v_kk_number"
-            name="kk_number"
-            placeholder="e.g. KK1"
-            className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
-          />
-        </div>
+        {duplicate && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-kiranam-border-strong bg-kiranam-surface-alt px-3.5 py-2.5 sm:col-span-2">
+            <p className="text-sm text-kiranam-ink">
+              {duplicate.fullName || 'Someone'} is already registered with this number as a{' '}
+              {duplicate.role === 'admin' ? 'staff account' : duplicate.role}.
+            </p>
+            {duplicate.role === 'contributor' && (
+              <button type="button" disabled={upgrading} onClick={handleUpgrade} className={`${buttonSecondary} shrink-0`}>
+                {upgrading ? 'Upgrading…' : 'Upgrade to volunteer'}
+              </button>
+            )}
+            {duplicate.role === 'volunteer' && (
+              <button type="button" onClick={() => setQuickViewId(duplicate.id)} className={`${buttonSecondary} shrink-0`}>
+                Edit profile
+              </button>
+            )}
+          </div>
+        )}
+
+        {!duplicate && (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label htmlFor="v_full_name" className={fieldLabelClass}>
+              Full name
+            </label>
+            <input
+              id="v_full_name"
+              name="full_name"
+              placeholder="Enter full name"
+              required
+              className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+            />
+          </div>
+        )}
+
+        {(!duplicate || duplicate.role === 'contributor') && (
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <label htmlFor="v_kk_number" className={fieldLabelClass}>
+              KK number <span className="font-normal text-kiranam-muted-2">— optional</span>
+            </label>
+            <input
+              id="v_kk_number"
+              name="kk_number"
+              placeholder="e.g. KK1"
+              className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+            />
+          </div>
+        )}
       </div>
 
       {state?.error && (
@@ -171,25 +240,16 @@ export function RegisterVolunteerForm({ onDone }: { onDone?: () => void }) {
         </p>
       )}
 
-      {state?.existingContributor && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-kiranam-border-strong bg-kiranam-surface-alt px-3.5 py-2.5">
-          <p className="text-sm text-kiranam-ink">
-            Upgrade {state.existingContributor.fullName || 'this contributor'} to a volunteer instead?
-          </p>
-          <button
-            type="button"
-            disabled={upgrading}
-            onClick={handleUpgrade}
-            className={`${buttonSecondary} shrink-0`}
-          >
-            {upgrading ? 'Upgrading…' : 'Upgrade to volunteer'}
-          </button>
-        </div>
+      {!duplicate && (
+        <button type="submit" disabled={pending} className={`${buttonPrimary} mt-5 w-full`}>
+          {pending ? 'Registering…' : 'Register Volunteer'}
+        </button>
       )}
-
-      <button type="submit" disabled={pending} className={`${buttonPrimary} mt-5 w-full`}>
-        {pending ? 'Registering…' : 'Register Volunteer'}
-      </button>
     </form>
+
+    {duplicate?.role === 'volunteer' && (
+      <VolunteerQuickViewModal volunteerId={quickViewId} onClose={() => setQuickViewId(null)} initialEditing />
+    )}
+    </>
   );
 }

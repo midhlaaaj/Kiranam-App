@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { inputClass } from '@/lib/ui';
 
 interface PersonOption {
@@ -15,15 +15,23 @@ export function PersonCombobox({
   name,
   placeholder = 'Search by name or phone…',
   emptyLabel = 'No matches.',
+  initial = null,
+  onSelect,
 }: {
   people: PersonOption[];
   name: string;
   placeholder?: string;
   emptyLabel?: string;
+  /** Pre-fills the combobox with an already-selected person (e.g. editing an
+   * existing assignment) instead of starting empty. */
+  initial?: PersonOption | null;
+  /** Fires whenever the selection changes (pick or clear) — for callers that
+   * need the value outside of reading the form on submit. */
+  onSelect?: (person: PersonOption | null) => void;
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initial ? `${initial.full_name || 'Unnamed'} — ${initial.phone || ''}` : '');
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<PersonOption | null>(null);
+  const [selected, setSelected] = useState<PersonOption | null>(initial);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,6 +56,7 @@ export function PersonCombobox({
     setSelected(p);
     setQuery(`${p.full_name || 'Unnamed'} — ${p.phone || ''}`);
     setOpen(false);
+    onSelect?.(p);
   }
 
   return (
@@ -63,10 +72,25 @@ export function PersonCombobox({
             setQuery(e.target.value);
             setSelected(null);
             setOpen(true);
+            onSelect?.(null);
           }}
           placeholder={placeholder}
-          className={`${inputClass} pl-9`}
+          className={`${inputClass} pl-9 ${selected ? 'pr-9' : ''}`}
         />
+        {selected && (
+          <button
+            type="button"
+            onClick={() => {
+              setSelected(null);
+              setQuery('');
+              onSelect?.(null);
+            }}
+            aria-label="Clear selection"
+            className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer text-kiranam-muted transition hover:text-kiranam-ink"
+          >
+            <X size={15} strokeWidth={2} />
+          </button>
+        )}
       </div>
 
       {open && (
