@@ -54,9 +54,20 @@ export async function GET(request: NextRequest) {
 
       const targetUrl = new URL(next, request.url);
       const isCrossHost = targetUrl.host !== request.nextUrl.host;
-      if (isCrossHost && data.session) {
-        targetUrl.searchParams.set('access_token', data.session.access_token);
-        targetUrl.searchParams.set('refresh_token', data.session.refresh_token);
+      if (isCrossHost) {
+        // Session tokens are only ever forwarded to the admin's own main
+        // domain — never to an arbitrary host a caller could put in `next`,
+        // which would otherwise let a modified copy of a legitimate reset
+        // link exfiltrate the victim's session.
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        const allowedHost = new URL(siteUrl).host;
+        if (targetUrl.host !== allowedHost) {
+          return NextResponse.redirect(new URL('/auth/error', request.url));
+        }
+        if (data.session) {
+          targetUrl.searchParams.set('access_token', data.session.access_token);
+          targetUrl.searchParams.set('refresh_token', data.session.refresh_token);
+        }
       }
       return NextResponse.redirect(targetUrl);
     }

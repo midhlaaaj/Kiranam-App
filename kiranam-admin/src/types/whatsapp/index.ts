@@ -108,6 +108,11 @@ export interface Contact {
   email?: string;
   company?: string;
   avatar_url?: string;
+  /** Defaults true; false for a Kiranam app user (kiranam_profile_id
+   *  set) who unchecked WhatsApp reminders at registration or withdrew
+   *  consent later (migration 027). Not meaningful for CSV/manually
+   *  added CRM contacts, which were never gated by that checkbox. */
+  whatsapp_consent?: boolean;
   created_at: string;
   updated_at: string;
   /** Hydrated by queries that embed `contact_tags(tags(*))` (e.g. the

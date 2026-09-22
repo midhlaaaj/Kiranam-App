@@ -225,6 +225,15 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       }
     }
 
+    // Contacts synced from the Kiranam app (kiranam_profile_id set)
+    // whose whatsapp_consent is false unchecked "receive contribution
+    // reminders over WhatsApp" at registration or withdrew it later
+    // (migration 027) — the privacy policy promises reminders only go
+    // out where that consent was given, so broadcasts must honor it.
+    // CSV/manually added CRM contacts have no kiranam_profile_id and
+    // were never gated by that checkbox, so they're unaffected.
+    contacts = contacts.filter((c) => c.whatsapp_consent !== false);
+
     return contacts;
   }
 

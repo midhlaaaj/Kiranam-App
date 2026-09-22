@@ -73,11 +73,13 @@ export default function PrivacyPolicyScreen() {
           We use your information to: create and manage your account; process and
           record contributions and issue receipts/acknowledgements; match and
           coordinate volunteers with contributors; send transactional messages
-          needed to run the app (e.g. OTPs, payment confirmations); send
-          contribution reminders and programme updates via WhatsApp or
-          push/in-app notification, only where you&apos;ve given specific consent,
-          which you can withdraw at any time; detect and prevent fraud, abuse, and
-          security incidents; and comply with applicable law.
+          needed to run the app — including your one-time login code, which we
+          deliver over WhatsApp, and payment confirmations; send contribution
+          reminders and programme updates via WhatsApp or push/in-app
+          notification, only where you&apos;ve given specific consent, which you
+          can withdraw at any time (this doesn&apos;t affect the login code, which
+          is required to sign in and isn&apos;t consent-based); detect and prevent
+          fraud, abuse, and security incidents; and comply with applicable law.
         </Section>
 
         <Section title="4. Who we share it with">
@@ -87,8 +89,9 @@ export default function PrivacyPolicyScreen() {
           provider.{'\n\n'}
           {'•'} Razorpay Software Private Limited — payment processing for
           contributions.{'\n\n'}
-          {'•'} Meta Platforms, Inc. (WhatsApp Business Platform) — WhatsApp
-          reminders, only if you&apos;ve opted in.{'\n\n'}
+          {'•'} Meta Platforms, Inc. (WhatsApp Business Platform) — delivery of
+          your login code (always, since it&apos;s how you sign in) and
+          contribution reminders (only if you&apos;ve opted in).{'\n\n'}
           {'•'} Google LLC (Firebase Cloud Messaging) and Expo — delivery of push
           notifications.{'\n\n'}
           {'•'} Volunteers and administrators, on a need-to-know basis, where

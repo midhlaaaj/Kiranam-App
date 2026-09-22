@@ -84,12 +84,14 @@ export default function PrivacyPolicyPage() {
           We use your information to: create and manage your account; process
           and record contributions and issue receipts/acknowledgements; match
           and coordinate volunteers with contributors; send transactional
-          messages needed to run the Services (e.g. OTPs, payment
-          confirmations); send contribution reminders and programme updates via
-          WhatsApp or push/in-app notification, only where you&apos;ve given
-          specific consent, which you can withdraw at any time; detect and
-          prevent fraud, abuse, and security incidents; and comply with
-          applicable law.
+          messages needed to run the Services — including your one-time login
+          code, which we deliver over WhatsApp, and payment confirmations; send
+          contribution reminders and programme updates via WhatsApp or
+          push/in-app notification, only where you&apos;ve given specific
+          consent, which you can withdraw at any time (this doesn&apos;t affect
+          the login code, which is required to sign in and isn&apos;t
+          consent-based); detect and prevent fraud, abuse, and security
+          incidents; and comply with applicable law.
         </Section>
 
         <Section title="4. Who we share it with">
@@ -98,7 +100,7 @@ export default function PrivacyPolicyPage() {
           <ul className="mt-2 list-disc space-y-2 pl-5">
             <li>Supabase, Inc. — our database, authentication, and file storage provider.</li>
             <li>Razorpay Software Private Limited — payment processing for contributions.</li>
-            <li>Meta Platforms, Inc. (WhatsApp Business Platform) — WhatsApp reminders, only if you&apos;ve opted in.</li>
+            <li>Meta Platforms, Inc. (WhatsApp Business Platform) — delivery of your login code (always, since it&apos;s how you sign in) and contribution reminders (only if you&apos;ve opted in).</li>
             <li>Google LLC (Firebase Cloud Messaging) and Expo — delivery of push notifications.</li>
             <li>Volunteers and administrators, on a need-to-know basis, where necessary to coordinate a volunteer-contributor relationship.</li>
           </ul>

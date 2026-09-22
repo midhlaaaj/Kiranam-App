@@ -90,14 +90,17 @@ export default function TermsPage() {
         </Section>
 
         <Section title="7. Communications and consent">
-          If you opt in during sign-up or from your profile settings,
-          we&apos;ll send contribution reminders and related updates to you
-          over WhatsApp and/or push or in-app notification. You can withdraw
-          this consent at any time from your profile settings; doing so stops
-          future reminder messages but doesn&apos;t affect your account, past
-          contributions, or transactional messages needed to run the app (e.g.
-          OTPs, payment confirmations). Your carrier&apos;s message and data
-          rates may apply to WhatsApp messages.
+          We deliver your one-time login code over WhatsApp — this is how
+          sign-in works and isn&apos;t optional or consent-based. If you
+          separately opt in during sign-up or from your profile settings,
+          we&apos;ll also send contribution reminders and related updates to
+          you over WhatsApp and/or push or in-app notification. You can
+          withdraw that reminder consent at any time from your profile
+          settings; doing so stops future reminder messages but doesn&apos;t
+          affect your account, past contributions, your login code, or other
+          transactional messages needed to run the app (e.g. payment
+          confirmations). Your carrier&apos;s message and data rates may apply
+          to WhatsApp messages.
         </Section>
 
         <Section title="8. Acceptable use">
