@@ -31,7 +31,7 @@ export const SETTINGS_SECTIONS = [
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
-export const DEFAULT_SECTION: SettingsSection = 'overview';
+const DEFAULT_SECTION: SettingsSection = 'overview';
 
 /** Rail grouping. `adminOnly` items are hidden for non-admins. */
 export interface SectionMeta {

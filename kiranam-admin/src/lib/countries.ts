@@ -62,7 +62,3 @@ const RAW_COUNTRIES: Omit<Country, 'flag'>[] = [
 ];
 
 export const COUNTRIES: Country[] = RAW_COUNTRIES.map((c) => ({ ...c, flag: flagEmoji(c.iso2) }));
-
-export function getCountryByIso2(iso2: string): Country | undefined {
-  return COUNTRIES.find((c) => c.iso2 === iso2);
-}

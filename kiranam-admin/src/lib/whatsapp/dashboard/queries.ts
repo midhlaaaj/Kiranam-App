@@ -11,8 +11,6 @@ import type {
   ActivityItem,
   ConversationsSeriesPoint,
   MetricsBundle,
-  PipelineDonutData,
-  PipelineStageSlice,
   ResponseTimeBucket,
   ResponseTimeSummary,
 } from './types'
@@ -126,45 +124,6 @@ export async function loadConversationsSeries(
   }
 
   return keys.map((day) => ({ day, ...(buckets.get(day) ?? { incoming: 0, outgoing: 0 }) }))
-}
-
-// --- 3. Pipeline donut -------------------------------------------------
-
-export async function loadPipelineDonut(db: DB): Promise<PipelineDonutData> {
-  const [stagesRes, dealsRes] = await Promise.all([
-    db.from('pipeline_stages').select('id, name, color, pipeline_id, position').order('position'),
-    db.from('deals').select('stage_id, value, status').eq('status', 'open'),
-  ])
-
-  const stages =
-    (stagesRes.data ?? []) as { id: string; name: string; color: string }[]
-  const deals = (dealsRes.data ?? []) as { stage_id: string; value: number | null }[]
-
-  const byStage = new Map<string, { count: number; total: number }>()
-  for (const d of deals) {
-    const row = byStage.get(d.stage_id) ?? { count: 0, total: 0 }
-    row.count += 1
-    row.total += d.value ?? 0
-    byStage.set(d.stage_id, row)
-  }
-
-  const slices: PipelineStageSlice[] = stages
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      color: s.color || '#64748b',
-      dealCount: byStage.get(s.id)?.count ?? 0,
-      totalValue: byStage.get(s.id)?.total ?? 0,
-    }))
-    // Hide empty stages from the ring (but we'd still show them in the
-    // legend if the user wanted a full breakdown — trimming keeps the
-    // visual clean for the common case).
-    .filter((s) => s.totalValue > 0 || s.dealCount > 0)
-
-  return {
-    stages: slices,
-    totalValue: slices.reduce((sum, s) => sum + s.totalValue, 0),
-  }
 }
 
 // --- 4. Response time by day of week ----------------------------------

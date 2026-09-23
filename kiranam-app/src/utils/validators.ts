@@ -24,10 +24,6 @@ export function validatePhoneNumber(nationalNumber: string, countryCode: Country
   return null;
 }
 
-export function validateOtp(otp: string): string | null {
-  return /^\d{6}$/.test(otp) ? null : 'Please enter the full 6-digit code.';
-}
-
 export function validateAmount(
   value: string | number,
   opts?: { min?: number; max?: number; label?: string }
@@ -50,12 +46,3 @@ export function validateReferralCode(code: string, opts?: { required?: boolean }
   return null;
 }
 
-export function validateMinLength(value: string, min: number, fieldLabel: string): string | null {
-  return value.trim().length >= min ? null : `${fieldLabel} must be at least ${min} characters.`;
-}
-
-export function validatePassword(password: string): string | null {
-  if (password.length < 8) return 'Password must be at least 8 characters.';
-  if (!/\d/.test(password)) return 'Password must include at least one number.';
-  return null;
-}

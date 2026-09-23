@@ -48,7 +48,7 @@ export function SkeletonPageHeading({
   );
 }
 
-export function SkeletonStatCard() {
+function SkeletonStatCard() {
   return (
     <div className={`${cardClass} p-5`}>
       <Skeleton className="mb-3 h-9 w-9 rounded-full" />

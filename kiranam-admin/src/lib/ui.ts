@@ -17,10 +17,6 @@ export const buttonDanger =
 export const linkDanger =
   'inline-flex min-h-10 items-center text-sm font-semibold text-kiranam-danger transition hover:underline cursor-pointer';
 
-export const linkGhost = 'text-sm font-semibold text-kiranam-ink transition hover:underline cursor-pointer';
-
-export const linkPrimary = 'text-sm font-semibold text-kiranam-primary transition hover:underline cursor-pointer';
-
 export const inputClass =
   'w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 

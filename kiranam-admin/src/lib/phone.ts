@@ -16,10 +16,3 @@ export function validatePhoneNumber(nationalDigits: string, iso2: CountryCode): 
   }
   return null;
 }
-
-/** National-format example digit length for a country, used to cap free typing
- * (e.g. maxLength on the input) before the field is even validated. */
-export function exampleNationalLength(iso2: CountryCode): number | null {
-  const example = getExampleNumber(iso2, examples);
-  return example ? example.nationalNumber.length : null;
-}
