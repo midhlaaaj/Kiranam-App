@@ -66,6 +66,103 @@ export async function verifyPhoneNumber(
 }
 
 // ============================================================
+// Conversation analytics (usage / spend — the closest the Cloud API
+// has to a "message balance")
+// ============================================================
+//
+// Meta's Cloud API has no prepaid balance to query — conversations
+// are billed to whatever payment method is linked to the Business
+// Manager, in arrears, unlike a BSP wallet. The nearest equivalent is
+// the WABA-level Conversation Analytics field, which reports
+// conversation volume and cost over a date range, broken down by
+// category (authentication/marketing/utility/service).
+
+export interface ConversationAnalyticsCategoryTotal {
+  category: string
+  conversations: number
+  cost: number
+}
+
+export interface ConversationAnalyticsSummary {
+  /** Null if Meta didn't return a currency (e.g. no billing set up yet). */
+  currency: string | null
+  totalConversations: number
+  totalCost: number
+  byCategory: ConversationAnalyticsCategoryTotal[]
+}
+
+export interface GetConversationAnalyticsArgs {
+  wabaId: string
+  accessToken: string
+  /** Unix seconds, inclusive start of the window. */
+  start: number
+  /** Unix seconds, exclusive end of the window. */
+  end: number
+}
+
+interface MetaConversationAnalyticsDataPoint {
+  start: number
+  end: number
+  conversation: number
+  cost?: number
+  conversation_category?: string
+}
+
+interface MetaConversationAnalyticsResponse {
+  currency?: string
+  conversation_analytics?: {
+    data?: Array<{ data_points?: MetaConversationAnalyticsDataPoint[] }>
+  }
+}
+
+/**
+ * Pulls WABA-level conversation volume + spend for `[start, end)` from
+ * Meta's Conversation Analytics field (`GET /{waba-id}?fields=conversation_analytics...`).
+ * Requires the access token to carry `whatsapp_business_management`.
+ */
+export async function getConversationAnalytics(
+  args: GetConversationAnalyticsArgs
+): Promise<ConversationAnalyticsSummary> {
+  const { wabaId, accessToken, start, end } = args
+  const fields =
+    `currency,conversation_analytics.start(${start}).end(${end})` +
+    `.granularity(DAILY).dimensions(["conversation_category"])`
+  const url = `${META_API_BASE}/${wabaId}?fields=${encodeURIComponent(fields)}`
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!response.ok) {
+    await throwMetaError(response, 'Failed to fetch conversation analytics')
+  }
+
+  const data = (await response.json()) as MetaConversationAnalyticsResponse
+  const points =
+    data.conversation_analytics?.data?.flatMap((d) => d.data_points ?? []) ?? []
+
+  const byCategoryMap = new Map<string, { conversations: number; cost: number }>()
+  for (const p of points) {
+    const key = p.conversation_category ?? 'unknown'
+    const bucket = byCategoryMap.get(key) ?? { conversations: 0, cost: 0 }
+    bucket.conversations += p.conversation ?? 0
+    bucket.cost += p.cost ?? 0
+    byCategoryMap.set(key, bucket)
+  }
+
+  const byCategory = [...byCategoryMap.entries()].map(([category, v]) => ({
+    category,
+    conversations: v.conversations,
+    cost: v.cost,
+  }))
+
+  return {
+    currency: data.currency ?? null,
+    totalConversations: byCategory.reduce((sum, c) => sum + c.conversations, 0),
+    totalCost: byCategory.reduce((sum, c) => sum + c.cost, 0),
+    byCategory,
+  }
+}
+
+// ============================================================
 // Cloud API registration (subscription for inbound webhooks)
 // ============================================================
 //

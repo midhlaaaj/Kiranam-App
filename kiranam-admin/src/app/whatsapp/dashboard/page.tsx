@@ -23,6 +23,7 @@ import type {
 
 import { MetricCard } from '@/components/whatsapp/dashboard/metric-card'
 import { SkeletonCard } from '@/components/whatsapp/dashboard/skeleton'
+import { UsageCard } from '@/components/whatsapp/dashboard/usage-card'
 import { QuickActions } from '@/components/whatsapp/dashboard/quick-actions'
 import { ConversationsChart } from '@/components/whatsapp/dashboard/conversations-chart'
 import { ResponseTimeChart } from '@/components/whatsapp/dashboard/response-time-chart'
@@ -117,7 +118,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricsLoading || !metrics ? (
           Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
@@ -165,6 +166,9 @@ export default function DashboardPage() {
             />
           </>
         )}
+        {/* Own fetch/loading cycle, independent of the three metrics
+            above — renders even while they're still loading. */}
+        <UsageCard />
       </div>
 
       {/* Quick actions */}
