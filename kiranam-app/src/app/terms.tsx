@@ -194,8 +194,9 @@ export default function TermsScreen() {
         <Section title="17. Grievance officer">
           In accordance with the Information Technology Act, 2000 and applicable
           rules, our Grievance Officer can be reached at:{'\n\n'}
-          Grievance Officer: [grievance officer name]{'\n'}
+          Grievance Officer: Diya Prasad{'\n'}
           Email: support@kiranam.online{'\n'}
+          Phone: +91 99466 61059{'\n'}
           Address: P.O. Kattippara, Poonoor, Kozhikode, Kerala 673573, India{'\n\n'}
           We&apos;ll acknowledge complaints within 48 hours and aim to resolve
           them within 30 days, or such other period as prescribed by applicable

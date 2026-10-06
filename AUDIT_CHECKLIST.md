@@ -5,7 +5,7 @@ Findings from the 2026-09-22 audit of the phone app, the admin website, and the 
 ## 1. Before you submit to the App Store / Play Store
 
 - [ ] **Set up a demo phone number for app reviewers.** Login only works by sending a one-time code over WhatsApp — if a reviewer's test number isn't on WhatsApp, or the message doesn't arrive in time, they get stuck at sign-in and the app can be rejected for "not working." Configure a test phone number with a fixed OTP in Supabase Auth, and put those credentials in App Store Connect's review notes and Play Console's app-access instructions.
-- [ ] **Fill in the grievance officer's real name** in the privacy policy and terms (currently a `[grievance officer name]` placeholder, in both the in-app screens and the public web pages). Legally required under the IT Act, and reviewers/DPDP complaints will need a real contact.
+- [x] **Fill in the grievance officer's real name.** Diya Prasad, +91 99466 61059, support@kiranam.online — filled in across the privacy policy and terms, in-app and web.
 - [ ] **Decide on 80G/12A tax-deduction wording.** The terms page has a bracketed placeholder noting this should be added if Kiranam holds that registration — confirm status and fill in or remove.
 - [ ] **Re-check Apple's privacy-manifest "required reason" API categories** against the final SDK versions in the build (Expo/EAS auto-merges third-party manifests at build time) — the audit didn't find an obvious gap but recommended a fresh check right before archiving the submission build.
 

@@ -162,8 +162,9 @@ export default function PrivacyPolicyScreen() {
           In accordance with the DPDP Act, 2023 and the Information Technology
           Act, 2000, we&apos;ve appointed a Grievance Officer for concerns about
           this Policy or our handling of your personal data:{'\n\n'}
-          Grievance Officer: [grievance officer name]{'\n'}
-          Email: privacy@kiranam.online{'\n'}
+          Grievance Officer: Diya Prasad{'\n'}
+          Email: support@kiranam.online{'\n'}
+          Phone: +91 99466 61059{'\n'}
           Address: P.O. Kattippara, Poonoor, Kozhikode, Kerala 673573, India{'\n\n'}
           We&apos;ll acknowledge your grievance and aim to resolve it within the
           timelines prescribed by applicable law. If you&apos;re not satisfied
@@ -179,7 +180,7 @@ export default function PrivacyPolicyScreen() {
 
         <Section title="13. Contact us">
           If you have questions about this policy or your data, contact us at
-          privacy@kiranam.online or at P.O. Kattippara, Poonoor, Kozhikode, Kerala 673573, India.
+          support@kiranam.online or at P.O. Kattippara, Poonoor, Kozhikode, Kerala 673573, India.
         </Section>
       </ScrollView>
     </SafeAreaView>
