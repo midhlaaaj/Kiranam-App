@@ -104,7 +104,8 @@ export interface FlowEditorContextValue {
   removeNode: (key: string) => void;
 
   // Actions
-  save: () => Promise<void>;
+  /** Resolves true when the save succeeded. */
+  save: () => Promise<boolean>;
   setStatus: (status: BuilderState["status"]) => Promise<void>;
   deleteFlow: () => Promise<void>;
 
@@ -292,22 +293,8 @@ export function FlowEditorProvider({
     [],
   );
 
-  // Browser-level reload / tab-close / external-link guard. SPA
-  // navigation (sidebar links, back button) isn't covered — Next 16
-  // routes through the App Router and beforeunload doesn't fire on
-  // client-side route changes. That's a follow-up; this catches the
-  // accidental refresh / closed-window class of data loss.
-  useEffect(() => {
-    if (!dirty) return;
-    const handler = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      // Modern browsers ignore the return value but require something
-      // truthy to actually show the native prompt.
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirty]);
+  // Leaving with unsaved edits (tab close and in-app links) is guarded
+  // by useUnsavedChangesGuard in the editor header.
 
   // ---- Validation ----
   const issues = useMemo<ValidationIssue[]>(
@@ -329,7 +316,7 @@ export function FlowEditorProvider({
   );
 
   // ---- Save (PUT) ----
-  const save = useCallback(async () => {
+  const save = useCallback(async (): Promise<boolean> => {
     setSaving(true);
     try {
       const res = await fetch(`/api/whatsapp/flows/${initialFlow.id}`, {
@@ -350,9 +337,11 @@ export function FlowEditorProvider({
       }
       setDirty(false);
       toast.success(t("saved"));
+      return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Save failed";
       toast.error(msg);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -374,8 +363,10 @@ export function FlowEditorProvider({
         // Always save first so the activation validator sees the
         // latest state — the user shouldn't have to remember "save
         // then activate".
-        if (next === "active") {
-          await save();
+        // If the save fails, stop — activating would put the *old*
+        // server version live while the editor shows the new one.
+        if (next === "active" && !(await save())) {
+          return;
         }
         const res = await fetch(`/api/whatsapp/flows/${initialFlow.id}/activate`, {
           method: "POST",
@@ -408,11 +399,8 @@ export function FlowEditorProvider({
   );
 
   // ---- Delete ----
+  // Confirmation happens in the header's ConfirmDialog.
   const deleteFlow = useCallback(async () => {
-    const yes = window.confirm(
-      `Delete "${state.name}"? Any active runs end immediately. This can't be undone.`,
-    );
-    if (!yes) return;
     try {
       const res = await fetch(`/api/whatsapp/flows/${initialFlow.id}`, {
         method: "DELETE",
@@ -423,7 +411,7 @@ export function FlowEditorProvider({
       const msg = err instanceof Error ? err.message : "Delete failed";
       toast.error(msg);
     }
-  }, [initialFlow.id, router, state.name]);
+  }, [initialFlow.id, router]);
 
   // ---- Node mutations ----
   const updateNode = useCallback(

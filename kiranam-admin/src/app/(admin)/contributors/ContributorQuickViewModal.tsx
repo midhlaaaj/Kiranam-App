@@ -7,7 +7,7 @@ import { Pencil } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { PersonCombobox } from '@/components/PersonCombobox';
 import { assignKkNumber, assignVolunteer, getContributorQuickView, getVolunteersForAssignment, unassignVolunteer } from './actions';
-import { buttonPrimary, buttonSecondary } from '@/lib/ui';
+import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
 
 const fieldLabelClass = 'text-xs font-semibold text-kiranam-muted';
 
@@ -119,7 +119,7 @@ export function ContributorQuickViewModal({
               value={kkNumber}
               onChange={(e) => setKkNumber(e.target.value)}
               placeholder="e.g. KK1"
-              className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+              className={inputClass}
             />
           </div>
 
@@ -131,6 +131,7 @@ export function ContributorQuickViewModal({
               name="volunteerId"
               initial={data.volunteer}
               onSelect={(p) => setSelectedVolunteerId(p?.id ?? null)}
+              className="max-w-none"
               placeholder="Search volunteers by name or phone…"
               emptyLabel="No volunteers match."
             />

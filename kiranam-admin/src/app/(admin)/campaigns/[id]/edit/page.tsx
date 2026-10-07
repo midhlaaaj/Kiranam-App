@@ -1,19 +1,17 @@
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { deleteCampaignImage, markCampaignFullyRaised, updateCampaign } from '../../actions';
-import { buttonPrimary, buttonSecondary, cardClass, formatMoney, inputClass, linkDanger } from '@/lib/ui';
+import { markCampaignFullyRaised, updateCampaign } from '../../actions';
+import { badgeClass, buttonSecondary, cardClass, formatMoney, inputClass } from '@/lib/ui';
+import { cn } from '@/lib/utils';
 import { Form } from '@/components/Form';
+import { SubmitButton } from '@/components/SubmitButton';
+import { EditCard, EditLayout } from '@/components/EditLayout';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
-import { FieldGroup, Field } from '@/components/FormField';
-import { ImageCropField, COVER_CROP, GALLERY_CROP } from '@/components/ImageCropField';
+import { Field } from '@/components/FormField';
+import { MediaManager } from '@/components/MediaManager';
+import { formatDate } from '@/lib/format';
 
-export default async function EditCampaignPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function EditCampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
   const { data: campaign } = await supabase.from('campaigns').select('*').eq('id', id).single();
@@ -25,106 +23,113 @@ export default async function EditCampaignPage({
     .eq('campaign_id', id)
     .order('created_at', { ascending: true });
 
+  const raised = Number(campaign.raised);
+  const goal = Number(campaign.goal);
+  const pct = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const completed = campaign.status === 'completed';
+
+  // Cover first, then the gallery in order — the one list MediaManager edits.
+  const mediaUrls = [campaign.cover_image_url, ...(images || []).map((i) => i.image_url)].filter((u): u is string => !!u);
+
   return (
-    <div>
-      <Link href="/campaigns" className="inline-flex items-center gap-1.5 text-sm font-medium text-kiranam-muted transition hover:text-kiranam-ink hover:underline">
-        <ArrowLeft size={15} /> Back to Campaigns
-      </Link>
+    <Form action={updateCampaign.bind(null, id)}>
+      <EditLayout
+        backHref="/campaigns"
+        backLabel="All campaigns"
+        title={campaign.title}
+        badge={
+          <span className={badgeClass(campaign.archived ? 'neutral' : completed ? 'neutral' : 'success')}>
+            {campaign.archived ? 'Archived' : completed ? 'Completed' : 'Ongoing'}
+          </span>
+        }
+        main={
+          <>
+            <EditCard title="Details">
+              <Field label="Title" htmlFor="title">
+                <input id="title" name="title" defaultValue={campaign.title} required className={inputClass} />
+              </Field>
+              <Field label="Description" htmlFor="description" hint="Shown to donors in the app.">
+                <textarea id="description" name="description" rows={5} defaultValue={campaign.description} className={cn(inputClass, 'resize-y')} />
+              </Field>
+            </EditCard>
 
-      <h1 className="mt-2 text-2xl font-bold tracking-tight text-kiranam-ink">Edit Campaign</h1>
+            <EditCard title="Funding">
+              <div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-2xl font-bold tabular-nums text-kiranam-ink">
+                    {formatMoney(raised)} <span className="text-base font-medium text-kiranam-muted">of {formatMoney(goal)}</span>
+                  </p>
+                  <p className="text-sm font-semibold tabular-nums text-kiranam-ink">{pct}%</p>
+                </div>
+                <div
+                  className="mt-2 h-2 overflow-hidden rounded-full bg-kiranam-surface-alt"
+                  role="progressbar"
+                  aria-valuenow={pct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Funding progress"
+                >
+                  <div className="h-full rounded-full bg-kiranam-success" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="mt-2 text-xs text-kiranam-muted">Raised updates automatically from successful contributions.</p>
+              </div>
+              <Field label="Goal (₹)" htmlFor="goal">
+                <div className="flex items-center rounded-lg border border-kiranam-input-border bg-kiranam-surface pl-3.5 focus-within:border-kiranam-primary focus-within:ring-3 focus-within:ring-kiranam-primary/15 sm:max-w-xs">
+                  <span aria-hidden className="text-sm text-kiranam-muted">₹</span>
+                  <input
+                    id="goal"
+                    name="goal"
+                    type="number"
+                    min="1"
+                    inputMode="numeric"
+                    defaultValue={campaign.goal}
+                    required
+                    className="no-spinner w-full bg-transparent px-2 py-2.5 text-sm text-kiranam-ink focus:outline-none"
+                  />
+                </div>
+              </Field>
+            </EditCard>
 
-      <Form action={updateCampaign.bind(null, id)} className={`mt-6 max-w-xl ${cardClass} p-5`}>
-        <FieldGroup label="Campaign details">
-          <Field label="Title" htmlFor="title">
-            <input id="title" name="title" defaultValue={campaign.title} required className={inputClass} />
-          </Field>
-          <Field label="Description">
-            <textarea
-              id="description"
-              name="description"
-              rows={3}
-              defaultValue={campaign.description}
-              className={inputClass}
-            />
-          </Field>
-        </FieldGroup>
+            <EditCard title="Photos" description="The first photo is the cover. Drag to reorder, or pick “Make cover”. Changes apply when you save.">
+              <MediaManager initialUrls={mediaUrls} />
+            </EditCard>
+          </>
+        }
+        aside={
+          <>
+            <div className={cn(cardClass, 'grid gap-4 p-5')}>
+              <Field label="Status" htmlFor="status">
+                <select id="status" name="status" defaultValue={campaign.status} className={cn(inputClass, 'cursor-pointer')}>
+                  <option value="active">Ongoing</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </Field>
+              <Field label="End date" htmlFor="end_date" optional hint="Completes automatically after this date.">
+                <input id="end_date" name="end_date" type="date" defaultValue={campaign.end_date || ''} className={inputClass} />
+              </Field>
+              <SubmitButton className="w-full">Save changes</SubmitButton>
+              <p className="text-center text-xs text-kiranam-muted">Created {formatDate(campaign.created_at)}</p>
+            </div>
 
-        <FieldGroup label="Funding">
-          <Field label="Goal (₹)" htmlFor="goal">
-            <input id="goal" name="goal" type="number" min="1" defaultValue={campaign.goal} required className={inputClass} />
-          </Field>
-          <p className="text-sm text-kiranam-muted">
-            Raised so far:{' '}
-            <span className="tabular-nums font-semibold text-kiranam-ink">{formatMoney(Number(campaign.raised))}</span>{' '}
-            — updates automatically from successful contributions.
-          </p>
-          <Field label="Status" htmlFor="status">
-            <select id="status" name="status" defaultValue={campaign.status} className={`${inputClass} cursor-pointer`}>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-            </select>
-          </Field>
-          <Field label="End date" hint="Campaign auto-completes once this date passes." optional htmlFor="end_date">
-            <input id="end_date" name="end_date" type="date" defaultValue={campaign.end_date || ''} className={inputClass} />
-          </Field>
-        </FieldGroup>
-
-        <FieldGroup label="Media" last>
-          <Field label="Cover image">
-            {campaign.cover_image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={campaign.cover_image_url} alt="" className="mb-2 h-28 w-full rounded-lg object-cover" />
-            )}
-            <ImageCropField name="cover" crop={COVER_CROP} />
-          </Field>
-          <Field label="Add gallery images">
-            <ImageCropField name="gallery" crop={GALLERY_CROP} multiple />
-          </Field>
-        </FieldGroup>
-
-        <button type="submit" className={`${buttonPrimary} mt-5 w-full`}>
-          Save Changes
-        </button>
-      </Form>
-
-      {campaign.status !== 'completed' && (
-        <div className="mt-4 max-w-xl">
-          <ConfirmSubmitButton
-            action={markCampaignFullyRaised.bind(null, id)}
-            label="Mark as fully raised"
-            title="Mark this campaign as fully raised?"
-            description={`This sets the raised amount to the full goal (${formatMoney(Number(campaign.goal))}) and marks the campaign as Completed.`}
-            confirmLabel="Mark as fully raised"
-            successMessage="Campaign marked as fully raised."
-            pendingMessage="Updating campaign…"
-            className={buttonSecondary}
-          />
-        </div>
-      )}
-
-      {(images || []).length > 0 && (
-        <>
-          <h2 className="mt-8 text-lg font-bold tracking-tight text-kiranam-ink">Gallery</h2>
-          <div className="mt-3 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-3">
-            {(images || []).map((img) => (
-              <div key={img.id} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.image_url} alt="" className="h-24 w-full rounded-lg object-cover" />
+            {!completed && (
+              <div className={cn(cardClass, 'p-5')}>
+                <p className="text-sm font-medium text-kiranam-ink">Reached the goal offline?</p>
+                <p className="mt-1 text-xs text-kiranam-muted">Sets raised to the full goal and marks the campaign completed.</p>
                 <ConfirmSubmitButton
-                  action={deleteCampaignImage.bind(null, img.id, id)}
-                  label="Delete"
-                  title="Delete this image?"
-                  description="This gallery image will be permanently removed from the campaign."
-                  confirmLabel="Delete"
-                  successMessage="Image deleted."
-                  pendingMessage="Deleting image…"
-                  className={`mt-1 ${linkDanger}`}
+                  action={markCampaignFullyRaised.bind(null, id)}
+                  label="Mark as fully raised"
+                  title="Mark this campaign as fully raised?"
+                  description={`This sets the raised amount to the full goal (${formatMoney(goal)}) and marks the campaign as Completed.`}
+                  confirmLabel="Mark as fully raised"
+                  successMessage="Campaign marked as fully raised."
+                  pendingMessage="Updating campaign…"
+                  className={cn(buttonSecondary, 'mt-3 w-full')}
                 />
               </div>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+            )}
+          </>
+        }
+      />
+    </Form>
   );
 }

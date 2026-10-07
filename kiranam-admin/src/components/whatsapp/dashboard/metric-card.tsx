@@ -41,12 +41,9 @@ export function MetricCard({ title, value, icon: Icon, delta, subtitle }: Metric
 }
 
 function DeltaRow({ sign, label }: { sign: number; label: string }) {
-  const tone =
-    sign > 0
-      ? 'text-primary'
-      : sign < 0
-      ? 'text-red-400'
-      : 'text-muted-foreground'
+  // Neutral on purpose: more or fewer isn't good/bad by itself, and red
+  // for "up" made every card look like an alarm. The arrow carries direction.
+  const tone = sign === 0 ? 'text-muted-foreground' : 'text-foreground'
   const Arrow = sign > 0 ? ArrowUp : sign < 0 ? ArrowDown : Minus
   return (
     <div className={cn('mt-2 flex items-center gap-1 text-sm', tone)}>

@@ -4,8 +4,10 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
-import { logAction } from '@/lib/audit';
+import { logAction, lookupLabel } from '@/lib/audit';
+import { friendlyErrorMessage } from '@/lib/errors';
 import { uploadPublicImage } from '@/lib/storage';
+import { applyMediaFromForm, CAMPAIGN_MEDIA } from '@/lib/mediaSave';
 
 export interface CreateCampaignState {
   message?: string;
@@ -36,15 +38,19 @@ export async function createCampaign(
     })
     .select('id')
     .single();
-  if (error) return { error: error.message };
+  if (error) return { error: friendlyErrorMessage(error.message) };
 
-  const cover = formData.get('cover');
-  if (cover instanceof File && cover.size > 0) {
-    const url = await uploadPublicImage('campaign-images', campaign.id, cover);
-    await supabase.from('campaigns').update({ cover_image_url: url }).eq('id', campaign.id);
+  // Photos: the unified MediaManager list (first = cover). Fall back to the
+  // legacy single cover field if a caller still posts it.
+  if (!(await applyMediaFromForm(CAMPAIGN_MEDIA, campaign.id, formData))) {
+    const cover = formData.get('cover');
+    if (cover instanceof File && cover.size > 0) {
+      const url = await uploadPublicImage('campaign-images', campaign.id, cover);
+      await supabase.from('campaigns').update({ cover_image_url: url }).eq('id', campaign.id);
+    }
   }
 
-  await logAction(admin.id, 'create_campaign', 'campaigns', campaign.id);
+  await logAction(admin.id, 'create_campaign', 'campaigns', campaign.id, { label: title });
   revalidatePath('/campaigns');
   return { message: `"${title}" created.` };
 }
@@ -69,19 +75,15 @@ export async function updateCampaign(id: string, formData: FormData) {
     .eq('id', id);
   if (error) throw new Error(error.message);
 
-  const cover = formData.get('cover');
-  if (cover instanceof File && cover.size > 0) {
-    const url = await uploadPublicImage('campaign-images', id, cover);
-    await supabase.from('campaigns').update({ cover_image_url: url }).eq('id', id);
+  if (!(await applyMediaFromForm(CAMPAIGN_MEDIA, id, formData))) {
+    const cover = formData.get('cover');
+    if (cover instanceof File && cover.size > 0) {
+      const url = await uploadPublicImage('campaign-images', id, cover);
+      await supabase.from('campaigns').update({ cover_image_url: url }).eq('id', id);
+    }
   }
 
-  const galleryFiles = formData.getAll('gallery').filter((f): f is File => f instanceof File && f.size > 0);
-  for (const file of galleryFiles) {
-    const url = await uploadPublicImage('campaign-images', id, file);
-    await supabase.from('campaign_images').insert({ campaign_id: id, image_url: url });
-  }
-
-  await logAction(admin.id, 'update_campaign', 'campaigns', id);
+  await logAction(admin.id, 'update_campaign', 'campaigns', id, { label: String(formData.get('title') || '') });
   revalidatePath('/campaigns');
   redirect(`/campaigns/${id}/edit`);
 }
@@ -96,7 +98,7 @@ export async function markCampaignFullyRaised(id: string) {
 
   const { data: campaign, error: fetchError } = await supabase
     .from('campaigns')
-    .select('goal')
+    .select('goal, title')
     .eq('id', id)
     .single();
   if (fetchError || !campaign) throw new Error(fetchError?.message || 'Campaign not found.');
@@ -107,7 +109,7 @@ export async function markCampaignFullyRaised(id: string) {
     .eq('id', id);
   if (error) throw new Error(error.message);
 
-  await logAction(admin.id, 'mark_campaign_fully_raised', 'campaigns', id, { goal: campaign.goal });
+  await logAction(admin.id, 'mark_campaign_fully_raised', 'campaigns', id, { goal: campaign.goal, label: campaign.title });
   revalidatePath('/campaigns');
   revalidatePath(`/campaigns/${id}/edit`);
 }
@@ -116,19 +118,23 @@ export async function deleteCampaignImage(imageId: string, campaignId: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from('campaign_images').delete().eq('id', imageId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'delete_campaign_image', 'campaign_images', imageId, { campaignId });
+  await logAction(admin.id, 'delete_campaign_image', 'campaign_images', imageId, {
+    campaignId,
+    label: await lookupLabel('campaigns', campaignId),
+  });
   revalidatePath(`/campaigns/${campaignId}/edit`);
 }
 
 export async function deleteCampaign(id: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
+  const label = await lookupLabel('campaigns', id);
   const { error } = await supabase.from('campaigns').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'delete_campaign', 'campaigns', id);
+  await logAction(admin.id, 'delete_campaign', 'campaigns', id, { label });
   revalidatePath('/campaigns');
 }
 
@@ -138,19 +144,29 @@ export async function deleteCampaign(id: string) {
 export async function archiveCampaign(id: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
-  const { error } = await supabase.from('campaigns').update({ archived: true }).eq('id', id);
-  if (error) throw new Error(error.message);
+  const { data, error } = await supabase
+    .from('campaigns')
+    .update({ archived: true })
+    .eq('id', id)
+    .select('title')
+    .single();
+  if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'archive_campaign', 'campaigns', id);
+  await logAction(admin.id, 'archive_campaign', 'campaigns', id, { label: data.title });
   revalidatePath('/campaigns');
 }
 
 export async function unarchiveCampaign(id: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
-  const { error } = await supabase.from('campaigns').update({ archived: false }).eq('id', id);
-  if (error) throw new Error(error.message);
+  const { data, error } = await supabase
+    .from('campaigns')
+    .update({ archived: false })
+    .eq('id', id)
+    .select('title')
+    .single();
+  if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'unarchive_campaign', 'campaigns', id);
+  await logAction(admin.id, 'unarchive_campaign', 'campaigns', id, { label: data.title });
   revalidatePath('/campaigns');
 }

@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/whatsapp/ui/select';
 import { ArrowLeft, ArrowRight, Eye, ImageIcon, Loader2 } from 'lucide-react';
+import { TemplatePreview } from '@/components/whatsapp/template-preview';
+import { PreviewImage } from '@/components/ImageLightbox';
 import { useTranslations } from 'next-intl';
 
 type VariableType = 'static' | 'field' | 'custom_field';
@@ -55,17 +57,15 @@ const contactFields = [
   { value: 'email', labelKey: 'email' },
 ];
 
-const SAMPLE_CONTACT: Contact = {
-  id: 'sample',
-  user_id: '',
-  account_id: '',
-  name: 'John Doe',
-  phone: '+1234567890',
-  email: 'john@example.com',
-  company: 'Acme Corp',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-};
+/** The words around a placeholder, so "{{2}}" reads as "…thanks for ___ this month". */
+function placeholderContext(body: string, placeholder: string) {
+  const i = body.indexOf(placeholder);
+  if (i === -1) return null;
+  const end = i + placeholder.length;
+  const before = body.slice(Math.max(0, i - 28), i).replace(/\{\{\d+\}\}/g, '…');
+  const after = body.slice(end, end + 28).replace(/\{\{\d+\}\}/g, '…');
+  return `${i > 28 ? '…' : ''}${before}___${after}${end + 28 < body.length ? '…' : ''}`;
+}
 
 export function Step3Personalize({
   template,
@@ -192,10 +192,7 @@ export function Step3Personalize({
    * possible. Placeholders keyed by "{{N}}" map to variable key "N".
    */
   const previewText = useMemo(() => {
-    const contact = firstContact ?? SAMPLE_CONTACT;
-    const customValues = firstContact
-      ? firstContactCustomValues
-      : new Map<string, string>();
+    const customValues = firstContact ? firstContactCustomValues : new Map<string, string>();
 
     let text = template.body_text;
     for (const placeholder of placeholders) {
@@ -207,15 +204,14 @@ export function Step3Personalize({
         if (mapping.type === 'static' && mapping.value) {
           replacement = mapping.value;
         } else if (mapping.type === 'field' && mapping.value) {
-          const fieldMap: Record<string, string | undefined> = {
-            name: contact.name,
-            phone: contact.phone,
-            email: contact.email,
-            company: contact.company,
-          };
-          replacement = fieldMap[mapping.value] ?? placeholder;
+          const fieldMap: Record<string, string | undefined> = firstContact
+            ? { name: firstContact.name, phone: firstContact.phone, email: firstContact.email, company: firstContact.company }
+            : {};
+          replacement = fieldMap[mapping.value] || `[${mapping.value.charAt(0).toUpperCase()}${mapping.value.slice(1)}]`;
         } else if (mapping.type === 'custom_field' && mapping.value) {
-          replacement = customValues.get(mapping.value) || placeholder;
+          replacement =
+            customValues.get(mapping.value) ||
+            `[${customFields.find((f) => f.id === mapping.value)?.field_name ?? 'custom field'}]`;
         }
       }
       text = text.replaceAll(placeholder, replacement);
@@ -227,11 +223,19 @@ export function Step3Personalize({
     placeholders,
     firstContact,
     firstContactCustomValues,
+    customFields,
   ]);
 
   const previewLabel = firstContact
-    ? firstContact.name || firstContact.phone
+    ? `Previewing as ${firstContact.name || firstContact.phone}`
     : t('personalize.previewSample');
+  const typeItems: Record<VariableType, string> = {
+    static: t('personalize.typeStatic'),
+    field: t('personalize.typeContact'),
+    custom_field: t('personalize.typeCustom'),
+  };
+  const fieldItems = Object.fromEntries(contactFields.map((f) => [f.value, t(`personalize.fieldMap.${f.labelKey}`)]));
+  const customFieldItems = Object.fromEntries(customFields.map((f) => [f.id, f.field_name]));
 
   return (
     <div className="space-y-6">
@@ -245,16 +249,17 @@ export function Step3Personalize({
       {mediaHeaderType && (
         <div className="rounded-xl border border-border bg-card/50 p-4">
           <div className="mb-3 flex items-center gap-2">
-            <ImageIcon className="h-4 w-4 text-primary" />
+            <ImageIcon className="h-4 w-4 text-muted-foreground" aria-hidden />
             <p className="text-sm font-medium text-foreground">{t('personalize.headerImage')}</p>
-            <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium uppercase text-primary">
+            <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium capitalize text-muted-foreground">
               {mediaHeaderType}
             </span>
           </div>
-          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          <label htmlFor="header-media-url" className="mb-1.5 block text-xs font-medium text-muted-foreground">
             {t('personalize.imageUrl')}
           </label>
           <Input
+            id="header-media-url"
             type="url"
             value={headerMediaUrl}
             onChange={(e) => onHeaderMediaUrlChange(e.target.value)}
@@ -267,15 +272,16 @@ export function Step3Personalize({
           {mediaHeaderType === 'image' &&
             headerMediaError === null &&
             headerMediaUrl.trim() && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={headerMediaUrl.trim()}
-                alt="Header preview"
-                className="mt-3 max-h-40 rounded-lg border border-border object-contain"
-              />
+              <div className="mt-3">
+                <PreviewImage
+                  src={headerMediaUrl.trim()}
+                  alt="Header preview"
+                  className="max-h-40 rounded-lg border border-border object-contain"
+                />
+              </div>
             )}
           {headerMediaError && (
-            <p className="mt-1.5 text-xs text-amber-300">
+            <p role="alert" className="mt-1.5 text-xs text-warning">
               {headerMediaError === 'missing'
                 ? 'A media URL is required to send this template.'
                 : 'Enter a valid http(s) URL.'}
@@ -285,10 +291,8 @@ export function Step3Personalize({
       )}
 
       {placeholders.length === 0 && !mediaHeaderType ? (
-        <div className="rounded-xl border border-border bg-card/50 p-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            {t('personalize.noPreview')}
-          </p>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">{t('personalize.noPreview')}</p>
         </div>
       ) : placeholders.length === 0 ? null : (
         <div className="space-y-4">
@@ -301,10 +305,13 @@ export function Step3Personalize({
                 key={placeholder}
                 className="rounded-xl border border-border bg-card/50 p-4"
               >
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-mono font-medium text-primary">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 font-mono text-xs font-semibold text-foreground">
                     {placeholder}
                   </span>
+                  {placeholderContext(template.body_text, placeholder) && (
+                    <span className="text-sm text-muted-foreground">“{placeholderContext(template.body_text, placeholder)}”</span>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -313,6 +320,7 @@ export function Step3Personalize({
                       {t('personalize.type')}
                     </label>
                     <Select
+                      items={typeItems}
                       value={mapping.type}
                       onValueChange={(val) =>
                         updateVariable(key, {
@@ -344,14 +352,15 @@ export function Step3Personalize({
                         onChange={(e) =>
                           updateVariable(key, { value: e.target.value })
                         }
-                        placeholder="Enter value..."
+                        placeholder="Same for everyone"
                         className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                       />
                     ) : mapping.type === 'field' ? (
                       <Select
-                        value={mapping.value || undefined}
+                        items={fieldItems}
+                        value={mapping.value || null}
                         onValueChange={(val) =>
-                          updateVariable(key, { value: val || '' })
+                          updateVariable(key, { value: String(val ?? '') })
                         }
                       >
                         <SelectTrigger className="w-full border-border bg-muted text-foreground">
@@ -367,9 +376,10 @@ export function Step3Personalize({
                       </Select>
                     ) : (
                       <Select
-                        value={mapping.value || undefined}
+                        items={customFieldItems}
+                        value={mapping.value || null}
                         onValueChange={(val) =>
-                          updateVariable(key, { value: val || '' })
+                          updateVariable(key, { value: String(val ?? '') })
                         }
                       >
                         <SelectTrigger className="w-full border-border bg-muted text-foreground">
@@ -400,33 +410,29 @@ export function Step3Personalize({
         </div>
       )}
 
-      {/* Live Preview — rendered as a WhatsApp-style bubble so the user
-          sees approximately what the recipient will see. */}
-      <div className="rounded-xl border border-border bg-card/50 p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <Eye className="h-4 w-4 text-primary" />
+      {/* Live preview — the shared WhatsApp-style render. */}
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Eye className="h-4 w-4 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium text-foreground">{t('personalize.preview')}</p>
-          <span className="text-xs text-muted-foreground">({previewLabel})</span>
-          {loadingPreview && (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-          )}
+          <span className="text-xs text-muted-foreground">{previewLabel}</span>
+          {loadingPreview && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden />}
         </div>
-        <div className="rounded-lg bg-[#0e1a12] p-3">
-          <div className="ml-auto max-w-[85%] rounded-lg bg-primary/30 px-3 py-2 shadow-sm">
-            <p className="whitespace-pre-wrap text-sm text-primary">
-              {previewText}
-            </p>
-          </div>
-        </div>
+        <TemplatePreview
+          headerType={template.header_type}
+          headerText={template.header_content}
+          headerMediaUrl={headerMediaUrl || template.header_media_url}
+          body={previewText}
+          footer={template.footer_text}
+          buttons={template.buttons}
+        />
       </div>
 
       {unmappedKeys.length > 0 && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-          Map every placeholder before continuing — still missing{' '}
-          <span className="font-mono font-semibold">
-            {unmappedKeys.join(', ')}
-          </span>
-          . Otherwise those placeholders will ship to Meta as empty strings.
+        <div role="status" className="rounded-md border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-foreground">
+          Fill in{' '}
+          <span className="font-mono font-semibold">{unmappedKeys.join(', ')}</span> to continue — empty
+          placeholders would arrive blank in people’s messages.
         </div>
       )}
 

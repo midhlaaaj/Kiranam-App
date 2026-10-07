@@ -23,6 +23,7 @@ import { Label } from '@/components/whatsapp/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/whatsapp/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/whatsapp/ui/alert';
 import { SettingsPanelHead } from './settings-panel-head';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   Accordion,
   AccordionItem,
@@ -50,6 +51,7 @@ export function WhatsAppConfig() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [config, setConfig] = useState<WhatsAppConfigType | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('unknown');
@@ -342,11 +344,8 @@ export function WhatsAppConfig() {
     }
   }
 
+  // Guarded by the Danger-zone ConfirmDialog (type RESET) — see render.
   async function handleReset() {
-    if (!confirm('This will delete the current WhatsApp config so you can re-enter it. Continue?')) {
-      return;
-    }
-
     try {
       setResetting(true);
       const res = await fetch('/api/whatsapp/whatsapp/config', { method: 'DELETE' });
@@ -614,7 +613,9 @@ export function WhatsAppConfig() {
                 <button
                   type="button"
                   onClick={() => setShowToken(!showToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={showToken ? 'Hide token' : 'Show token'}
+                  aria-pressed={showToken}
+                  className="absolute right-1 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -683,6 +684,8 @@ export function WhatsAppConfig() {
                   variant="outline"
                   size="icon"
                   onClick={handleCopyWebhookUrl}
+                  aria-label="Copy webhook URL"
+                  title="Copy webhook URL"
                   className="shrink-0 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <Copy className="size-4" />
@@ -726,27 +729,57 @@ export function WhatsAppConfig() {
               </>
             )}
           </Button>
-          {config && (
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={resetting}
-              className="border-red-900 text-red-400 hover:text-red-300 hover:bg-red-950/40"
-            >
-              {resetting ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t('resetting')}
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="size-4" />
-                  {t('resetConfig')}
-                </>
-              )}
-            </Button>
-          )}
         </div>
+
+        {/* Danger zone — kept apart from Save/Test so it's never a misclick. */}
+        {config && (
+          <Card className="border-destructive/40">
+            <CardHeader>
+              <CardTitle className="text-foreground text-base">Danger zone</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                Removes the saved WhatsApp connection so it can be entered again from scratch.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                variant="outline"
+                onClick={() => setConfirmResetOpen(true)}
+                disabled={resetting}
+                className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                {resetting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    {t('resetting')}
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="size-4" />
+                    {t('resetConfig')}
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        <ConfirmDialog
+          open={confirmResetOpen}
+          onOpenChange={setConfirmResetOpen}
+          title="Reset the WhatsApp connection?"
+          description="Only do this if you're replacing the number or the credentials are broken."
+          consequences={[
+            'Stop the inbox from receiving new WhatsApp messages',
+            'Make broadcasts and automations fail until it’s set up again',
+            <strong key="otp">Stop donors from logging in to the Kiranam app — login codes are sent through this number</strong>,
+          ]}
+          confirmLabel="Reset connection"
+          confirmText="RESET"
+          destructive
+          onConfirm={() => {
+            setConfirmResetOpen(false);
+            handleReset();
+          }}
+        />
       </div>
 
       {/* Setup Instructions Sidebar */}

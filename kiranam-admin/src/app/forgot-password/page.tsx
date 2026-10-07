@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
       />
 
       <div className="animate-count-in relative w-full max-w-sm rounded-lg bg-kiranam-surface p-8 shadow-elevation-lg">
-        <p className="text-4xl font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
+        <p className="text-4xl font-extrabold tracking-tight text-kiranam-brand">Kiranam</p>
         <p className="mt-4 text-sm text-kiranam-muted">
           Enter your admin email and we&apos;ll send a link to reset your password.
         </p>

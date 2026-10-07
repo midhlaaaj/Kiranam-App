@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
 import { registerVolunteer, upgradeContributorToVolunteer, type RegisterVolunteerState } from './actions';
 import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
-import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
+import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
@@ -26,7 +26,10 @@ const nativeControlClass =
 export function RegisterVolunteerForm({
   onDone,
   onEditExisting,
+  bare = false,
 }: {
+  /** Render without its own card (a dialog already provides the frame + title). */
+  bare?: boolean;
   onDone?: () => void;
   /** Called instead of opening a quick-view modal locally, so the caller can
    * close this registration panel first (it would otherwise unmount along
@@ -110,10 +113,10 @@ export function RegisterVolunteerForm({
         setPhoneTouched(true);
         if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate) e.preventDefault();
       }}
-      className={`${cardClass} p-5`}
+      className={bare ? undefined : `${cardClass} p-5`}
     >
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-kiranam-ink">Register volunteer</h3>
+        <h3 className={bare ? 'sr-only' : 'text-sm font-semibold text-kiranam-ink'}>Register volunteer</h3>
         <p className="mt-0.5 text-xs text-kiranam-muted">
           For someone recruited offline. They&apos;ll claim this by logging into the app with the same phone
           number. Assign their contributors afterwards from their volunteer page.
@@ -127,7 +130,7 @@ export function RegisterVolunteerForm({
             className={`flex overflow-hidden rounded-lg border bg-kiranam-surface transition duration-150 ${
               phoneError
                 ? 'border-kiranam-danger'
-                : 'border-kiranam-border-strong focus-within:border-kiranam-primary'
+                : 'border-kiranam-input-border focus-within:border-kiranam-primary focus-within:ring-3 focus-within:ring-kiranam-primary/15'
             }`}
           >
             <div className="relative flex shrink-0 items-stretch border-r border-kiranam-border-strong">
@@ -223,7 +226,7 @@ export function RegisterVolunteerForm({
               name="full_name"
               placeholder="Enter full name"
               required
-              className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+              className={inputClass}
             />
           </div>
         )}
@@ -237,7 +240,7 @@ export function RegisterVolunteerForm({
               id="v_kk_number"
               name="kk_number"
               placeholder="e.g. KK1"
-              className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+              className={inputClass}
             />
           </div>
         )}
@@ -250,9 +253,11 @@ export function RegisterVolunteerForm({
       )}
 
       {!duplicate && (
-        <button type="submit" disabled={pending} className={`${buttonPrimary} mt-5 w-full`}>
-          {pending ? 'Registering…' : 'Register Volunteer'}
+      <div className={bare ? 'sticky bottom-0 z-10 mt-5 border-t border-kiranam-border bg-kiranam-surface pb-1 pt-4' : 'mt-5'}>
+        <button type="submit" disabled={pending} className={`${buttonPrimary} w-full`}>
+          {pending ? 'Registering…' : 'Register volunteer'}
         </button>
+      </div>
       )}
     </form>
   );

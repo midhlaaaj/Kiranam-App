@@ -1,20 +1,20 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Archive, ArchiveRestore, Megaphone, Pencil, Search, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, Megaphone, Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { archiveCampaign, deleteCampaign, unarchiveCampaign } from './actions';
 import { CreateCampaignForm } from './CreateCampaignForm';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
-import { NotificationBell } from '@/components/NotificationBell';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PillTabs } from '@/components/PillTabs';
+import { PreviewImage } from '@/components/ImageLightbox';
+import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
+import { searchTerm } from '@/lib/search';
 import {
   badgeClass,
-  buttonPrimary,
   formatMoney,
-  inputClass,
   staggerDelay,
   tableCellClass,
   tableHeadRowClass,
@@ -30,14 +30,14 @@ export default async function CampaignsPage({
   const { q, status } = await searchParams;
 
   return (
-    <div>
+    <FilterRoot>
       <AddNewPanel
         title="Campaigns"
         label="Add new campaign"
-        bell={<NotificationBell />}
         modal
         filters={
           <PillTabs
+            label="Status"
             items={[
               {
                 key: 'all',
@@ -66,32 +66,17 @@ export default async function CampaignsPage({
             ]}
           />
         }
-        search={
-          <form className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
-              <input
-                type="search"
-                name="q"
-                placeholder="Search campaigns…"
-                defaultValue={q}
-                className={`${inputClass} w-56 pl-9`}
-              />
-            </div>
-            {status && <input type="hidden" name="status" value={status} />}
-            <button type="submit" className={buttonPrimary}>
-              Search
-            </button>
-          </form>
-        }
+        search={<FilterSearch placeholder="Search campaigns" label="Search campaigns" />}
       >
         <CreateCampaignForm />
       </AddNewPanel>
 
-      <Suspense fallback={<SkeletonTable rows={5} cols={4} />}>
-        <CampaignsTable q={q} status={status} />
-      </Suspense>
-    </div>
+      <FilterResults>
+        <Suspense key={`${q ?? ''}:${status ?? ''}`} fallback={<SkeletonTable rows={5} cols={4} />}>
+          <CampaignsTable q={q} status={status} />
+        </Suspense>
+      </FilterResults>
+    </FilterRoot>
   );
 }
 
@@ -113,7 +98,8 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
     .select('id, title, status, raised, goal, cover_image_url, archived')
     .eq('archived', showArchived)
     .order('created_at', { ascending: false });
-  if (q) query = query.ilike('title', `%${q}%`);
+  const term = searchTerm(q);
+  if (term) query = query.ilike('title', `%${term}%`);
   if (status === 'active' || status === 'completed') query = query.eq('status', status);
 
   const { data: campaigns } = await query;
@@ -123,8 +109,8 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
       {(campaigns || []).length === 0 ? (
         <EmptyState
           icon={Megaphone}
-          title={showArchived ? 'No archived campaigns' : 'No campaigns yet'}
-          description={showArchived ? undefined : 'Create your first campaign above.'}
+          title={q || status ? 'No campaigns match these filters' : 'No campaigns yet'}
+          description={q || status ? 'Try a different search or clear the status tab.' : 'Use “Add new campaign” to create your first one.'}
         />
       ) : (
         <table className="w-full text-sm">
@@ -142,8 +128,7 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
                 <td className={tableCellClass}>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {c.cover_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.cover_image_url} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                      <PreviewImage src={c.cover_image_url} alt={c.title} className="h-10 w-10 rounded-lg object-cover" buttonClassName="shrink-0" />
                     ) : (
                       <div className="h-10 w-10 shrink-0 rounded-lg bg-kiranam-primary-soft" />
                     )}
@@ -210,6 +195,7 @@ async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
                       title="Delete this campaign?"
                       description={`"${c.title}" and its images will be permanently deleted. This can't be undone.`}
                       confirmLabel="Delete campaign"
+                      destructive
                       successMessage="Campaign deleted."
                       pendingMessage="Deleting campaign…"
                       className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"

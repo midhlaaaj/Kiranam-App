@@ -23,7 +23,7 @@ export default function SignupPage() {
       />
 
       <div className="animate-count-in relative w-full max-w-sm rounded-lg bg-kiranam-surface p-8 shadow-elevation-lg">
-        <p className="text-4xl font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
+        <p className="text-4xl font-extrabold tracking-tight text-kiranam-brand">Kiranam</p>
         <p className="mt-4 text-sm text-kiranam-muted">
           Create your admin account. You need to have been invited by an existing admin first.
         </p>

@@ -1,6 +1,27 @@
 import { verifyAdmin } from '@/lib/dal';
+import { createClient } from '@/lib/supabase/server';
 import { logout } from '@/lib/actions/auth';
+import { Suspense } from 'react';
 import { AdminShell, LogoutIcon } from '@/components/AdminShell';
+import { NotificationBell } from '@/components/NotificationBell';
+
+// Pending volunteer applications, shown beside Volunteers in the sidebar.
+async function PendingApplicationsBadge() {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from('volunteer_applications')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  if (!count) return null;
+  return (
+    <span
+      className="inline-flex min-w-5 items-center justify-center rounded-full bg-kiranam-primary px-1.5 text-xs font-semibold tabular-nums text-white"
+      aria-label={`${count} pending`}
+    >
+      {count}
+    </span>
+  );
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await verifyAdmin();
@@ -24,7 +45,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   );
 
   return (
-    <AdminShell initials={initials} email={admin.email || ''} logoutButton={logoutButton}>
+    <AdminShell
+      initials={initials}
+      email={admin.email || ''}
+      logoutButton={logoutButton}
+      // Both render at once; only the numbers stream in afterwards.
+      navBadges={{
+        '/volunteers': (
+          <Suspense fallback={null}>
+            <PendingApplicationsBadge />
+          </Suspense>
+        ),
+      }}
+      bell={<NotificationBell />}
+    >
       {children}
     </AdminShell>
   );

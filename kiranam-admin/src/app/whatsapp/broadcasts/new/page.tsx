@@ -1,234 +1,163 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/whatsapp/supabase/client';
-import { useAuth } from '@/hooks/whatsapp/use-auth';
 import { toast } from 'sonner';
+import { Check } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { MessageTemplate } from '@/types/whatsapp';
 import { Step1ChooseTemplate } from '@/components/whatsapp/broadcasts/step1-choose-template';
 import { Step2SelectAudience } from '@/components/whatsapp/broadcasts/step2-select-audience';
 import { Step3Personalize } from '@/components/whatsapp/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/whatsapp/broadcasts/step4-schedule-send';
-import { useBroadcastSending } from '@/hooks/whatsapp/use-broadcast-sending';
-import { Check } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useBroadcastSending, type AudienceConfig, type VariableMapping } from '@/hooks/whatsapp/use-broadcast-sending';
+import { cn } from '@/lib/whatsapp/utils';
 
-const steps = [
-  { label: 'template', key: 'template' },
-  { label: 'audience', key: 'audience' },
-  { label: 'personalize', key: 'personalize' },
-  { label: 'send', key: 'send' },
-] as const;
+const steps = ['template', 'audience', 'personalize', 'send'] as const;
 
+function defaultBroadcastName(template: MessageTemplate) {
+  const pretty = template.name.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+  const date = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }).format(new Date());
+  return `${pretty} – ${date}`;
+}
+
+// No "Save as draft": a saved draft couldn't be reopened in this wizard,
+// so it only created rows that could be viewed or deleted.
 export default function NewBroadcastPage() {
   const router = useRouter();
   const t = useTranslations('Broadcasts.new');
-  const { accountId } = useAuth();
-  const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
+  const { createAndSendBroadcast, isProcessing, sentSoFar, totalToSend } = useBroadcastSending();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [template, setTemplate] = useState<MessageTemplate | null>(null);
-  const [audience, setAudience] = useState<{
-    type: 'all' | 'tags' | 'custom_field' | 'csv';
-    tagIds?: string[];
-    customField?: {
-      fieldId: string;
-      operator: 'is' | 'is_not' | 'contains';
-      value: string;
-    };
-    csvContacts?: { phone: string; name?: string }[];
-    excludeTagIds?: string[];
-  }>({ type: 'all' });
-  const [variables, setVariables] = useState<
-    Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>
-  >({});
+  const [audience, setAudience] = useState<AudienceConfig>({ type: 'all' });
+  const [variables, setVariables] = useState<Record<string, VariableMapping>>({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
 
-  async function handleSend() {
-    if (!template) return;
+  // The send runs from this tab: block in-app navigation (sidebar links etc.)
+  // while it's in progress. Tab close/refresh is guarded in step 4.
+  useEffect(() => {
+    if (!isProcessing) return;
+    const onClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement | null)?.closest('a[href]');
+      if (!link) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toast.warning('A broadcast is sending — stay on this page until it finishes.');
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [isProcessing]);
 
-    try {
-      const broadcastId = await createAndSendBroadcast({
-        name,
-        template,
-        audience: {
-          type: audience.type,
-          tagIds: audience.tagIds,
-          customField: audience.customField,
-          csvContacts: audience.csvContacts,
-          excludeTagIds: audience.excludeTagIds,
-        },
-        variables,
-        headerMediaUrl,
-      });
-      router.push(`/whatsapp/broadcasts/${broadcastId}`);
-    } catch (err) {
-      // Previously swallowed with console.error — the wizard would
-      // just no-op, leaving the user confused. Surface the reason.
-      const message = err instanceof Error ? err.message : 'Broadcast failed';
-      console.error('Broadcast failed:', err);
-      toast.error(message);
-    }
+  function goTo(step: number) {
+    if (step === 3 && template && !name.trim()) setName(defaultBroadcastName(template));
+    setCurrentStep(step);
   }
 
-  /**
-   * Writes a draft broadcast row — no recipients, no sending. The user
-   * can revisit it via the list page to finish the flow later. We
-   * don't persist the in-progress audience/variable config here
-   * because the current schema doesn't carry it past `audience_filter`
-   * and `template_variables`; those are enough for the user to
-   * recognize the draft but not to exactly round-trip into the wizard.
-   * A full resume-draft UX is a future polish.
-   */
-  async function handleSaveDraft() {
-    if (!template || !name.trim()) {
-      toast.error(t('toastGiveName'));
-      return;
+  async function handleSend() {
+    if (!template) return;
+    try {
+      const broadcastId = await createAndSendBroadcast({ name: name.trim(), template, audience, variables, headerMediaUrl });
+      router.push(`/whatsapp/broadcasts/${broadcastId}`);
+    } catch (err) {
+      console.error('Broadcast failed:', err);
+      toast.error(err instanceof Error ? err.message : 'Broadcast failed');
     }
-    const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) {
-      toast.error(t('toastNotSignedIn'));
-      return;
-    }
-    if (!accountId) {
-      toast.error(t('toastNotLinked'));
-      return;
-    }
-
-    const { error } = await supabase.from('broadcasts').insert({
-      user_id: user.id,
-      account_id: accountId,
-      name: name.trim(),
-      template_name: template.name,
-      template_language: template.language ?? 'en_US',
-      template_variables: variables,
-      audience_filter: {
-        type: audience.type,
-        tagIds: audience.tagIds,
-      },
-      status: 'draft',
-      total_recipients: 0,
-      sent_count: 0,
-      delivered_count: 0,
-      read_count: 0,
-      replied_count: 0,
-      failed_count: 0,
-    });
-
-    if (error) {
-      toast.error(t('toastFailedDraft', { error: error.message }));
-      return;
-    }
-    toast.success(t('toastDraftSaved'));
-    router.push('/whatsapp/broadcasts');
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('subtitle')}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
-      {/* Step Indicator */}
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => {
-          const isActive = index === currentStep;
-          const isCompleted = index < currentStep;
-
-          return (
-            <div key={step.key} className="flex flex-1 items-center">
-              <div className="flex items-center gap-2">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all ${
-                    isCompleted
-                      ? 'bg-primary text-primary-foreground'
-                      : isActive
-                        ? 'border-2 border-primary bg-primary/10 text-primary'
-                        : 'border border-border bg-muted text-muted-foreground'
-                  }`}
+      <nav aria-label="Broadcast steps">
+        <ol className="flex items-center justify-between">
+          {steps.map((step, index) => {
+            const isActive = index === currentStep;
+            const isCompleted = index < currentStep;
+            const label = t(`steps.${step}`);
+            return (
+              <li key={step} className="flex flex-1 items-center last:flex-none">
+                <button
+                  type="button"
+                  onClick={() => isCompleted && !isProcessing && goTo(index)}
+                  disabled={!isCompleted || isProcessing}
+                  aria-current={isActive ? 'step' : undefined}
+                  aria-label={`Step ${index + 1}: ${label}${isCompleted ? ' (completed — go back)' : ''}`}
+                  className={cn('flex items-center gap-2 rounded-full', isCompleted && 'cursor-pointer hover:opacity-80')}
                 >
-                  {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
-                </div>
-                <span
-                  className={`hidden text-sm font-medium sm:block ${
-                    isActive ? 'text-foreground' : isCompleted ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                >
-                  {t(`steps.${step.label}`)}
-                </span>
-              </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={`mx-3 h-px flex-1 ${
-                    index < currentStep ? 'bg-primary' : 'bg-muted'
-                  }`}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
+                  <span
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition',
+                      isCompleted
+                        ? 'bg-foreground text-background'
+                        : isActive
+                          ? 'border-2 border-foreground text-foreground'
+                          : 'border border-border bg-muted text-muted-foreground'
+                    )}
+                  >
+                    {isCompleted ? <Check className="h-4 w-4" aria-hidden /> : index + 1}
+                  </span>
+                  <span
+                    className={cn(
+                      'text-xs font-medium sm:text-sm',
+                      isActive ? 'text-foreground' : 'text-muted-foreground',
+                      !isActive && 'hidden sm:inline'
+                    )}
+                  >
+                    {label}
+                  </span>
+                </button>
+                {index < steps.length - 1 && (
+                  <span className={cn('mx-3 h-px flex-1', index < currentStep ? 'bg-foreground' : 'bg-border')} aria-hidden />
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
 
-      {/* Step Content */}
       <div className="relative min-h-[400px]">
-        <div
-          className="transition-all duration-300 ease-in-out"
-          style={{
-            opacity: isProcessing ? 0.6 : 1,
-            pointerEvents: isProcessing ? 'none' : 'auto',
-          }}
-        >
-          {currentStep === 0 && (
-            <Step1ChooseTemplate
-              selectedTemplate={template}
-              onSelect={setTemplate}
-              onNext={() => setCurrentStep(1)}
-              onBack={() => router.push('/whatsapp/broadcasts')}
-            />
-          )}
-          {currentStep === 1 && (
-            <Step2SelectAudience
-              audience={audience}
-              onUpdate={setAudience}
-              onNext={() => setCurrentStep(2)}
-              onBack={() => setCurrentStep(0)}
-            />
-          )}
-          {currentStep === 2 && template && (
-            <Step3Personalize
-              template={template}
-              variables={variables}
-              onUpdate={setVariables}
-              headerMediaUrl={headerMediaUrl}
-              onHeaderMediaUrlChange={setHeaderMediaUrl}
-              onNext={() => setCurrentStep(3)}
-              onBack={() => setCurrentStep(1)}
-            />
-          )}
-          {currentStep === 3 && template && (
-            <Step4ScheduleSend
-              name={name}
-              onNameChange={setName}
-              template={template}
-              audience={audience}
-              onSend={handleSend}
-              onSaveDraft={handleSaveDraft}
-              onBack={() => setCurrentStep(2)}
-              isProcessing={isProcessing}
-              progress={progress}
-            />
-          )}
-        </div>
+        {currentStep === 0 && (
+          <Step1ChooseTemplate
+            selectedTemplate={template}
+            onSelect={setTemplate}
+            onNext={() => goTo(1)}
+            onBack={() => router.push('/whatsapp/broadcasts')}
+          />
+        )}
+        {currentStep === 1 && (
+          <Step2SelectAudience audience={audience} onUpdate={setAudience} onNext={() => goTo(2)} onBack={() => goTo(0)} />
+        )}
+        {currentStep === 2 && template && (
+          <Step3Personalize
+            template={template}
+            variables={variables}
+            onUpdate={setVariables}
+            headerMediaUrl={headerMediaUrl}
+            onHeaderMediaUrlChange={setHeaderMediaUrl}
+            onNext={() => goTo(3)}
+            onBack={() => goTo(1)}
+          />
+        )}
+        {currentStep === 3 && template && (
+          <Step4ScheduleSend
+            name={name}
+            onNameChange={setName}
+            template={template}
+            audience={audience}
+            variables={variables}
+            headerMediaUrl={headerMediaUrl}
+            onSend={handleSend}
+            onBack={() => goTo(2)}
+            isProcessing={isProcessing}
+            sentSoFar={sentSoFar}
+            totalToSend={totalToSend}
+          />
+        )}
       </div>
     </div>
   );

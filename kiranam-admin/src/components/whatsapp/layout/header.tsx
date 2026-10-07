@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/whatsapp/use-auth";
 import {
-  ExternalLink,
+  ArrowLeft,
   LogOut,
   Menu,
   Settings as SettingsIcon,
@@ -31,25 +30,6 @@ import {
 } from "@/components/whatsapp/ui/dropdown-menu";
 import { ModeToggle } from "@/components/whatsapp/layout/mode-toggle";
 
-const pageTitles: Record<string, string> = {
-  "/whatsapp/dashboard": "dashboard",
-  "/whatsapp/inbox": "inbox",
-  "/whatsapp/notifications": "notifications",
-  "/whatsapp/contacts": "contacts",
-  "/whatsapp/pipelines": "pipelines",
-  "/whatsapp/broadcasts": "broadcasts",
-  "/whatsapp/automations": "automations",
-  "/whatsapp/settings": "settings",
-};
-
-function getPageTitleKey(pathname: string): string {
-  if (pageTitles[pathname]) return pageTitles[pathname];
-  const match = Object.entries(pageTitles).find(([path]) =>
-    pathname.startsWith(path),
-  );
-  return match ? match[1] : "dashboard";
-}
-
 interface HeaderProps {
   /** Wired to the shell's drawer state. Used only on mobile — the
    *  hamburger button is hidden on lg+. */
@@ -60,9 +40,7 @@ import { useTranslations } from "next-intl";
 
 export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
-  const pathname = usePathname();
   const { profile, signOut } = useAuth();
-  const titleKey = getPageTitleKey(pathname);
 
   const initial =
     profile?.full_name?.charAt(0)?.toUpperCase() ??
@@ -81,9 +59,22 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <h1 className="truncate text-base font-semibold text-foreground sm:text-lg">
-          {t(titleKey as string)}
-        </h1>
+        {/* Every page already renders its own heading right below this
+            bar — repeating it here just duplicated the title on screen.
+            On mobile (where the sidebar's "Kiranam / WhatsApp"
+            wordmark is hidden behind the drawer) show it here instead,
+            so there's still brand/wayfinding context with the drawer
+            closed; lg:hidden since the sidebar already shows it on
+            desktop. */}
+        <Link
+          href="/whatsapp/dashboard"
+          className="flex items-baseline gap-1.5 lg:hidden"
+        >
+          <span className="text-base font-extrabold tracking-tight text-kiranam-brand">
+            Kiranam
+          </span>
+          <span className="text-xs font-medium text-muted-foreground">WhatsApp</span>
+        </Link>
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
@@ -125,8 +116,11 @@ export function Header({ onOpenSidebar }: HeaderProps) {
           <DropdownMenuSeparator className="bg-border" />
           <DropdownMenuItem
             render={
-              <Link
-                href="/whatsapp/settings?tab=profile"
+              // Profile/password/sessions live only in the admin panel now
+              // (same shared account) — a real cross-app link, not a
+              // same-app route, so <a> rather than next/link's <Link>.
+              <a
+                href={`${ADMIN_PANEL_URL}/settings/account`}
                 className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
               />
             }
@@ -153,7 +147,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               />
             }
           >
-            <ExternalLink className="size-4" />
+            <ArrowLeft className="size-4" />
             {t("menuBackToAdmin")}
           </DropdownMenuItem>
           <DropdownMenuSeparator className="bg-border" />

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { logAction } from '@/lib/audit';
+import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { getAutoAssignKkNumber } from '@/lib/kkSettings';
 import { validatePhoneNumber } from '@/lib/phone';
@@ -84,7 +84,10 @@ export async function assignKkNumber(contributorId: string, kkNumberInput: strin
   const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', contributorId);
   if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'assign_kk_number', 'profiles', contributorId, { kkNumber });
+  await logAction(admin.id, 'assign_kk_number', 'profiles', contributorId, {
+    kkNumber,
+    label: await lookupLabel('profiles', contributorId),
+  });
   revalidatePath('/contributors');
   revalidatePath(`/contributors/${contributorId}`);
   revalidatePath('/settings');
@@ -196,7 +199,13 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     }
   }
 
-  await logAction(admin.id, 'register_contributor', 'profiles', contributorId, { fullName, monthlyAmount, kkNumber, volunteerId: volunteerId || null });
+  await logAction(admin.id, 'register_contributor', 'profiles', contributorId, {
+    fullName,
+    label: fullName,
+    monthlyAmount,
+    kkNumber,
+    volunteerId: volunteerId || null,
+  });
   revalidatePath('/contributors');
   return { message: `${fullName} has been registered as a contributor. They can log in with this phone number.` };
 }
@@ -244,7 +253,12 @@ export async function assignVolunteer(contributorId: string, formData: FormData)
     .insert({ volunteer_id: volunteerId, contributor_id: contributorId, source: 'admin' });
   if (error) throw new Error(error.message);
 
-  await logAction(admin.id, 'assign_contributor', 'contributor_assignments', contributorId, { volunteerId });
+  await logAction(admin.id, 'assign_contributor', 'contributor_assignments', contributorId, {
+    volunteerId: volunteerId,
+    contributorId: contributorId,
+    label: await lookupLabel('profiles', contributorId),
+    otherLabel: await lookupLabel('profiles', volunteerId),
+  });
   revalidatePath(`/contributors/${contributorId}`);
   revalidatePath(`/volunteers/${volunteerId}`);
 }
@@ -259,7 +273,12 @@ export async function unassignVolunteer(contributorId: string, volunteerId: stri
     .eq('volunteer_id', volunteerId);
   if (error) throw new Error(error.message);
 
-  await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', contributorId, { volunteerId });
+  await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', contributorId, {
+    volunteerId: volunteerId,
+    contributorId: contributorId,
+    label: await lookupLabel('profiles', contributorId),
+    otherLabel: await lookupLabel('profiles', volunteerId),
+  });
   revalidatePath(`/contributors/${contributorId}`);
   revalidatePath(`/volunteers/${volunteerId}`);
 }
@@ -308,7 +327,13 @@ export async function addOfflinePayment(
   });
   if (error) return { error: friendlyErrorMessage(error.message) };
 
-  await logAction(admin.id, 'add_offline_payment', 'contributions', contributorId, { amount, note, campaignId });
+  await logAction(admin.id, 'add_offline_payment', 'contributions', contributorId, {
+    amount,
+    note,
+    campaignId,
+    campaignTitle,
+    label: await lookupLabel('profiles', contributorId),
+  });
   revalidatePath(`/contributors/${contributorId}`);
   revalidatePath('/contributions');
   revalidatePath('/campaigns');

@@ -7,7 +7,7 @@ import { Pencil } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { demoteVolunteerToContributor, getVolunteerQuickView, updateVolunteerKkNumber } from './actions';
-import { buttonPrimary, buttonSecondary } from '@/lib/ui';
+import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
 
 const fieldLabelClass = 'text-xs font-semibold text-kiranam-muted';
 
@@ -105,7 +105,7 @@ export function VolunteerQuickViewModal({
               value={kkNumber}
               onChange={(e) => setKkNumber(e.target.value)}
               placeholder="e.g. KK1"
-              className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+              className={inputClass}
             />
           </div>
 
@@ -158,6 +158,7 @@ export function VolunteerQuickViewModal({
               title="Demote to contributor?"
               description={`${data.full_name || 'This volunteer'} will become a plain contributor again. Any contributors currently assigned to them will be unassigned first.`}
               confirmLabel="Demote"
+              destructive
               pendingMessage="Demoting…"
               successMessage={`${data.full_name || 'Volunteer'} has been demoted to contributor.`}
               onSuccess={onClose}

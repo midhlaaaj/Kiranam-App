@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { Sheet, SheetContent, SheetTitle } from "@/components/whatsapp/ui/sheet";
+
 import { Suspense, useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -77,7 +80,14 @@ function InboxPageInner() {
     }
   }, []);
 
+  // Phones have no room for a side panel — the same button opens the
+  // contact details as a sheet instead.
+  const [contactSheetOpen, setContactSheetOpen] = useState(false);
   const handleToggleContactPanel = useCallback(() => {
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      setContactSheetOpen(true);
+      return;
+    }
     setContactPanelOpen((prev) => {
       const next = !prev;
       try {
@@ -244,7 +254,20 @@ function InboxPageInner() {
               c.id === newMsg.conversation_id
                 ? {
                     ...c,
-                    last_message_text: newMsg.content_text ?? "",
+                    // Media has no text — label it instead of a blank preview.
+                    last_message_text:
+                      newMsg.content_text ||
+                      (newMsg.content_type === "image"
+                        ? "📷 Photo"
+                        : newMsg.content_type === "audio"
+                          ? "🎤 Voice message"
+                          : newMsg.content_type === "video"
+                            ? "🎬 Video"
+                            : newMsg.content_type === "document"
+                              ? "📄 Document"
+                              : newMsg.content_type === "location"
+                                ? "📍 Location"
+                                : ""),
                     last_message_at: newMsg.created_at,
                     unread_count:
                       activeConversation?.id === newMsg.conversation_id
@@ -480,9 +503,14 @@ function InboxPageInner() {
       // clobbers the messages MessageThread just fetched.
       autoSelectedForDeepLinkRef.current = conv.id;
       // Reflect the selection in the URL so a refresh lands the user
-      // back in the same thread, and so copy-paste links work. Use
-      // replace() to avoid polluting browser history with every click.
-      router.replace(`/whatsapp/inbox?c=${conv.id}`, { scroll: false });
+      // back in the same thread, and so copy-paste links work. On phones
+      // (single pane) push a history entry so the system Back gesture
+      // returns to the list instead of leaving the inbox; on desktop
+      // replace() keeps history clean.
+      const singlePane = window.matchMedia("(max-width: 1023px)").matches;
+      const href = `/whatsapp/inbox?c=${conv.id}`;
+      if (singlePane) router.push(href, { scroll: false });
+      else router.replace(href, { scroll: false });
     },
     [activeConversation?.id, router]
   );
@@ -558,17 +586,24 @@ function InboxPageInner() {
   // conversation slides the thread in; the thread's back button pops
   // it back to the list. On lg+ both panes render side-by-side as
   // before, unchanged.
-  const hasActiveConv = !!activeConversation;
+  // Tied to the ?c= param too, so the phone's Back gesture (which pops the
+  // param) returns to the list pane.
+  const hasActiveConv = !!activeConversation && !!deepLinkConvId;
 
   return (
-    <div className="-m-4 flex h-[calc(100vh-3.5rem)] flex-col overflow-hidden sm:-m-6">
+    // dvh, not vh: on phones vh includes the browser chrome, which pushed
+    // the composer under the address bar.
+    <div className="-m-4 flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden sm:-m-6">
       {/* WhatsApp connection banner — in the flex column, not absolute,
           so it pushes the panels down instead of overlapping them. */}
       {whatsappConnected === false && (
-        <div className="flex shrink-0 items-center justify-center gap-2 border-b border-amber-500/20 bg-amber-500/10 px-4 py-2">
-          <WifiOff className="h-4 w-4 text-amber-400" />
-          <p className="text-xs text-amber-400">
-            {t("whatsappNotConnected")}
+        <div role="status" className="flex shrink-0 items-center justify-center gap-2 border-b border-warning/25 bg-warning-soft px-4 py-2">
+          <WifiOff className="h-4 w-4 text-warning" aria-hidden />
+          <p className="text-sm text-foreground">
+            {t("whatsappNotConnected")}{" "}
+            <Link href="/whatsapp/settings?tab=whatsapp" className="font-semibold underline underline-offset-2">
+              Connect WhatsApp →
+            </Link>
           </p>
         </div>
       )}
@@ -634,6 +669,12 @@ function InboxPageInner() {
             <ContactSidebar contact={activeContact} />
           </div>
         )}
+        <Sheet open={contactSheetOpen} onOpenChange={setContactSheetOpen}>
+          <SheetContent side="right" className="w-[88vw] max-w-sm p-0 lg:hidden">
+            <SheetTitle className="sr-only">Contact details</SheetTitle>
+            <ContactSidebar contact={activeContact} />
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );

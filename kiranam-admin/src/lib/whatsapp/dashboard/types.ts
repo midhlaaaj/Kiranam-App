@@ -8,10 +8,13 @@ export interface MetricDelta {
 }
 
 export interface MetricsBundle {
-  activeConversations: MetricDelta
+  /** Conversations currently open (a snapshot — no delta). */
+  openConversations: number
+  /** Of those, how many nobody is assigned to. */
+  unassignedOpen: number
+  /** Conversations started today vs. yesterday. */
+  newConversations: MetricDelta
   newContactsToday: MetricDelta
-  openDealsValue: number
-  openDealsCount: number
   messagesSentToday: MetricDelta
 }
 

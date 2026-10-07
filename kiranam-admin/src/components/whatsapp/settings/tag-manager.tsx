@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Tag as TagIcon, X } from 'lucide-react';
+import { Loader2, Lock, Plus, Tag as TagIcon, X } from 'lucide-react';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { useAuth } from '@/hooks/whatsapp/use-auth';
 import { Button } from '@/components/whatsapp/ui/button';
@@ -25,6 +25,12 @@ import {
 import { cn } from '@/lib/whatsapp/utils';
 import { useTranslations } from 'next-intl';
 import type { Tag } from '@/types/whatsapp';
+
+// Created and maintained by database triggers (profile sync + contribution
+// pause) and relied on by broadcasts — "Paused" in particular keeps paused
+// donors out of every broadcast. Deleting one silently breaks that, so they
+// are locked here.
+const SYSTEM_TAGS = new Set(['Contributor', 'Volunteer', 'Paused']);
 
 const PRESET_COLORS = [
   { name: 'red', value: '#ef4444' },
@@ -185,14 +191,24 @@ export function TagManager() {
                       style={{ backgroundColor: tag.color }}
                     />
                     {tag.name}
-                    <button
-                      type="button"
-                      onClick={() => confirmDelete(tag)}
-                      aria-label={t('deleteAria', { name: tag.name })}
-                      className="ml-0.5 rounded-full p-0.5 opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
-                    >
-                      <X className="size-3" />
-                    </button>
+                    {SYSTEM_TAGS.has(tag.name) ? (
+                      <span
+                        className="ml-0.5 inline-flex p-0.5 opacity-70"
+                        title="Managed automatically by Kiranam — can’t be deleted"
+                        aria-label={`${tag.name} is a system tag and can’t be deleted`}
+                      >
+                        <Lock className="size-3" aria-hidden />
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => confirmDelete(tag)}
+                        aria-label={t('deleteAria', { name: tag.name })}
+                        className="-my-1 -mr-1.5 ml-0 inline-flex size-7 items-center justify-center rounded-full opacity-60 transition-opacity hover:bg-black/10 hover:opacity-100 dark:hover:bg-white/10"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    )}
                   </span>
                 ))}
               </div>

@@ -31,8 +31,8 @@ export interface AutomationTemplateDefinition {
 export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefinition> = {
   welcome_message: {
     slug: 'welcome_message',
-    name: 'Welcome Message',
-    description: 'Auto-reply to first-time contacts with a greeting.',
+    name: 'Welcome new contacts',
+    description: 'Thank people the first time they message you.',
     // first_inbound_message (added in PR #33) catches both brand-new
     // contacts AND manually-added/imported contacts on their first-ever
     // reply, which is what a user setting up a "welcome" automation
@@ -44,19 +44,15 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
       {
         step_type: 'send_message',
         step_config: {
-          text: "Hi! 👋 Thanks for reaching out. We'll get back to you shortly.",
+          text: "Hi! 🙏 Thank you for reaching out to Kiranam. A volunteer will reply to you shortly.",
         },
-      },
-      {
-        step_type: 'add_tag',
-        step_config: { tag_id: '' },
       },
     ],
   },
   out_of_office: {
     slug: 'out_of_office',
-    name: 'Out of Office',
-    description: 'Auto-reply during off-hours so nobody is left waiting.',
+    name: 'After-hours reply',
+    description: 'Let people know when the team is offline, so nobody waits without an answer.',
     trigger_type: 'new_message_received',
     trigger_config: {},
     steps: [
@@ -71,7 +67,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Thanks for your message! Our team is offline right now (9am–6pm) and will reply first thing tomorrow.",
+            "Thanks for your message! Our volunteers reply between 9am and 6pm — we'll get back to you first thing tomorrow.",
         },
         parent_index: 0,
         branch: 'yes',
@@ -80,11 +76,11 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
   },
   lead_qualifier: {
     slug: 'lead_qualifier',
-    name: 'Lead Qualifier',
-    description: 'Ask qualification questions to filter inbound leads.',
+    name: 'Donation enquiry',
+    description: 'Reply when someone asks how to give, and hand them to a volunteer.',
     trigger_type: 'keyword_match',
     trigger_config: {
-      keywords: ['pricing', 'quote', 'buy'],
+      keywords: ['donate', 'donation', 'contribute', 'give'],
       match_type: 'contains',
     },
     steps: [
@@ -92,12 +88,8 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Great — happy to help with pricing! Quick question: roughly how many seats are you looking for?",
+            "Thank you for wanting to support Kiranam! 💛 You can give monthly through the Kiranam app, or a volunteer will message you here to help set it up.",
         },
-      },
-      {
-        step_type: 'wait',
-        step_config: { amount: 10, unit: 'minutes' },
       },
       {
         step_type: 'assign_conversation',
@@ -107,8 +99,8 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
   },
   follow_up_reminder: {
     slug: 'follow_up_reminder',
-    name: 'Follow-up Reminder',
-    description: 'Send a nudge if a contact has not replied within 24 hours.',
+    name: 'Follow-up nudge',
+    description: 'Check in a day later if the conversation went quiet.',
     trigger_type: 'new_message_received',
     trigger_config: {},
     steps: [
@@ -120,7 +112,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Just circling back — did you have any other questions for us? Happy to help!",
+            "Just checking in — is there anything else we can help you with? 🙏",
         },
       },
     ],

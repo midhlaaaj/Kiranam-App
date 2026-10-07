@@ -66,6 +66,7 @@ async function NotificationsBody() {
               title="Clear all notifications?"
               description="This permanently deletes every notification in this list. This can't be undone."
               confirmLabel="Clear all"
+              destructive
               successMessage="Notifications cleared."
               pendingMessage="Clearing…"
               className={linkDanger}

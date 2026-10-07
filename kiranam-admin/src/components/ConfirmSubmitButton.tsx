@@ -15,7 +15,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
-/** Wraps a destructive server action in a confirm dialog + toast feedback.
+/** Wraps a server action in a confirm dialog + toast feedback.
  * Calls `action` directly (Server Actions are callable outside <form>), so no
  * surrounding <form> is needed at the call site. */
 export function ConfirmSubmitButton({
@@ -28,7 +28,7 @@ export function ConfirmSubmitButton({
   successMessage,
   pendingMessage = 'Working…',
   onSuccess,
-  destructive = true,
+  destructive = false,
   'aria-label': ariaLabel,
 }: {
   action: () => Promise<void>;
@@ -42,9 +42,9 @@ export function ConfirmSubmitButton({
   /** Called after `action` resolves successfully — for callers that need to
    * do more than show a toast (reset a form, close a panel, etc). */
   onSuccess?: () => void;
-  /** Styles the confirm button as destructive (red) — the default, since
-   * this component is mostly used for delete/remove actions. Set false for
-   * a confirm-gated action that isn't destructive (e.g. a role change). */
+  /** Styles the confirm button as destructive (solid danger red). Opt in
+   * for deletes/removals only — approvals, archiving and other reversible
+   * confirmations use the normal primary button. */
   destructive?: boolean;
   'aria-label'?: string;
 }) {

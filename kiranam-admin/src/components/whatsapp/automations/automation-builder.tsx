@@ -9,13 +9,15 @@ import {
 } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard"
+import { validateStepsForActivation, validateTriggerForActivation } from "@/lib/whatsapp/automations/validate"
 import { toast } from "sonner"
 import {
   ArrowLeft,
   ChevronDown,
   Plus,
   Trash2,
-  GripVertical,
   MessageSquare,
   FileText,
   Tag,
@@ -634,6 +636,20 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   const [state, setState] = useState<BuilderInitial>(initial)
   const [saving, setSaving] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Dirty tracking against the last saved version — guards leaving with
+  // unsaved work (tab close and in-app links, including Back).
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initial))
+  const dirty = JSON.stringify(state) !== savedSnapshot
+  const guard = useUnsavedChangesGuard(dirty)
+
+  // Live activation checks — the same rules the server enforces, listed
+  // all at once in plain words instead of one toast with a "steps[2]" path.
+  const issues = state.is_active
+    ? [
+        ...validateTriggerForActivation(state.trigger_type, state.trigger_config),
+        ...validateStepsForActivation(toApiSteps(state.steps)),
+      ]
+    : []
 
   function patchTop<K extends keyof BuilderInitial>(key: K, value: BuilderInitial[K]) {
     setState((s) => ({ ...s, [key]: value }))
@@ -657,7 +673,13 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
   }
 
   function deleteStepAt(path: StepPath) {
+    const before = state.steps
     setState((s) => ({ ...s, steps: removeAt(s.steps, path) }))
+    // Deleting a condition removes its whole Yes/No branch — make it undoable.
+    toast("Step deleted", {
+      action: { label: "Undo", onClick: () => setState((s) => ({ ...s, steps: before })) },
+      duration: 8000,
+    })
   }
 
   function moveStepAt(path: StepPath, direction: -1 | 1) {
@@ -693,17 +715,19 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         // If the server blocked activation with validation issues,
         // surface the first concrete problem so the user can fix it
         // without opening DevTools for the full array.
-        const firstIssue: { path?: string; message?: string } | undefined =
-          body?.issues?.[0]
-        if (firstIssue?.message) {
-          toast.error(firstIssue.message, {
-            description: firstIssue.path ? `at ${firstIssue.path}` : undefined,
-          })
+        const serverIssues: { path?: string; message?: string }[] = body?.issues ?? []
+        if (serverIssues.length > 0) {
+          toast.error(
+            serverIssues.length === 1
+              ? `Can't activate: ${humanizeIssuePath(serverIssues[0].path)}${serverIssues[0].message}`
+              : `Can't activate yet — ${serverIssues.length} things to fix (listed above the steps).`,
+          )
         } else {
           toast.error(body?.error ?? t("toasts.saveFailed"))
         }
         return
       }
+      setSavedSnapshot(JSON.stringify(state))
       toast.success(isEditing ? t("toasts.saved") : t("toasts.created"))
       if (!isEditing && body?.automation?.id) {
         router.replace(`/whatsapp/automations/${body.automation.id}/edit`)
@@ -721,7 +745,7 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
       <header className="flex flex-shrink-0 items-center gap-2 border-b border-border bg-card/80 px-3 py-3 sm:gap-3 sm:px-4">
         <button
           type="button"
-          onClick={() => router.push("/whatsapp/automations")}
+          onClick={() => guard.navigate("/whatsapp/automations")}
           className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           aria-label={t("backToAutomations")}
         >
@@ -743,13 +767,47 @@ export function AutomationBuilder({ initial }: { initial: BuilderInitial }) {
         </div>
         <Button
           onClick={save}
-          disabled={saving}
+          disabled={saving || (isEditing && !dirty)}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {isEditing ? t("save") : t("saveDraft")}
+          {/* Says what saving will do — "Save draft" next to an "Active"
+              switch used to be misleading. */}
+          {isEditing && !dirty
+            ? "Saved"
+            : state.is_active
+              ? initial.is_active
+                ? "Save — stays active"
+                : "Save & activate"
+              : isEditing
+                ? t("save")
+                : t("saveDraft")}
         </Button>
       </header>
+
+      {issues.length > 0 && (
+        <div role="status" className="flex-shrink-0 border-b border-warning/25 bg-warning-soft px-4 py-2.5 text-sm text-foreground">
+          <p className="font-semibold">Fix before this can run:</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">
+            {issues.map((i) => (
+              <li key={i.path + i.message}>
+                {humanizeIssuePath(i.path)}
+                {i.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={guard.open}
+        onOpenChange={guard.setOpen}
+        title="Leave without saving?"
+        description="Your changes to this automation haven't been saved."
+        confirmLabel="Leave"
+        destructive
+        onConfirm={guard.proceed}
+      />
 
       {/* Canvas */}
       <div className="relative flex-1 overflow-y-auto">
@@ -870,7 +928,7 @@ function TriggerCard({
                   {t("schedule")}
                 </label>
                 <Input
-                  placeholder="Cron expression or HH:mm"
+                  placeholder="e.g. 09:00 (daily at 9am)"
                   value={(config.schedule as string) ?? ""}
                   onChange={(e) =>
                     onConfigChange({ ...config, schedule: e.target.value })
@@ -1110,7 +1168,6 @@ function StepRenderer({
             onClick={() => props.setExpandedId(expanded ? null : step.cid)}
             className="flex w-full items-center gap-3 px-4 py-3 text-left"
           >
-            <GripVertical className="h-4 w-4 flex-shrink-0 text-muted-foreground" aria-hidden />
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
               <Icon className="h-4 w-4" />
             </div>
@@ -1438,21 +1495,24 @@ function StepEditor({
               <option value="time_of_day">{t("config.subjects.time_of_day")}</option>
             </select>
           </FieldBlock>
-          <FieldBlock label={t("config.operandLabel")}>
-            <Input
-              placeholder={
-                cfg.subject === "time_of_day"
-                  ? t("config.placeholderTime")
-                  : cfg.subject === "contact_field"
-                  ? t("config.placeholderContact")
-                  : cfg.subject === "tag_presence"
-                  ? t("config.placeholderTag")
-                  : ""
-              }
-              value={(cfg.operand as string) ?? ""}
-              onChange={(e) => set({ operand: e.target.value })}
-              className="bg-muted text-foreground"
-            />
+          <FieldBlock label={(cfg.subject ?? "tag_presence") === "tag_presence" ? "Tag" : t("config.operandLabel")}>
+            {(cfg.subject ?? "tag_presence") === "tag_presence" ? (
+              // Pick the tag by name — admins can't be expected to know tag IDs.
+              <TagSelect value={(cfg.operand as string) ?? ""} onChange={(v) => set({ operand: v })} t={t} />
+            ) : (
+              <Input
+                placeholder={
+                  cfg.subject === "time_of_day"
+                    ? t("config.placeholderTime")
+                    : cfg.subject === "contact_field"
+                    ? t("config.placeholderContact")
+                    : ""
+                }
+                value={(cfg.operand as string) ?? ""}
+                onChange={(e) => set({ operand: e.target.value })}
+                className="bg-muted text-foreground"
+              />
+            )}
           </FieldBlock>
           {(cfg.subject === "contact_field" || cfg.subject === "message_content") && (
             <FieldBlock label="Value">
@@ -1741,4 +1801,18 @@ export function fromServerSteps(nodes: ServerStepNode[]): BuilderStep[] {
           }
         : undefined,
   }))
+}
+
+/** "steps[1].yes.steps[0].text" → "Step 2 › If yes › Step 1: " */
+function humanizeIssuePath(path?: string): string {
+  if (!path) return ""
+  if (path.startsWith("trigger")) return "Trigger: "
+  const parts: string[] = []
+  const re = /steps\[(\d+)\]|\.(yes|no)\./g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(path))) {
+    if (m[1] !== undefined) parts.push(`Step ${Number(m[1]) + 1}`)
+    else parts.push(m[2] === "yes" ? "If yes" : "If no")
+  }
+  return parts.length ? `${parts.join(" › ")}: ` : ""
 }

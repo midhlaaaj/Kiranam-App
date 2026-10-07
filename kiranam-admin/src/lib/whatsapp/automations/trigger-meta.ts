@@ -6,38 +6,42 @@ export interface TriggerMeta {
   pillClass: string
 }
 
+// One neutral pill style — eight hues (several failing contrast in light
+// mode) added noise without meaning; the label carries the information.
+const NEUTRAL_PILL = 'border-border bg-muted text-foreground'
+
 const TRIGGER_META: Record<AutomationTriggerType, TriggerMeta> = {
   new_message_received: {
-    label: 'New Message',
-    pillClass: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+    label: 'Any new message',
+    pillClass: NEUTRAL_PILL,
   },
   first_inbound_message: {
-    label: 'First Message from Contact',
-    pillClass: 'border-teal-500/30 bg-teal-500/10 text-teal-300',
+    label: 'First message from someone',
+    pillClass: NEUTRAL_PILL,
   },
   keyword_match: {
-    label: 'Keyword Match',
-    pillClass: 'border-purple-500/30 bg-purple-500/10 text-purple-300',
+    label: 'Message contains a keyword',
+    pillClass: NEUTRAL_PILL,
   },
   new_contact_created: {
-    label: 'New Contact',
-    pillClass: 'border-primary/30 bg-primary/10 text-primary',
+    label: 'New contact added',
+    pillClass: NEUTRAL_PILL,
   },
   conversation_assigned: {
-    label: 'Conversation Assigned',
-    pillClass: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
+    label: 'Conversation assigned',
+    pillClass: NEUTRAL_PILL,
   },
   tag_added: {
-    label: 'Tag Added',
-    pillClass: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+    label: 'Tag added',
+    pillClass: NEUTRAL_PILL,
   },
   time_based: {
-    label: 'Time-Based',
-    pillClass: 'border-slate-500/30 bg-slate-500/10 text-muted-foreground',
+    label: 'On a schedule',
+    pillClass: NEUTRAL_PILL,
   },
   interactive_reply: {
-    label: 'Button / List Reply',
-    pillClass: 'border-pink-500/30 bg-pink-500/10 text-pink-300',
+    label: 'Button or list reply',
+    pillClass: NEUTRAL_PILL,
   },
 }
 
@@ -45,7 +49,7 @@ export function triggerMeta(t: AutomationTriggerType | string): TriggerMeta {
   return (
     TRIGGER_META[t as AutomationTriggerType] ?? {
       label: t,
-      pillClass: 'border-slate-500/30 bg-slate-500/10 text-muted-foreground',
+      pillClass: NEUTRAL_PILL,
     }
   )
 }

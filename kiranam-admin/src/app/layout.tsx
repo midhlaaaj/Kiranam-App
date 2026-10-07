@@ -25,7 +25,9 @@ export default function RootLayout({
       <body className="min-h-dvh flex flex-col bg-kiranam-bg text-kiranam-ink font-sans">
         <ThemeProvider attribute="class" forcedTheme="light" enableSystem={false}>
           {children}
-          <Toaster position="top-right" richColors closeButton />
+          {/* The only Toaster in the app (sonner renders every toast in every
+              mounted Toaster). Neutral surface + semantic icon colours. */}
+          <Toaster position="top-right" closeButton />
         </ThemeProvider>
       </body>
     </html>

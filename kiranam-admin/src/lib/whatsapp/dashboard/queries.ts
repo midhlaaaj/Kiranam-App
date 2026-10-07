@@ -37,7 +37,7 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
     newConvYesterday,
     newContactsToday,
     newContactsYesterday,
-    openDeals,
+    unassignedOpen,
     messagesToday,
     messagesYesterday,
   ] = await Promise.all([
@@ -59,7 +59,11 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
-    db.from('deals').select('value, status').eq('status', 'open'),
+    db
+      .from('conversations')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'open')
+      .is('assigned_agent_id', null),
     db
       .from('messages')
       .select('id', { count: 'exact', head: true })
@@ -73,23 +77,21 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .lt('created_at', todayStart),
   ])
 
-  const openDealsRows = (openDeals.data ?? []) as { value: number | null }[]
-  const openDealsValue = openDealsRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+  // Any failed count must surface as an error card, not as a "0".
+  const failed = [openConvCur, newConvToday, newConvYesterday, newContactsToday, newContactsYesterday, unassignedOpen, messagesToday, messagesYesterday].find((r) => r.error)
+  if (failed?.error) throw new Error(failed.error.message)
 
   return {
-    activeConversations: {
-      current: openConvCur.count ?? 0,
-      // "vs yesterday" on a current-state count has no clean answer
-      // without snapshots — we show the delta in NEW open conversations
-      // today vs yesterday. That's the business-meaningful daily signal.
-      previous: (newConvToday.count ?? 0) - (newConvYesterday.count ?? 0),
+    openConversations: openConvCur.count ?? 0,
+    unassignedOpen: unassignedOpen.count ?? 0,
+    newConversations: {
+      current: newConvToday.count ?? 0,
+      previous: newConvYesterday.count ?? 0,
     },
     newContactsToday: {
       current: newContactsToday.count ?? 0,
       previous: newContactsYesterday.count ?? 0,
     },
-    openDealsValue,
-    openDealsCount: openDealsRows.length,
     messagesSentToday: {
       current: messagesToday.count ?? 0,
       previous: messagesYesterday.count ?? 0,

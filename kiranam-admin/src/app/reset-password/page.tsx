@@ -61,7 +61,7 @@ function ResetPasswordForm() {
   if (sessionState === 'error') {
     return pageShell(
       <div className="text-center">
-        <p className="text-4xl font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
+        <p className="text-4xl font-extrabold tracking-tight text-kiranam-brand">Kiranam</p>
         <p className="mt-5 text-sm font-semibold text-kiranam-ink">This reset link has expired</p>
         <p className="mt-2 text-sm text-kiranam-muted">Request a new one from the login page.</p>
       </div>
@@ -70,7 +70,7 @@ function ResetPasswordForm() {
 
   return pageShell(
     <>
-      <p className="text-4xl font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
+      <p className="text-4xl font-extrabold tracking-tight text-kiranam-brand">Kiranam</p>
       <p className="mt-4 text-sm text-kiranam-muted">Choose a new password for your admin account.</p>
 
       <form action={formAction} className="mt-6 space-y-4">

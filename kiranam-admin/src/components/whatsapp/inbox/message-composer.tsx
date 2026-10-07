@@ -24,6 +24,7 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/whatsapp/ui/button";
+import { Input } from "@/components/whatsapp/ui/input";
 import { GatedButton } from "@/components/whatsapp/ui/gated-button";
 import {
   DropdownMenu,
@@ -153,6 +154,8 @@ export function MessageComposer({
   const [interactivePayload, setInteractivePayload] =
     useState<InteractiveMessagePayload>(blankButtonsPayload);
   const [savingQuickReply, setSavingQuickReply] = useState(false);
+  // Inline name field for "Save as quick reply" (replaces window.prompt).
+  const [quickReplyName, setQuickReplyName] = useState<string | null>(null);
   const [quickReplyOpen, setQuickReplyOpen] = useState(false);
 
   // Media attachment state. `draft` holds an uploaded-but-not-yet-sent
@@ -216,8 +219,8 @@ export function MessageComposer({
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    // Max 4 lines (~96px)
-    el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
+    // Grows to ~8 lines before scrolling.
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, []);
 
   const handleSend = useCallback(async () => {
@@ -238,7 +241,9 @@ export function MessageComposer({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      // On touch keyboards Enter inserts a new line (there's no Shift);
+      // the Send button sends. On desktop Enter sends, Shift+Enter = newline.
+      if (e.key === "Enter" && !e.shiftKey && !window.matchMedia("(pointer: coarse)").matches) {
         e.preventDefault();
         handleSend();
       }
@@ -326,10 +331,11 @@ export function MessageComposer({
       toast.error(result.error);
       return;
     }
-    const title = window
-      .prompt(t("quickReplyNamePrompt"))
-      ?.trim();
-    if (!title) return;
+    const title = quickReplyName?.trim();
+    if (!title) {
+      setQuickReplyName("");
+      return;
+    }
     setSavingQuickReply(true);
     try {
       const res = await fetch("/api/whatsapp/quick-replies", {
@@ -347,12 +353,13 @@ export function MessageComposer({
         return;
       }
       toast.success(t("quickReplySaved"));
+      setQuickReplyName(null);
     } catch {
       toast.error(t("quickReplySaveError"));
     } finally {
       setSavingQuickReply(false);
     }
-  }, [interactivePayload, t]);
+  }, [interactivePayload, quickReplyName, t]);
 
   // A picked quick reply: text fills the composer; interactive opens the
   // builder pre-filled so the agent can tweak before sending.
@@ -634,6 +641,7 @@ export function MessageComposer({
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={inputsDisabled || busy}
+              aria-label={t("attachMedia")}
               title={
                 readOnly
                   ? t("readOnlyTitle")
@@ -674,6 +682,7 @@ export function MessageComposer({
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={inputsDisabled}
+              aria-label={t("moreActions")}
               title={
                 readOnly
                   ? t("readOnlyTitle")
@@ -714,8 +723,14 @@ export function MessageComposer({
             size="sm"
             canAct={!readOnly}
             gateReason="send messages"
-            disabled={drafting}
-            title={readOnly ? undefined : t("draftWithAI")}
+            disabled={drafting || sessionExpired}
+            title={
+              readOnly
+                ? undefined
+                : sessionExpired
+                  ? "AI drafts are off — the 24h reply window has closed, so only a template can be sent."
+                  : t("draftWithAI")
+            }
             className="h-9 w-9 shrink-0 p-0 text-muted-foreground hover:text-primary"
             onClick={handleDraft}
           >
@@ -740,12 +755,14 @@ export function MessageComposer({
             }
             disabled={sessionExpired || readOnly}
             rows={1}
+            maxLength={4096}
+            aria-label={t("typeMessagePlaceholder")}
             // Textarea keeps its own inline title — the GatedButton
             // wrapping pattern doesn't apply to non-button inputs.
             // The placeholder text also surfaces the read-only state.
             title={readOnly ? t("readOnlyTitle") : undefined}
             className={cn(
-              "flex-1 resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50",
+              "flex-1 resize-none rounded-xl border border-input bg-card px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/15",
               (sessionExpired || readOnly) && "cursor-not-allowed opacity-50"
             )}
           />
@@ -756,6 +773,7 @@ export function MessageComposer({
             gateReason="send messages"
             disabled={!text.trim() || sessionExpired || sending}
             onClick={handleSend}
+            title={t("send")}
             className="h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
           >
             <Send className="h-4 w-4" />
@@ -763,14 +781,12 @@ export function MessageComposer({
         </div>
       )}
 
-      {/* Hint sits outside the flex row so its height doesn't push
-          `items-end` buttons below the textarea. Indented to line up
-          under the textarea left edge. */}
-      {!draft && !recording && (
-        <p className="mt-1 pl-[5.5rem] text-[10px] text-muted-foreground">
-          {t("draftHint")}
+      {text.length > 3500 && (
+        <p className={cn("mt-1 text-right text-xs tabular-nums", text.length >= 4096 ? "text-destructive" : "text-warning")}>
+          {text.length}/4096
         </p>
       )}
+
 
       {/* Interactive-message builder dialog. */}
       <Dialog open={interactiveOpen} onOpenChange={setInteractiveOpen}>
@@ -784,11 +800,32 @@ export function MessageComposer({
               onChange={setInteractivePayload}
             />
           </div>
+          {quickReplyName !== null && (
+            <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3">
+              <label className="grid min-w-48 flex-1 gap-1 text-sm font-medium text-foreground">
+                {t("quickReplyNamePrompt")}
+                <Input
+                  autoFocus
+                  value={quickReplyName}
+                  onChange={(e) => setQuickReplyName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void saveAsQuickReply();
+                    }
+                  }}
+                />
+              </label>
+              <Button variant="ghost" onClick={() => setQuickReplyName(null)}>
+                {t("cancel")}
+              </Button>
+            </div>
+          )}
           <DialogFooter>
             <Button
               variant="outline"
-              disabled={savingQuickReply}
-              onClick={saveAsQuickReply}
+              disabled={savingQuickReply || (quickReplyName !== null && !quickReplyName.trim())}
+              onClick={() => (quickReplyName === null ? setQuickReplyName("") : void saveAsQuickReply())}
             >
               {savingQuickReply ? (
                 <Loader2 className="mr-1 h-4 w-4 animate-spin" />

@@ -1,13 +1,25 @@
+'use client';
+
+import { usePathname } from 'next/navigation';
 import { Tabs } from '@/components/Tabs';
 
-export function SettingsTabs({ active }: { active: 'general' | 'admin-users' | 'logs' }) {
+const ITEMS = [
+  { href: '/settings', label: 'General' },
+  { href: '/settings/account', label: 'Account' },
+  { href: '/settings/admin-users', label: 'Team' },
+  { href: '/settings/logs', label: 'Activity log' },
+];
+
+/** Rendered once by settings/layout.tsx — active tab comes from the URL, so
+ * the heading + tab strip never shift position between tabs. */
+export function SettingsTabs() {
+  const pathname = usePathname();
   return (
     <Tabs
-      items={[
-        { href: '/settings', label: 'General', active: active === 'general' },
-        { href: '/settings/admin-users', label: 'Admin Users', active: active === 'admin-users' },
-        { href: '/settings/logs', label: 'Logs', active: active === 'logs' },
-      ]}
+      items={ITEMS.map((item) => ({
+        ...item,
+        active: item.href === '/settings' ? pathname === '/settings' : pathname.startsWith(item.href),
+      }))}
     />
   );
 }

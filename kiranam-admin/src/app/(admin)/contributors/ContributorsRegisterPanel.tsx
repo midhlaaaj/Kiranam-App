@@ -13,12 +13,10 @@ import type { PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
  * view in its place — the quick view is rendered here, as a sibling of
  * AddNewPanel, so it survives that close instead of unmounting with it. */
 export function ContributorsRegisterPanel({
-  bell,
   filters,
   search,
   mobileToolbar,
 }: {
-  bell?: React.ReactNode;
   filters?: React.ReactNode;
   search?: React.ReactNode;
   mobileToolbar?: React.ReactNode;
@@ -31,8 +29,6 @@ export function ContributorsRegisterPanel({
       <AddNewPanel
         title="Contributors"
         label="Register contributor"
-        description="For a contributor who committed offline and hasn't signed up in the app yet."
-        bell={bell}
         modal
         filters={filters}
         search={search}
@@ -41,6 +37,7 @@ export function ContributorsRegisterPanel({
         onOpenChange={setOpen}
       >
         <RegisterContributorForm
+          bare
           onDone={() => setOpen(false)}
           onEditExisting={(match) => {
             setOpen(false);

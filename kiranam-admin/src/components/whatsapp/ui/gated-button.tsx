@@ -92,6 +92,10 @@ export function GatedButton({
       <Button
         disabled={effectivelyDisabled}
         className={className}
+        // The tooltip lives on the wrapper span (see above), which screen
+        // readers don't announce for the button — give icon-only buttons
+        // the same text as their accessible name.
+        aria-label={typeof tooltip === "string" ? tooltip : undefined}
         {...rest}
       >
         {children}

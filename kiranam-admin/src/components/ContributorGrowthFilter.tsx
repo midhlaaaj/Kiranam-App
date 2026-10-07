@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { buttonSecondary, inputClass, pillTabClass, pillTabItemClass } from '@/lib/ui';
+import { cn } from '@/lib/utils';
 
 export function ContributorGrowthFilter({
   granularity,
@@ -81,10 +82,10 @@ export function ContributorGrowthFilter({
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className={`${inputClass} w-auto`}
+            className={cn(inputClass, 'w-auto')}
           />
           <span className="text-sm text-kiranam-muted">to</span>
-          <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className={`${inputClass} w-auto`} />
+          <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className={cn(inputClass, 'w-auto')} />
           <button type="button" onClick={applyCustom} className={buttonSecondary}>
             Apply
           </button>

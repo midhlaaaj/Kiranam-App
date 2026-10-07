@@ -1,10 +1,9 @@
 'use client';
 
-import { cloneElement, isValidElement, Suspense, useState } from 'react';
+import { cloneElement, isValidElement, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { buttonPrimary } from '@/lib/ui';
 import { Modal } from './Modal';
-import { SkeletonBell } from './Skeleton';
 
 /** Page header + "create" form, used by list pages that support inline
  * creation (Campaigns, Events, Notifications, Contributors). Renders the
@@ -24,7 +23,6 @@ export function AddNewPanel({
   title,
   description,
   label,
-  bell,
   filters,
   search,
   mobileToolbar,
@@ -36,10 +34,6 @@ export function AddNewPanel({
   title: string;
   description?: React.ReactNode;
   label: string;
-  /** Notification bell, rendered beside the create button — pass
-   * `<NotificationBell />` (a Server Component, so it can't be built inside
-   * this Client Component and has to come in as a prop from the page). */
-  bell?: React.ReactNode;
   /** Left side of the toolbar row (status pills, tabs, etc). */
   filters?: React.ReactNode;
   /** Right side of the toolbar row (search box + button). */
@@ -78,7 +72,7 @@ export function AddNewPanel({
 
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-kiranam-border pb-5 mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-kiranam-border pb-5 mb-6 lg:pr-14">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-balance text-kiranam-ink">{title}</h1>
           {description && <p className="mt-1 text-sm text-kiranam-muted">{description}</p>}
@@ -89,9 +83,6 @@ export function AddNewPanel({
               toolbar row hides below sm) it still needs a home on small screens, hence sm:hidden here. */}
           {!hasToolbar && button}
           {hasToolbar && mobileToolbar && <span className="sm:hidden">{button}</span>}
-          {/* Own Suspense boundary so this async DB-backed component never
-              blocks the title/toolbar above from rendering immediately. */}
-          {bell && <Suspense fallback={<SkeletonBell />}>{bell}</Suspense>}
         </div>
       </div>
 

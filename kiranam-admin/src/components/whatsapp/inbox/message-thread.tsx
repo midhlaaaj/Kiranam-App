@@ -28,9 +28,8 @@ import {
   PanelRightOpen,
   PanelRightClose,
 } from "lucide-react";
-import { format, isToday, isYesterday, differenceInHours } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 import { useTranslations } from "next-intl";
-import { Badge } from "@/components/whatsapp/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,10 +134,13 @@ function groupMessagesByDate(messages: Message[]) {
 }
 
 const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string }[] = [
-  { label: "Open", value: "open", color: "text-primary" },
-  { label: "Pending", value: "pending", color: "text-amber-400" },
+  { label: "Open", value: "open", color: "text-foreground" },
+  { label: "Pending", value: "pending", color: "text-warning" },
   { label: "Closed", value: "closed", color: "text-muted-foreground" },
 ];
+
+/** Messages loaded per page — older ones load on demand. */
+const PAGE_SIZE = 50;
 
 /**
  * WhatsApp-style doodle background applied to the chat area (both the
@@ -171,7 +173,7 @@ export function MessageThread({
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
 
-  const { user } = useAuth();
+  const { user, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -202,15 +204,17 @@ export function MessageThread({
   }, [isRefreshing, onRefresh]);
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
 
-  // Profiles are bounded by RLS to rows the current user is allowed to
-  // see — today that's just the current user, but the dropdown keeps the
-  // shape ready for shared-team workspaces without a refactor.
+  // Assignable people = members of this WhatsApp account only. Admins can
+  // read *every* profile under RLS (contributors and volunteers included),
+  // so this must filter explicitly — otherwise the assign menu lists donors.
   useEffect(() => {
+    if (!accountId) return;
     let cancelled = false;
     const supabase = createClient();
     supabase
       .from("profiles")
-      .select("*")
+      .select("id, user_id, full_name, email, avatar_url, account_id, account_role, created_at")
+      .eq("account_id", accountId)
       .order("full_name")
       .then(({ data, error }) => {
         if (cancelled) return;
@@ -223,24 +227,30 @@ export function MessageThread({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [accountId]);
 
-  // 24-hour session timer
+  // 24-hour session timer — re-evaluated every minute so an open thread
+  // flips to "template only" on time instead of when the next message lands.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const sessionInfo = useMemo(() => {
-    if (!messages.length) return { expired: false, remaining: "" };
+    if (!messages.length) return { expired: false, remaining: "", hoursLeft: 24 };
 
     // Find last customer message
     const lastCustomerMsg = [...messages]
       .reverse()
       .find((m) => m.sender_type === "customer");
 
-    if (!lastCustomerMsg) return { expired: true, remaining: "No customer messages" };
+    if (!lastCustomerMsg) return { expired: true, remaining: tTimer("expired"), hoursLeft: 0 };
 
-    const hoursSince = differenceInHours(new Date(), new Date(lastCustomerMsg.created_at));
+    const hoursSince = (nowTick - new Date(lastCustomerMsg.created_at).getTime()) / 3_600_000;
     const expired = hoursSince >= 24;
 
     if (expired) {
-      return { expired: true, remaining: tTimer("expired") };
+      return { expired: true, remaining: tTimer("expired"), hoursLeft: 0 };
     }
 
     const hoursLeft = 24 - hoursSince;
@@ -249,8 +259,8 @@ export function MessageThread({
         ? tTimer("xhRemaining", { hours: Math.floor(hoursLeft) })
         : tTimer("xmRemaining", { minutes: Math.floor(hoursLeft * 60) });
 
-    return { expired, remaining };
-  }, [messages, tTimer]);
+    return { expired, remaining, hoursLeft };
+  }, [messages, tTimer, nowTick]);
 
   // Store latest callback in a ref so fetchMessages doesn't need to
   // depend on `onMessagesLoaded` — otherwise parent re-renders cause
@@ -284,14 +294,17 @@ export function MessageThread({
         .from("messages")
         .select("*")
         .eq("conversation_id", conversationId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false })
+        .limit(PAGE_SIZE);
 
       if (cancelled) return;
 
       if (error) {
         console.error("Failed to fetch messages:", error);
       } else {
-        onMessagesLoadedRef.current(data ?? []);
+        setHasOlder((data ?? []).length === PAGE_SIZE);
+        stickToBottomRef.current = true;
+        onMessagesLoadedRef.current([...(data ?? [])].reverse());
       }
 
       if (!cancelled) setLoading(false);
@@ -436,13 +449,67 @@ export function MessageThread({
       });
   }, [conversationId, hasUnread]);
 
-  // Auto-scroll to bottom on new messages
+  // Scroll: follow new messages only when the agent is already at the
+  // bottom (or just sent one). Reading history is never yanked away —
+  // a "New messages" pill appears instead.
+  const stickToBottomRef = useRef(true);
+  const lastMessageIdRef = useRef<string | null>(null);
+  const [showNewPill, setShowNewPill] = useState(false);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+    stickToBottomRef.current = true;
+    setShowNewPill(false);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    stickToBottomRef.current = nearBottom;
+    if (nearBottom) setShowNewPill(false);
+  }, []);
+
   useEffect(() => {
-    if (scrollRef.current) {
-      const el = scrollRef.current;
-      el.scrollTop = el.scrollHeight;
+    const last = messages[messages.length - 1];
+    const isNewLast = !!last && last.id !== lastMessageIdRef.current;
+    lastMessageIdRef.current = last?.id ?? null;
+    if (!isNewLast) return; // status ticks / older pages — keep position
+    const own = last.sender_type === "agent" || last.sender_type === "bot";
+    if (stickToBottomRef.current || own) {
+      requestAnimationFrame(scrollToBottom);
+    } else {
+      setShowNewPill(true);
     }
-  }, [messages]);
+  }, [messages, scrollToBottom]);
+
+  const loadOlder = useCallback(async () => {
+    if (!conversation || loadingOlder || messages.length === 0) return;
+    setLoadingOlder(true);
+    const el = scrollRef.current;
+    const prevHeight = el?.scrollHeight ?? 0;
+    const { data, error } = await createClient()
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", conversation.id)
+      .lt("created_at", messages[0].created_at)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
+    setLoadingOlder(false);
+    if (error) {
+      toast.error("Couldn't load earlier messages.");
+      return;
+    }
+    setHasOlder((data ?? []).length === PAGE_SIZE);
+    onMessagesLoadedRef.current([...(data ?? [])].reverse().concat(messages));
+    // Keep the reader's place after prepending.
+    requestAnimationFrame(() => {
+      if (el) el.scrollTop = el.scrollHeight - prevHeight;
+    });
+  }, [conversation, loadingOlder, messages]);
 
   const handleSend = useCallback(
     async (text: string, replyToId?: string) => {
@@ -624,13 +691,22 @@ export function MessageThread({
     async (status: ConversationStatus) => {
       if (!conversation) return;
 
-      const supabase = createClient();
-      await supabase
+      const previous = conversation.status;
+      onStatusChange(conversation.id, status);
+      const { error } = await createClient()
         .from("conversations")
         .update({ status })
         .eq("id", conversation.id);
-
-      onStatusChange(conversation.id, status);
+      if (error) {
+        // Roll back — otherwise this screen says "Closed" while it's still
+        // open for everyone else.
+        onStatusChange(conversation.id, previous);
+        toast.error("Couldn't change the status. Please try again.");
+        return;
+      }
+      toast.success(
+        status === "closed" ? "Conversation closed." : status === "pending" ? "Marked as pending." : "Conversation reopened.",
+      );
     },
     [conversation, onStatusChange]
   );
@@ -903,18 +979,32 @@ export function MessageThread({
             <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
             <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
           </div>
-          {/* Session timer badge — hidden on the narrowest phones so
-              the name + back arrow keep their room. */}
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
-            )}
-          >
-            <Clock className="h-3 w-3" />
-            {sessionInfo.remaining}
-          </Badge>
+          {/* 24-hour reply window — the key "can I reply freely?" signal,
+              so it shows on every screen size. Expired → template only;
+              clicking it opens the template picker. */}
+          {sessionInfo.remaining && (
+            <button
+              type="button"
+              onClick={sessionInfo.expired ? () => setTemplateModalOpen(true) : undefined}
+              disabled={!sessionInfo.expired}
+              title={
+                sessionInfo.expired
+                  ? "More than 24h since they last wrote — only an approved template can be sent. Click to pick one."
+                  : "Free-form replies are allowed for 24h after the customer's last message."
+              }
+              className={cn(
+                "ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium sm:ml-2",
+                sessionInfo.expired
+                  ? "cursor-pointer border-border bg-muted text-foreground hover:bg-muted/70"
+                  : sessionInfo.hoursLeft < 2
+                    ? "border-warning/30 bg-warning-soft text-warning"
+                    : "border-success/20 bg-success-soft text-success",
+              )}
+            >
+              <Clock className="h-3 w-3" aria-hidden />
+              {sessionInfo.expired ? "Template only" : sessionInfo.remaining}
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -933,7 +1023,8 @@ export function MessageThread({
               title={contactPanelOpen ? t("hideContact") : t("showContact")}
               aria-pressed={contactPanelOpen}
               className={cn(
-                "hidden h-7 w-7 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground lg:inline-flex",
+                // Desktop: show/hide the side panel. Phones: open it as a sheet.
+                "inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted hover:text-foreground lg:h-7 lg:w-7",
                 contactPanelOpen ? "text-primary" : "text-muted-foreground",
               )}
             >
@@ -1013,7 +1104,10 @@ export function MessageThread({
                   {t("noTeammates")}
                 </DropdownMenuItem>
               ) : (
-                profiles.map((p) => {
+                // Current user first, so "assign to me" is always one click.
+                [...profiles]
+                  .sort((a, b) => Number(b.user_id === user?.id) - Number(a.user_id === user?.id))
+                  .map((p) => {
                   const isSelected = p.user_id === assignedAgentId;
                   const presence = getPresence(p.user_id);
                   return (
@@ -1060,7 +1154,19 @@ export function MessageThread({
       </div>
 
       {/* Messages Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
+      <div ref={scrollRef} onScroll={handleScroll} className="relative flex-1 overflow-y-auto px-4 py-4">
+        {hasOlder && !loading && (
+          <div className="mb-3 flex justify-center">
+            <button
+              type="button"
+              onClick={loadOlder}
+              disabled={loadingOlder}
+              className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-60"
+            >
+              {loadingOlder ? "Loading…" : "Load earlier messages"}
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -1124,6 +1230,20 @@ export function MessageThread({
                           reactions={msgReactions}
                           currentUserId={user?.id}
                           onToggleReaction={handlePillToggle}
+                          senderName={
+                            msg.sender_type === "agent" && msg.sender_id && msg.sender_id !== user?.id
+                              ? profiles.find((p) => p.user_id === msg.sender_id)?.full_name?.split(" ")[0] ?? null
+                              : null
+                          }
+                          onRetry={
+                            msg.status === "failed" && msg.content_type === "text" && msg.content_text
+                              ? () => {
+                                  // Drop the failed bubble, then send again as a new message.
+                                  onMessagesLoadedRef.current(messages.filter((m) => m.id !== msg.id));
+                                  void handleSend(msg.content_text!, msg.reply_to_message_id);
+                                }
+                              : undefined
+                          }
                         />
                       </MessageActions>
                     );
@@ -1131,6 +1251,17 @@ export function MessageThread({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+        {showNewPill && (
+          <div className="pointer-events-none sticky bottom-1 flex justify-center">
+            <button
+              type="button"
+              onClick={scrollToBottom}
+              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background shadow-md"
+            >
+              New messages ↓
+            </button>
           </div>
         )}
       </div>
@@ -1151,8 +1282,10 @@ export function MessageThread({
         }}
       />
 
-      {/* Composer */}
+      {/* Composer — keyed by conversation so a half-typed reply or staged
+          attachment can never carry over to (and be sent to) another contact. */}
       <MessageComposer
+        key={conversation.id}
         conversationId={conversation.id}
         sessionExpired={sessionInfo.expired}
         onSend={handleSend}
@@ -1167,6 +1300,7 @@ export function MessageThread({
         open={templateModalOpen}
         onOpenChange={setTemplateModalOpen}
         onSelect={handleSendTemplate}
+        contactName={contact?.name}
       />
     </div>
   );

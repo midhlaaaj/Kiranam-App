@@ -1,37 +1,24 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, ArrowRight, Check, FileUp, Filter, Loader2, Tags, Upload, Users } from 'lucide-react';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { CustomField, Tag } from '@/types/whatsapp';
 import { Button } from '@/components/whatsapp/ui/button';
+import { Input } from '@/components/whatsapp/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/whatsapp/ui/select';
+import { cn } from '@/lib/whatsapp/utils';
 import {
-  Users,
-  Tags,
-  Filter,
-  Upload,
-  Loader2,
-  ArrowRight,
-  ArrowLeft,
-  X,
-} from 'lucide-react';
-import { useTranslations } from 'next-intl';
+  isAudienceComplete,
+  type AudienceConfig,
+  type CustomFieldFilter,
+  type CustomFieldOperator,
+} from '@/lib/whatsapp/broadcast-audience';
+import { AudienceSummary } from './audience-summary';
 
-type AudienceType = 'all' | 'tags' | 'custom_field' | 'csv';
-type CustomFieldOperator = 'is' | 'is_not' | 'contains';
-
-interface CustomFieldFilter {
-  fieldId: string;
-  operator: CustomFieldOperator;
-  value: string;
-}
-
-interface AudienceConfig {
-  type: AudienceType;
-  tagIds?: string[];
-  customField?: CustomFieldFilter;
-  csvContacts?: { phone: string; name?: string }[];
-  excludeTagIds?: string[];
-}
+type AudienceType = AudienceConfig['type'];
 
 interface Step2Props {
   audience: AudienceConfig;
@@ -40,432 +27,390 @@ interface Step2Props {
   onBack: () => void;
 }
 
-export function Step2SelectAudience({
-  audience,
-  onUpdate,
-  onNext,
-  onBack,
-}: Step2Props) {
-  const t = useTranslations('Broadcasts.wizard');
+// ─── CSV parsing ───────────────────────────────────────────────────────────
 
-  const OPERATOR_OPTIONS = useMemo<{ value: CustomFieldOperator; label: string }[]>(() => [
-    { value: 'is', label: t('selectAudience.operatorIs') },
-    { value: 'is_not', label: t('selectAudience.operatorIsNot') },
-    { value: 'contains', label: t('selectAudience.operatorContains') },
-  ], [t]);
+interface CsvResult {
+  fileName: string;
+  valid: { phone: string; name?: string }[];
+  rejected: { row: number; value: string }[];
+}
 
-  const audienceOptions = useMemo<{
-    type: AudienceType;
-    label: string;
-    description: string;
-    icon: typeof Users;
-  }[]>(() => [
-    {
-      type: 'all',
-      label: t('selectAudience.method.all'),
-      description: t('selectAudience.allDescLoading'),
-      icon: Users,
-    },
-    {
-      type: 'tags',
-      label: t('selectAudience.method.tags'),
-      description: t('selectAudience.tagDesc'),
-      icon: Tags,
-    },
-    {
-      type: 'custom_field',
-      label: t('selectAudience.method.customField'),
-      description: t('selectAudience.customFieldDesc'),
-      icon: Filter,
-    },
-    {
-      type: 'csv',
-      label: t('selectAudience.method.csv'),
-      description: t('selectAudience.csvDesc'),
-      icon: Upload,
-    },
-  ], [t]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [loadingTags, setLoadingTags] = useState(false);
-  const [loadingFields, setLoadingFields] = useState(false);
-  const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
-  const [loadingCount, setLoadingCount] = useState(false);
+function splitCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (quoted && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else quoted = !quoted;
+    } else if (ch === ',' && !quoted) {
+      out.push(cur.trim());
+      cur = '';
+    } else cur += ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
 
-  // Tags are used both by the primary "Filter by Tags" audience type
-  // AND by the exclude-list below — so always load once on mount.
-  useEffect(() => {
-    async function fetchTags() {
-      setLoadingTags(true);
-      try {
-        const supabase = createClient();
-        const { data } = await supabase.from('tags').select('*').order('name');
-        setTags(data ?? []);
-      } finally {
-        setLoadingTags(false);
-      }
+/** Stored contact phones are digits-only with country code ("919846571425"). */
+function normalizePhone(raw: string): string | null {
+  const parsed = parsePhoneNumberFromString(raw, 'IN');
+  return parsed?.isValid() ? parsed.number.replace(/^\+/, '') : null;
+}
+
+function parseCsv(text: string, fileName: string): CsvResult | { error: 'parse' | 'missingPhone' } {
+  const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length === 0) return { error: 'parse' };
+  const header = splitCsvLine(lines[0]).map((h) => h.toLowerCase());
+  let phoneCol = header.findIndex((h) => /phone|mobile|number|whatsapp/.test(h));
+  let nameCol = header.findIndex((h) => /name/.test(h));
+  let dataStart = 1;
+  if (phoneCol === -1) {
+    // Headerless file: accept it if the first column already looks like phones.
+    if (normalizePhone(splitCsvLine(lines[0])[0] ?? '')) {
+      phoneCol = 0;
+      nameCol = splitCsvLine(lines[0]).length > 1 ? 1 : -1;
+      dataStart = 0;
+    } else return { error: 'missingPhone' };
+  }
+  const valid: CsvResult['valid'] = [];
+  const rejected: CsvResult['rejected'] = [];
+  const seen = new Set<string>();
+  for (let i = dataStart; i < lines.length; i++) {
+    const cols = splitCsvLine(lines[i]);
+    const phone = normalizePhone(cols[phoneCol] ?? '');
+    if (!phone) {
+      rejected.push({ row: i + 1, value: cols[phoneCol] ?? '' });
+      continue;
     }
-    fetchTags();
+    if (seen.has(phone)) continue;
+    seen.add(phone);
+    valid.push({ phone, name: nameCol >= 0 ? cols[nameCol] || undefined : undefined });
+  }
+  return { fileName, valid, rejected };
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────
+
+export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step2Props) {
+  const t = useTranslations('Broadcasts.wizard');
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[] | null>(null);
+  // Restored from the wizard's audience when coming Back to this step.
+  const [csv, setCsv] = useState<CsvResult | null>(() =>
+    audience.csvContacts?.length ? { fileName: 'Uploaded file', valid: audience.csvContacts, rejected: [] } : null
+  );
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const options = useMemo<{ type: AudienceType; label: string; description: string; icon: typeof Users }[]>(
+    () => [
+      { type: 'all', label: t('selectAudience.method.all'), description: t('selectAudience.allDescLoading'), icon: Users },
+      { type: 'tags', label: t('selectAudience.method.tags'), description: t('selectAudience.tagDesc'), icon: Tags },
+      { type: 'custom_field', label: t('selectAudience.method.customField'), description: t('selectAudience.customFieldDesc'), icon: Filter },
+      { type: 'csv', label: t('selectAudience.method.csv'), description: t('selectAudience.csvDesc'), icon: Upload },
+    ],
+    [t]
+  );
+
+  const operatorItems: Record<CustomFieldOperator, string> = {
+    is: t('selectAudience.operatorIs'),
+    is_not: t('selectAudience.operatorIsNot'),
+    contains: t('selectAudience.operatorContains'),
+  };
+
+  // Tags feed both the "Filter by tags" audience and the exclude list.
+  useEffect(() => {
+    createClient()
+      .from('tags')
+      .select('*')
+      .order('name')
+      .then(({ data }) => setTags(data ?? []));
   }, []);
 
-  // Lazy-load custom fields only when that audience type is active.
   useEffect(() => {
-    if (audience.type !== 'custom_field') return;
-    async function fetchFields() {
-      setLoadingFields(true);
-      try {
-        const supabase = createClient();
-        const { data } = await supabase
-          .from('custom_fields')
-          .select('*')
-          .order('field_name');
-        setCustomFields(data ?? []);
-      } finally {
-        setLoadingFields(false);
-      }
-    }
-    fetchFields();
-  }, [audience.type]);
+    if (audience.type !== 'custom_field' || customFields !== null) return;
+    createClient()
+      .from('custom_fields')
+      .select('*')
+      .order('field_name')
+      .then(({ data }) => setCustomFields(data ?? []));
+  }, [audience.type, customFields]);
 
-  const fetchEstimatedCount = useCallback(async () => {
-    setLoadingCount(true);
-    try {
-      const supabase = createClient();
-
-      // Base query — produces the superset before exclude is applied.
-      let baseIds: Set<string> | null = null; // null means "all contacts"
-
-      if (audience.type === 'all') {
-        // Handled below — full-table count adjusted by excludes.
-      } else if (
-        audience.type === 'tags' &&
-        audience.tagIds &&
-        audience.tagIds.length > 0
-      ) {
-        const { data } = await supabase
-          .from('contact_tags')
-          .select('contact_id')
-          .in('tag_id', audience.tagIds);
-        baseIds = new Set((data ?? []).map((r) => r.contact_id));
-      } else if (
-        audience.type === 'custom_field' &&
-        audience.customField?.fieldId &&
-        audience.customField.value
-      ) {
-        const { fieldId, operator, value } = audience.customField;
-        let q = supabase
-          .from('contact_custom_values')
-          .select('contact_id')
-          .eq('custom_field_id', fieldId);
-        if (operator === 'is') q = q.eq('value', value);
-        else if (operator === 'is_not') q = q.neq('value', value);
-        else q = q.ilike('value', `%${value}%`);
-        const { data } = await q;
-        baseIds = new Set((data ?? []).map((r) => r.contact_id));
-      } else if (
-        audience.type === 'csv' &&
-        audience.csvContacts &&
-        audience.csvContacts.length > 0
-      ) {
-        setEstimatedCount(audience.csvContacts.length);
-        return;
-      } else {
-        // Partially-configured audience — wait for the user to finish.
-        setEstimatedCount(null);
-        return;
-      }
-
-      // Apply exclude tags
-      let excludeSet: Set<string> | null = null;
-      if (audience.excludeTagIds && audience.excludeTagIds.length > 0) {
-        const { data: excludeRows } = await supabase
-          .from('contact_tags')
-          .select('contact_id')
-          .in('tag_id', audience.excludeTagIds);
-        excludeSet = new Set((excludeRows ?? []).map((r) => r.contact_id));
-      }
-
-      if (baseIds) {
-        const effective = [...baseIds].filter(
-          (id) => !excludeSet?.has(id),
-        );
-        setEstimatedCount(effective.length);
-      } else {
-        // "All" — fetch the total, then subtract exclude set if any.
-        const { count } = await supabase
-          .from('contacts')
-          .select('*', { count: 'exact', head: true });
-        const total = count ?? 0;
-        setEstimatedCount(excludeSet ? Math.max(0, total - excludeSet.size) : total);
-      }
-    } finally {
-      setLoadingCount(false);
-    }
-  }, [
-    audience.type,
-    audience.tagIds,
-    audience.customField,
-    audience.csvContacts,
-    audience.excludeTagIds,
-  ]);
-
-  useEffect(() => {
-    fetchEstimatedCount();
-  }, [fetchEstimatedCount]);
-
-  function toggleTag(tagId: string) {
-    const current = audience.tagIds ?? [];
-    const updated = current.includes(tagId)
-      ? current.filter((id) => id !== tagId)
-      : [...current, tagId];
-    onUpdate({ ...audience, tagIds: updated });
+  function selectType(type: AudienceType) {
+    // Drop config belonging to other types so nothing stale leaks across.
+    onUpdate({
+      ...audience,
+      type,
+      tagIds: type === 'tags' ? audience.tagIds : undefined,
+      customField: type === 'custom_field' ? audience.customField : undefined,
+      csvContacts: type === 'csv' ? audience.csvContacts : undefined,
+    });
   }
 
-  function toggleExcludeTag(tagId: string) {
-    const current = audience.excludeTagIds ?? [];
-    const updated = current.includes(tagId)
-      ? current.filter((id) => id !== tagId)
-      : [...current, tagId];
-    onUpdate({ ...audience, excludeTagIds: updated });
+  function toggle(list: 'tagIds' | 'excludeTagIds', tagId: string) {
+    const current = audience[list] ?? [];
+    onUpdate({ ...audience, [list]: current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId] });
   }
 
-  function updateCustomField(patch: Partial<CustomFieldFilter>) {
-    const prev = audience.customField ?? {
-      fieldId: '',
-      operator: 'is' as CustomFieldOperator,
-      value: '',
-    };
+  function updateRule(patch: Partial<CustomFieldFilter>) {
+    const prev = audience.customField ?? { fieldId: '', operator: 'is' as CustomFieldOperator, value: '' };
     onUpdate({ ...audience, customField: { ...prev, ...patch } });
   }
 
-  const isValid =
-    audience.type === 'all' ||
-    (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) ||
-    (audience.type === 'custom_field' &&
-      !!audience.customField?.fieldId &&
-      audience.customField.value.length > 0) ||
-    (audience.type === 'csv' &&
-      audience.csvContacts &&
-      audience.csvContacts.length > 0);
+  async function onPickCsv(file: File | undefined) {
+    if (!file) return;
+    setCsvError(null);
+    const result = parseCsv(await file.text(), file.name);
+    if ('error' in result) {
+      setCsv(null);
+      setCsvError(result.error === 'missingPhone' ? t('selectAudience.errorCsvMissingPhone') : t('selectAudience.errorCsvParse'));
+      onUpdate({ ...audience, csvContacts: undefined });
+      return;
+    }
+    setCsv(result);
+    onUpdate({ ...audience, csvContacts: result.valid });
+  }
+
+  const fieldItems = Object.fromEntries((customFields ?? []).map((f) => [f.id, f.field_name]));
+  const tagChip = (selected: boolean) =>
+    cn(
+      'inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition',
+      selected
+        ? 'border-foreground bg-foreground text-background'
+        : 'border-border bg-card text-muted-foreground hover:border-foreground/40 hover:text-foreground'
+    );
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-foreground">{t('selectAudience.title')}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('selectAudience.subtitle')}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('selectAudience.subtitle')}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {audienceOptions.map((option: { type: AudienceType; label: string; description: string; icon: typeof Users }) => {
-          const isSelected = audience.type === option.type;
+      <div role="radiogroup" aria-label={t('selectAudience.title')} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {options.map((option) => {
+          const selected = audience.type === option.type;
           const Icon = option.icon;
           return (
             <button
               key={option.type}
-              onClick={() =>
-                onUpdate({
-                  ...audience,
-                  type: option.type,
-                  // Wipe shape fields from other types to avoid stale
-                  // config leaking across selections.
-                  tagIds: option.type === 'tags' ? audience.tagIds : undefined,
-                  customField:
-                    option.type === 'custom_field'
-                      ? audience.customField
-                      : undefined,
-                  csvContacts:
-                    option.type === 'csv' ? audience.csvContacts : undefined,
-                })
-              }
-              className={`flex items-start gap-3 rounded-xl border p-4 text-left transition-all ${
-                isSelected
-                  ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
-                  : 'border-border bg-card/50 hover:border-border'
-              }`}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => selectType(option.type)}
+              className={cn(
+                'flex items-start gap-3 rounded-xl border p-4 text-left transition',
+                selected ? 'border-foreground bg-card ring-1 ring-foreground' : 'border-border bg-card hover:border-foreground/40'
+              )}
             >
-              <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                  isSelected
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-muted text-muted-foreground'
-                }`}
+              <span
+                className={cn(
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  selected ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'
+                )}
               >
-                <Icon className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-foreground">{option.label}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {option.description}
-                </p>
-              </div>
+                <Icon className="h-4 w-4" aria-hidden />
+              </span>
+              <span>
+                <span className="block text-sm font-medium text-foreground">{option.label}</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">{option.description}</span>
+              </span>
             </button>
           );
         })}
       </div>
 
       {audience.type === 'tags' && (
-        <div className="rounded-xl border border-border bg-card/50 p-4">
+        <fieldset className="rounded-xl border border-border bg-card p-4">
+          <legend className="sr-only">{t('selectAudience.selectTags')}</legend>
           <p className="mb-3 text-sm font-medium text-foreground">{t('selectAudience.selectTags')}</p>
-          {loadingTags ? (
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          ) : tags.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {t('selectAudience.noTagsFound')}
-            </p>
+          {tags.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t('selectAudience.noTagsFound')}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {tags.map((tag) => {
-                const isSelected = audience.tagIds?.includes(tag.id);
+                const selected = !!audience.tagIds?.includes(tag.id);
                 return (
-                  <button
-                    key={tag.id}
-                    onClick={() => toggleTag(tag.id)}
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                      isSelected
-                        ? 'border-primary/30 bg-primary/10 text-primary'
-                        : 'border-border bg-muted text-muted-foreground hover:border-border'
-                    }`}
-                  >
-                    <span
-                      className="mr-1.5 h-2 w-2 rounded-full"
-                      style={{ backgroundColor: tag.color }}
-                    />
+                  <button key={tag.id} type="button" aria-pressed={selected} onClick={() => toggle('tagIds', tag.id)} className={tagChip(selected)}>
+                    {selected ? <Check className="h-3 w-3" aria-hidden /> : <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} aria-hidden />}
                     {tag.name}
                   </button>
                 );
               })}
             </div>
           )}
-        </div>
+        </fieldset>
       )}
 
       {audience.type === 'custom_field' && (
-        <div className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
-          <p className="text-sm font-medium text-foreground">{t('selectAudience.method.customField')}</p>
-          {loadingFields ? (
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        <div className="rounded-xl border border-border bg-card p-4">
+          {customFields === null ? (
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading fields" />
           ) : customFields.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {t('selectAudience.errorLoadFields')}
-            </p>
+            <p className="text-sm text-muted-foreground">{t('selectAudience.errorLoadFields')}</p>
           ) : (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_minmax(0,1fr)]">
-              <select
-                value={audience.customField?.fieldId ?? ''}
-                onChange={(e) => updateCustomField({ fieldId: e.target.value })}
-                className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                <option value="">{t('selectAudience.selectField')}</option>
-                {customFields.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.field_name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={audience.customField?.operator ?? 'is'}
-                onChange={(e) =>
-                  updateCustomField({
-                    operator: e.target.value as CustomFieldOperator,
-                  })
-                }
-                className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              >
-                {OPERATOR_OPTIONS.map((op: { value: CustomFieldOperator; label: string }) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={audience.customField?.value ?? ''}
-                onChange={(e) => updateCustomField({ value: e.target.value })}
-                placeholder={t('selectAudience.valuePlaceholder')}
-                className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
-              />
+            <div className="flex flex-wrap items-end gap-2">
+              <span className="pb-2 text-sm font-medium text-foreground">{t('selectAudience.ruleIntro')}</span>
+              <label className="grid min-w-40 flex-1 gap-1 text-xs text-muted-foreground">
+                {t('selectAudience.field')}
+                <Select items={fieldItems} value={audience.customField?.fieldId || null} onValueChange={(v) => updateRule({ fieldId: String(v ?? '') })}>
+                  <SelectTrigger className="h-9 w-full bg-card text-foreground">
+                    <SelectValue placeholder={t('selectAudience.selectField')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customFields.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.field_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="grid w-32 gap-1 text-xs text-muted-foreground">
+                {t('selectAudience.operator')}
+                <Select
+                  items={operatorItems}
+                  value={audience.customField?.operator ?? 'is'}
+                  onValueChange={(v) => updateRule({ operator: v as CustomFieldOperator })}
+                >
+                  <SelectTrigger className="h-9 w-full bg-card text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(operatorItems) as CustomFieldOperator[]).map((op) => (
+                      <SelectItem key={op} value={op}>
+                        {operatorItems[op]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </label>
+              <label className="grid min-w-40 flex-1 gap-1 text-xs text-muted-foreground">
+                {t('selectAudience.value')}
+                <Input
+                  value={audience.customField?.value ?? ''}
+                  onChange={(e) => updateRule({ value: e.target.value })}
+                  placeholder={t('selectAudience.valuePlaceholder')}
+                  className="h-9 bg-card"
+                />
+              </label>
             </div>
           )}
         </div>
       )}
 
-      {/* Exclude list — applies regardless of audience type */}
-      <div className="rounded-xl border border-border bg-card/50 p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <X className="h-4 w-4 text-red-400" />
-          <p className="text-sm font-medium text-foreground">
-            {t('selectAudience.excludeTags')}
-          </p>
+      {audience.type === 'csv' && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
+            onChange={(e) => {
+              onPickCsv(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+          {!csv ? (
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="flex w-full flex-col items-center gap-2 rounded-lg border border-dashed border-border px-4 py-8 text-center transition hover:border-foreground/40"
+            >
+              <FileUp className="h-6 w-6 text-muted-foreground" aria-hidden />
+              <span className="text-sm font-medium text-foreground">{t('selectAudience.csvChoose')}</span>
+              <span className="max-w-sm text-xs text-muted-foreground">{t('selectAudience.csvHint')}</span>
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-foreground">
+                  <span className="font-medium">{csv.fileName}</span> ·{' '}
+                  <span className="font-semibold">{t('selectAudience.csvValid', { count: csv.valid.length })}</span>
+                </p>
+                <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                  {t('selectAudience.csvReplace')}
+                </Button>
+              </div>
+              {csv.rejected.length > 0 && (
+                <details className="rounded-lg bg-muted/60 px-3 py-2 text-xs text-foreground">
+                  <summary className="cursor-pointer">{t('selectAudience.csvRejected', { count: csv.rejected.length })}</summary>
+                  <ul className="mt-1.5 space-y-0.5 text-muted-foreground">
+                    {csv.rejected.slice(0, 20).map((r) => (
+                      <li key={r.row}>
+                        Row {r.row}: “{r.value || 'empty'}”
+                      </li>
+                    ))}
+                    {csv.rejected.length > 20 && <li>…and {csv.rejected.length - 20} more</li>}
+                  </ul>
+                </details>
+              )}
+              {csv.valid.length > 0 && (
+                <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+                  {csv.valid.slice(0, 5).map((r) => (
+                    <li key={r.phone} className="flex justify-between gap-3 px-3 py-1.5">
+                      <span className="truncate text-foreground">{r.name || '—'}</span>
+                      <span className="tabular-nums text-muted-foreground">+{r.phone}</span>
+                    </li>
+                  ))}
+                  {csv.valid.length > 5 && (
+                    <li className="px-3 py-1.5 text-xs text-muted-foreground">+ {csv.valid.length - 5} more</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+          {csvError && (
+            <p role="alert" className="mt-2 text-sm text-destructive">
+              {csvError}
+            </p>
+          )}
         </div>
+      )}
+
+      <fieldset className="rounded-xl border border-border bg-card p-4">
+        <legend className="sr-only">{t('selectAudience.excludeTags')}</legend>
+        <p className="text-sm font-medium text-foreground">{t('selectAudience.excludeTags')}</p>
+        <p className="mb-3 mt-0.5 text-xs text-muted-foreground">{t('selectAudience.excludeHint')}</p>
         {tags.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t('selectAudience.noTagsFound')}</p>
+          <p className="text-sm text-muted-foreground">{t('selectAudience.noTagsFound')}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => {
-              const isExcluded = audience.excludeTagIds?.includes(tag.id);
+              const excluded = !!audience.excludeTagIds?.includes(tag.id);
               return (
                 <button
                   key={tag.id}
-                  onClick={() => toggleExcludeTag(tag.id)}
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                    isExcluded
-                      ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                      : 'border-border bg-muted text-muted-foreground hover:border-border'
-                  }`}
+                  type="button"
+                  aria-pressed={excluded}
+                  onClick={() => toggle('excludeTagIds', tag.id)}
+                  className={cn(tagChip(excluded), excluded && 'line-through decoration-background/60')}
                 >
-                  <span
-                    className="mr-1.5 h-2 w-2 rounded-full"
-                    style={{ backgroundColor: tag.color }}
-                  />
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} aria-hidden />
                   {tag.name}
                 </button>
               );
             })}
           </div>
         )}
-      </div>
+      </fieldset>
 
-      {/* Audience Summary */}
-      <div className="rounded-xl border border-border bg-card/50 p-4">
-        <p className="mb-2 text-sm font-medium text-foreground">Audience Summary</p>
-        {loadingCount ? (
-          <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span className="text-xs text-muted-foreground">Calculating…</span>
-          </div>
-        ) : estimatedCount !== null ? (
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            <span className="text-sm text-foreground">
-              {estimatedCount.toLocaleString()}
-            </span>
-            <span className="text-xs text-muted-foreground">estimated recipients</span>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            Select an audience type to see the estimate.
-          </p>
-        )}
-      </div>
+      <AudienceSummary audience={audience} />
 
       <div className="flex items-center justify-between border-t border-border pt-4">
-        <Button
-          variant="outline"
-          onClick={onBack}
-          className="border-border text-muted-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
+        <Button variant="outline" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" aria-hidden />
           {t('back')}
         </Button>
-        <Button
-          onClick={onNext}
-          disabled={!isValid}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
+        <Button onClick={onNext} disabled={!isAudienceComplete(audience)}>
           {t('next')}
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4" aria-hidden />
         </Button>
       </div>
     </div>

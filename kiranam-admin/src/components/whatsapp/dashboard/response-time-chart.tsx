@@ -35,14 +35,11 @@ export function ResponseTimeChart({
   const t = useTranslations('Dashboard.responseTimeChart')
   const hasData = data?.buckets.some((b) => b.avgMinutes != null) ?? false
 
-  // Map buckets → Tremor rows. Null `avgMinutes` (no samples)
-  // collapses to 0; the chart will render an empty slot for it.
-  // We attach `samples` on the row so a future customTooltip can
-  // surface "no samples" copy without losing the data shape.
+  // Days with no replies stay null — a gap, not a perfect "0 min".
   const chartData =
     data?.buckets.map((b, i) => ({
       day: DOW_SHORT_MON_FIRST[i],
-      [CATEGORY]: b.avgMinutes ?? 0,
+      [CATEGORY]: b.avgMinutes,
       samples: b.samples,
     })) ?? []
 
@@ -59,7 +56,7 @@ export function ResponseTimeChart({
         </div>
         <div className="flex items-center gap-3 text-right text-xs">
           {thresholdMinutes > 0 && (
-            <span className="rounded-full border border-rose-500/40 bg-rose-500/10 px-2 py-0.5 font-medium text-rose-300 tabular-nums">
+            <span className="rounded-full border border-border bg-muted px-2 py-0.5 font-medium text-foreground tabular-nums">
               {t('target', { minutes: thresholdMinutes })}
             </span>
           )}
@@ -94,10 +91,8 @@ export function ResponseTimeChart({
             data={chartData}
             index="day"
             categories={[CATEGORY]}
-            // 'violet' maps to Tailwind's `fill-violet-500` — matches
-            // the brand accent the hand-rolled bars used (#7c3aed).
-            colors={['violet']}
-            valueFormatter={(value) => `${value.toFixed(1)}m`}
+            colors={['ink']}
+            valueFormatter={(value) => (value == null ? 'No replies' : `${value.toFixed(1)}m`)}
             showLegend={false}
             yAxisWidth={48}
             // Compact height so the chart sits well inside the card

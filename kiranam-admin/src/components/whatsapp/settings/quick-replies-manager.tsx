@@ -24,6 +24,7 @@ import {
   type InteractiveMessagePayload,
 } from "@/lib/whatsapp/whatsapp/interactive";
 import type { QuickReply, QuickReplyKind } from "@/types/whatsapp";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface DraftState {
   id?: string;
@@ -110,9 +111,11 @@ export function QuickRepliesManager() {
     }
   }, [draft, load]);
 
-  const remove = useCallback(
+  const [pendingRemove, setPendingRemove] = useState<string | null>(null);
+  const remove = useCallback((id: string) => setPendingRemove(id), []);
+  const doRemove = useCallback(
     async (id: string) => {
-      if (!window.confirm("Delete this quick reply?")) return;
+      setPendingRemove(null);
       const res = await fetch(`/api/whatsapp/quick-replies/${id}`, { method: "DELETE" });
       if (!res.ok) {
         toast.error("Couldn't delete the quick reply.");
@@ -236,6 +239,15 @@ export function QuickRepliesManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!pendingRemove}
+        onOpenChange={(o) => !o && setPendingRemove(null)}
+        title="Delete this quick reply?"
+        description="Agents won't be able to insert it from the inbox any more."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => pendingRemove && void doRemove(pendingRemove)}
+      />
     </div>
   );
 }

@@ -1,16 +1,10 @@
-import { Skeleton, SkeletonPageHeading, SkeletonTable } from '@/components/Skeleton';
+import { SkeletonPageHeading, SkeletonTable, SkeletonToolbar } from '@/components/Skeleton';
 
 export default function Loading() {
   return (
     <div>
-      <SkeletonPageHeading titleWidth="w-32" descriptionWidth="w-80" />
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Skeleton className="h-9 w-40 rounded-full" />
-        <div className="flex flex-wrap items-center gap-3">
-          <Skeleton className="h-9 w-64 rounded-lg" />
-          <Skeleton className="h-10 w-40 rounded-lg" />
-        </div>
-      </div>
+      <SkeletonPageHeading titleWidth="w-32" />
+      <SkeletonToolbar searchWidth="w-64" action="w-40" />
       <SkeletonTable rows={7} cols={4} />
     </div>
   );

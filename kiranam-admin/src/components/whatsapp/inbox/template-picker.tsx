@@ -20,7 +20,11 @@ import {
   ChevronRight,
   LayoutTemplate,
   Loader2,
+  Search,
 } from "lucide-react";
+import { TemplatePreview, fillPlaceholders } from "@/components/whatsapp/template-preview";
+import { TEMPLATE_CATEGORY_INFO, templateDisplayName } from "@/lib/whatsapp/template-display";
+import { languageName } from "@/lib/whatsapp/language-names";
 import { extractVariableIndices } from "@/lib/whatsapp/whatsapp/template-validators";
 import { useTranslations } from "next-intl";
 
@@ -34,6 +38,19 @@ interface TemplatePickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (template: MessageTemplate, values: TemplateSendValues) => void;
+  /** Used to prefill {{1}}, which is almost always the recipient's name. */
+  contactName?: string | null;
+}
+
+/** "Hi ___, thanks for…" — the words around a placeholder. */
+function placeholderContext(body: string, n: number) {
+  const token = `{{${n}}}`;
+  const i = body.indexOf(token);
+  if (i === -1) return null;
+  const end = i + token.length;
+  const before = body.slice(Math.max(0, i - 24), i).replace(/\{\{\d+\}\}/g, "…");
+  const after = body.slice(end, end + 24).replace(/\{\{\d+\}\}/g, "…");
+  return `${i > 24 ? "…" : ""}${before}___${after}${end + 24 < body.length ? "…" : ""}`;
 }
 
 function renderBodyPreview(body: string, params: string[]): string {
@@ -77,12 +94,12 @@ function collectVariableSlots(template: MessageTemplate): {
 export function TemplatePicker({
   open,
   onOpenChange,
-  onSelect,
-}: TemplatePickerProps) {
+  onSelect, contactName }: TemplatePickerProps) {
   const t = useTranslations("Inbox.templatePicker");
 
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<MessageTemplate | null>(null);
   const [params, setParams] = useState<string[]>([]);
   const [headerText, setHeaderText] = useState<string>("");
@@ -156,7 +173,9 @@ export function TemplatePicker({
       return;
     }
     setSelected(template);
-    setParams(new Array(slots.bodyVars.length).fill(""));
+    // {{1}} is nearly always the person's name — prefill it (editable).
+    const firstName = contactName?.trim().split(/\s+/)[0] ?? "";
+    setParams(slots.bodyVars.map((v) => (v === 1 ? firstName : "")));
     setHeaderText("");
     setButtonParams({});
   }
@@ -193,7 +212,7 @@ export function TemplatePicker({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-popover-foreground">
             <LayoutTemplate className="h-4 w-4 text-primary" />
-            {selected ? selected.name : t("sendTemplate")}
+            {selected ? templateDisplayName(selected.name) : t("sendTemplate")}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             {selected
@@ -204,6 +223,19 @@ export function TemplatePicker({
 
         {!selected ? (
           <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {templates.length > 6 && (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search templates"
+                  aria-label="Search templates"
+                  className="pl-9"
+                />
+              </div>
+            )}
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -216,7 +248,12 @@ export function TemplatePicker({
                 </p>
               </div>
             ) : (
-              templates.map((t) => (
+              templates
+                .filter((tpl) => {
+                  const q = query.trim().toLowerCase();
+                  return !q || templateDisplayName(tpl.name).toLowerCase().includes(q) || tpl.body_text.toLowerCase().includes(q);
+                })
+                .map((t) => (
                 <button
                   key={t.id}
                   type="button"
@@ -226,19 +263,18 @@ export function TemplatePicker({
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-medium text-popover-foreground">
-                          {t.name}
+                        <p className="truncate text-sm font-semibold text-popover-foreground">
+                          {templateDisplayName(t.name)}
                         </p>
-                        <Badge className="border border-primary/30 bg-primary/20 text-[10px] text-primary">
+                        <Badge
+                          className="border border-border bg-muted text-xs text-muted-foreground"
+                          title={TEMPLATE_CATEGORY_INFO[t.category]?.hint}
+                        >
                           {t.category}
                         </Badge>
-                        {t.language && (
-                          <span className="text-[10px] uppercase text-muted-foreground">
-                            {t.language}
-                          </span>
-                        )}
+                        <span className="text-xs text-muted-foreground">{languageName(t.language)}</span>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                         {t.body_text}
                       </p>
                     </div>
@@ -250,22 +286,20 @@ export function TemplatePicker({
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="rounded-md border border-border bg-background/50 p-3">
-              <p className="mb-1 text-xs text-muted-foreground">{t("preview")}</p>
-              <p className="whitespace-pre-wrap text-sm text-popover-foreground">
-                {renderBodyPreview(selected.body_text, params)}
-              </p>
-              {selected.footer_text && (
-                <p className="mt-2 text-xs italic text-muted-foreground">
-                  {selected.footer_text}
-                </p>
-              )}
-            </div>
+            <TemplatePreview
+              headerType={selected.header_type}
+              headerText={selected.header_content ? fillPlaceholders(selected.header_content, { "1": headerText }) : null}
+              headerMediaUrl={selected.header_media_url}
+              body={renderBodyPreview(selected.body_text, params)}
+              footer={selected.footer_text}
+              buttons={selected.buttons}
+            />
+            {selected.category === "Marketing" && (
+              <p className="text-xs text-muted-foreground">{TEMPLATE_CATEGORY_INFO.Marketing.hint}</p>
+            )}
             {slots && slots.headerVarCount > 0 && (
               <div className="space-y-1">
-                <Label className="text-xs text-popover-foreground">
-                  {`Header {{1}}`}
-                </Label>
+                <Label className="text-sm text-popover-foreground">Title blank</Label>
                 <Input
                   value={headerText}
                   onChange={(e) => setHeaderText(e.target.value)}
@@ -276,7 +310,9 @@ export function TemplatePicker({
             )}
             {slots?.bodyVars.map((v, i) => (
               <div key={v} className="space-y-1">
-                <Label className="text-xs text-popover-foreground">{`Body {{${v}}}`}</Label>
+                <Label className="text-sm text-popover-foreground">
+                  {placeholderContext(selected.body_text, v) ? `“${placeholderContext(selected.body_text, v)}”` : `Blank ${v}`}
+                </Label>
                 <Input
                   value={params[i] ?? ""}
                   onChange={(e) => {
@@ -291,9 +327,7 @@ export function TemplatePicker({
             ))}
             {slots?.urlButtonSlots.map((slot) => (
               <div key={slot.index} className="space-y-1">
-                <Label className="text-xs text-popover-foreground">
-                  {`URL button "${slot.text}" — value for `}{`{{1}}`}
-                </Label>
+                <Label className="text-sm text-popover-foreground">{`Link for the “${slot.text}” button`}</Label>
                 <Input
                   value={buttonParams[slot.index] ?? ""}
                   onChange={(e) =>

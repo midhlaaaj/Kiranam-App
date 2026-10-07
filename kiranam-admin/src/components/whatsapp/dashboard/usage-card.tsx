@@ -21,6 +21,8 @@ interface UsageResponse {
   byCategory?: CategoryTotal[]
 }
 
+const TITLE = 'WhatsApp spend · last 7 days'
+
 const CATEGORY_LABEL: Record<string, string> = {
   authentication: 'Authentication (OTP)',
   marketing: 'Marketing',
@@ -65,11 +67,9 @@ export function UsageCard() {
     return (
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-start justify-between">
-          <p className="text-sm font-medium text-muted-foreground">
-            WhatsApp usage (7 days)
-          </p>
+          <p className="text-sm font-medium text-muted-foreground">{TITLE}</p>
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <Wallet className="h-4 w-4" />
+            <Wallet className="h-4 w-4" aria-hidden />
           </div>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
@@ -84,21 +84,25 @@ export function UsageCard() {
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-muted-foreground">
-          WhatsApp usage (last 7 days)
-        </p>
+        <p className="text-sm font-medium text-muted-foreground">{TITLE}</p>
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
           <Wallet className="h-4 w-4" />
         </div>
       </div>
+      {/* Spend is the headline — that's what this card exists for. */}
       <p className="mt-3 text-[28px] leading-none font-bold tabular-nums text-foreground">
-        {totalConversations.toLocaleString()}{' '}
-        <span className="text-base font-medium text-muted-foreground">conversations</span>
+        {currency ? formatCost(totalCost, currency) : totalConversations.toLocaleString('en-IN')}
       </p>
       <p className="mt-2 text-sm text-muted-foreground">
-        {currency
-          ? `${formatCost(totalCost, currency)} billed to your Meta Business Manager payment method`
-          : 'Billed to your Meta Business Manager payment method'}
+        {totalConversations.toLocaleString('en-IN')} billable conversations · paid to Meta{' '}
+        <a
+          href="https://business.facebook.com/billing_hub/accounts"
+          target="_blank"
+          rel="noreferrer"
+          className="font-medium text-foreground underline underline-offset-2"
+        >
+          View billing ↗
+        </a>
       </p>
       {byCategory.length > 0 && (
         <ul className="mt-4 space-y-1.5 border-t border-border pt-3 text-sm">

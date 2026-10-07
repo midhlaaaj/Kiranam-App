@@ -3,9 +3,9 @@
 import { useActionState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { createCampaign, type CreateCampaignState } from './actions';
-import { buttonPrimary, cardClass, inputClass } from '@/lib/ui';
+import { buttonPrimary, inputClass } from '@/lib/ui';
 import { Form } from '@/components/Form';
-import { ImageCropField, COVER_CROP } from '@/components/ImageCropField';
+import { MediaManager } from '@/components/MediaManager';
 
 const initialState: CreateCampaignState = {};
 
@@ -26,18 +26,32 @@ export function CreateCampaignForm({ onDone }: { onDone?: () => void }) {
   }, [state, onDone]);
 
   return (
-    <Form ref={formRef} action={formAction} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
-      <input name="title" placeholder="Title" required className={`${inputClass} sm:col-span-2`} />
-      <textarea name="description" placeholder="Description" className={`${inputClass} sm:col-span-2`} />
-      <input name="goal" type="number" placeholder="Goal (₹)" required className={inputClass} />
-      <input name="raised" type="number" placeholder="Already raised (₹, optional)" className={inputClass} />
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">End date (optional)</label>
-        <input name="end_date" type="date" className={inputClass} />
+    <Form ref={formRef} action={formAction} className="grid gap-4 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <label htmlFor="c-title" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Title</label>
+        <input id="c-title" name="title" required className={inputClass} />
       </div>
       <div className="sm:col-span-2">
-        <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image (optional)</label>
-        <ImageCropField name="cover" crop={COVER_CROP} />
+        <label htmlFor="c-desc" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Description</label>
+        <textarea id="c-desc" name="description" rows={3} className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor="c-goal" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Goal (₹)</label>
+        <input id="c-goal" name="goal" type="number" min="1" inputMode="numeric" required className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor="c-raised" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Already raised (₹) <span className="font-normal text-kiranam-muted">— optional</span></label>
+        <input id="c-raised" name="raised" type="number" min="0" inputMode="numeric" className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor="c-end" className="mb-1.5 block text-sm font-medium text-kiranam-ink">End date <span className="font-normal text-kiranam-muted">— optional</span></label>
+        <input id="c-end" name="end_date" type="date" className={inputClass} />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">
+          Photos <span className="font-normal text-kiranam-muted">— optional · the first photo is the cover</span>
+        </label>
+        <MediaManager />
       </div>
 
       {state?.error && <p className="text-sm text-kiranam-danger sm:col-span-2" role="alert">{state.error}</p>}

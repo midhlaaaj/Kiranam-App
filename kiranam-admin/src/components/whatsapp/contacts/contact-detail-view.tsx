@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { addContactTag, deleteContactTag } from '@/lib/whatsapp/contacts/tag-api';
 import { useAuth } from '@/hooks/whatsapp/use-auth';
-import { formatCurrency } from '@/lib/whatsapp/currency';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactNote, CustomField, Deal, MessageTemplate } from '@/types/whatsapp';
+import type { Contact, Tag, ContactNote, CustomField, MessageTemplate } from '@/types/whatsapp';
+import Link from 'next/link';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   TemplatePicker,
   type TemplateSendValues,
@@ -34,7 +35,6 @@ import {
   Plus,
   Trash2,
   Save,
-  DollarSign,
   LayoutTemplate,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -54,7 +54,7 @@ export function ContactDetailView({
 }: ContactDetailViewProps) {
   const t = useTranslations('Contacts.detailView');
   const supabase = createClient();
-  const { accountId, defaultCurrency } = useAuth();
+  const { accountId } = useAuth();
 
   const [contact, setContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(false);
@@ -91,8 +91,9 @@ export function ContactDetailView({
   const [loadingCustom, setLoadingCustom] = useState(false);
 
   // Deals tab
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [loadingDeals, setLoadingDeals] = useState(false);
+  // Existing inbox conversation for this contact, for "Open chat".
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
   const fetchContact = useCallback(async () => {
     if (!contactId) return;
@@ -165,16 +166,16 @@ export function ContactDetailView({
     setLoadingCustom(false);
   }, [contactId, supabase]);
 
-  const fetchDeals = useCallback(async () => {
+  const fetchConversation = useCallback(async () => {
     if (!contactId) return;
-    setLoadingDeals(true);
     const { data } = await supabase
-      .from('deals')
-      .select('*, stage:pipeline_stages(*)')
+      .from('conversations')
+      .select('id')
       .eq('contact_id', contactId)
-      .order('created_at', { ascending: false });
-    setDeals((data ?? []) as Deal[]);
-    setLoadingDeals(false);
+      .order('last_message_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setConversationId((data?.id as string | undefined) ?? null);
   }, [contactId, supabase]);
 
   useEffect(() => {
@@ -183,9 +184,9 @@ export function ContactDetailView({
       fetchTags();
       fetchNotes();
       fetchCustomFields();
-      fetchDeals();
+      fetchConversation();
     }
-  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals]);
+  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchConversation]);
 
   async function copyPhone() {
     if (!contact) return;
@@ -275,7 +276,7 @@ export function ContactDetailView({
   }
 
   async function deleteNote(noteId: string) {
-    if (!window.confirm(t('confirmDeleteNote'))) return;
+    setNoteToDelete(null);
     const { error } = await supabase
       .from('contact_notes')
       .delete()
@@ -430,7 +431,20 @@ export function ContactDetailView({
                   </div>
                 </div>
               </div>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap gap-2">
+                {conversationId && (
+                  <Link
+                    href={`/whatsapp/inbox?c=${conversationId}`}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold text-foreground hover:bg-muted"
+                  >
+                    Open chat
+                  </Link>
+                )}
+                {contact.whatsapp_consent === false && (
+                  <span className="inline-flex h-8 items-center rounded-full bg-destructive/10 px-3 text-xs font-semibold text-destructive">
+                    Opted out of WhatsApp
+                  </span>
+                )}
                 <Button
                   size="sm"
                   onClick={() => setTemplatePickerOpen(true)}
@@ -474,49 +488,49 @@ export function ContactDetailView({
                 >
                   {t('tabs.custom')}
                 </TabsTrigger>
-                <TabsTrigger
-                  value="deals"
-                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
-                >
-                  {t('tabs.deals')}
-                </TabsTrigger>
               </TabsList>
 
               {/* Details Tab */}
               <TabsContent value="details" className="flex-1 overflow-y-auto px-4 py-3">
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">{t('company', { fallback: 'Name' })}</Label>
+                    <Label htmlFor="cd-name" className="text-foreground text-sm">{t('name')}</Label>
                     <Input
+                      id="cd-name"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
+                      className="text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">
-                      {t('phone')} <span className="text-red-400">*</span>
+                    <Label htmlFor="cd-phone" className="text-foreground text-sm">
+                      {t('phone')} <span className="text-destructive" aria-hidden>*</span>
                     </Label>
                     <Input
+                      id="cd-phone"
+                      required
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
+                      className="text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">{t('email')}</Label>
+                    <Label htmlFor="cd-email" className="text-foreground text-sm">{t('email')}</Label>
                     <Input
+                      id="cd-email"
+                      type="email"
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
+                      className="text-sm"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-muted-foreground text-xs">{t('company')}</Label>
+                    <Label htmlFor="cd-company" className="text-foreground text-sm">{t('company')}</Label>
                     <Input
+                      id="cd-company"
                       value={editCompany}
                       onChange={(e) => setEditCompany(e.target.value)}
-                      className="bg-muted border-border text-foreground h-8 text-sm"
+                      className="text-sm"
                     />
                   </div>
                   <Button
@@ -554,17 +568,18 @@ export function ContactDetailView({
                             key={tag.id}
                             onClick={() => toggleTag(tag.id)}
                             disabled={savingTags}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
+                            aria-pressed={selected}
+                            className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition ${
                               selected
-                                ? 'ring-2 ring-primary ring-offset-1 ring-offset-border'
-                                : 'opacity-50 hover:opacity-80'
+                                ? 'border-foreground bg-foreground text-background'
+                                : 'border-border bg-card text-muted-foreground hover:text-foreground'
                             }`}
-                            style={{
-                              backgroundColor: tag.color + '20',
-                              color: tag.color,
-                            }}
                           >
-                            {selected && <Check className="size-3 mr-1" />}
+                            {selected ? (
+                              <Check className="size-3" aria-hidden />
+                            ) : (
+                              <span className="size-2 rounded-full" style={{ backgroundColor: tag.color }} aria-hidden />
+                            )}
                             {tag.name}
                           </button>
                         );
@@ -614,22 +629,24 @@ export function ContactDetailView({
                         className="rounded-lg bg-muted/50 border border-border/50 p-3 group"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap flex-1">
+                          <p className="text-sm text-foreground whitespace-pre-wrap flex-1">
                             {note.note_text}
                           </p>
                           <button
-                            onClick={() => deleteNote(note.id)}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all cursor-pointer shrink-0"
+                            type="button"
+                            onClick={() => setNoteToDelete(note.id)}
+                            aria-label="Delete note"
+                            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                           >
-                            <Trash2 className="size-3.5" />
+                            <Trash2 className="size-3.5" aria-hidden />
                           </button>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1.5">
-                          {new Date(note.created_at).toLocaleDateString('en-US', {
-                            month: 'short',
+                          {new Date(note.created_at).toLocaleString('en-IN', {
                             day: 'numeric',
+                            month: 'short',
                             year: 'numeric',
-                            hour: '2-digit',
+                            hour: 'numeric',
                             minute: '2-digit',
                           })}
                         </p>
@@ -686,63 +703,15 @@ export function ContactDetailView({
                 )}
               </TabsContent>
 
-              {/* Deals Tab */}
-              <TabsContent value="deals" className="flex-1 overflow-y-auto px-4 py-3">
-                {loadingDeals ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-primary" />
-                  </div>
-                ) : deals.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t('dealsTab.noDeals')}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {deals.map((deal) => (
-                      <div
-                        key={deal.id}
-                        className="rounded-lg border border-border bg-muted/50 p-3"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">
-                            {deal.title}
-                          </p>
-                          {deal.stage && (
-                            <span
-                              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                              style={{
-                                backgroundColor: `${deal.stage.color}20`,
-                                color: deal.stage.color,
-                              }}
-                            >
-                              {deal.stage.name}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="size-3" />
-                            {formatCurrency(
-                              deal.value ?? 0,
-                              deal.currency || defaultCurrency,
-                            )}
-                          </span>
-                          {deal.status && deal.status !== 'open' && (
-                            <span
-                              className={
-                                deal.status === 'won'
-                                  ? 'text-primary'
-                                  : 'text-red-400'
-                              }
-                            >
-                              {deal.status}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
             </Tabs>
+            <ConfirmDialog
+              open={noteToDelete !== null}
+              onOpenChange={(o) => !o && setNoteToDelete(null)}
+              title={t('confirmDeleteNote')}
+              confirmLabel="Delete note"
+              destructive
+              onConfirm={() => noteToDelete && void deleteNote(noteToDelete)}
+            />
           </div>
         )}
       </SheetContent>

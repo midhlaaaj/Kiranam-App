@@ -10,18 +10,9 @@ export function Skeleton({ className = '', style }: { className?: string; style?
   );
 }
 
-/** Placeholder for the circular NotificationBell while it streams in behind
- * its own Suspense boundary (see PageHeading / AddNewPanel) — kept as a
- * standalone export so loading.tsx files can match its exact dimensions. */
-export function SkeletonBell() {
-  return <Skeleton className="h-10 w-10 rounded-full" />;
-}
-
-/** Matches PageHeading / AddNewPanel's title row (title + optional action
- * button + the red circular NotificationBell) for the brief window before
- * the real page.tsx itself has returned anything — once it has, the title
- * and toolbar render immediately and only NotificationBell (Suspense-wrapped
- * in PageHeading/AddNewPanel) shows this bell placeholder on its own. */
+/** Matches PageHeading / AddNewPanel's title row (title, optional description,
+ * optional action button). The notification bell now lives in the admin shell's
+ * top bar, so it is no longer part of the page heading. */
 export function SkeletonPageHeading({
   titleWidth = 'w-40',
   withAction = false,
@@ -35,15 +26,12 @@ export function SkeletonPageHeading({
   descriptionWidth?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-kiranam-border pb-5 mb-6">
+    <div className="flex flex-wrap items-start justify-between gap-4 border-b border-kiranam-border pb-5 mb-6 lg:pr-14">
       <div>
         <Skeleton className={`h-8 ${titleWidth}`} />
         {descriptionWidth && <Skeleton className={`mt-2 h-4 ${descriptionWidth}`} />}
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {withAction && <Skeleton className="h-10 w-36 rounded-lg" />}
-        <SkeletonBell />
-      </div>
+      {withAction && <Skeleton className="h-10 w-36 rounded-lg" />}
     </div>
   );
 }
@@ -154,6 +142,77 @@ export function SkeletonChart({ height = 260 }: { height?: number }) {
     <div className={`${cardClass} p-5`}>
       <Skeleton className="mb-4 h-5 w-40" />
       <Skeleton className="w-full" style={{ height }} />
+    </div>
+  );
+}
+
+/** Filter/search row of list pages: one dropdown on the left, search + primary
+ * action on the right (same sizes as FilterBar / AddNewPanel). */
+export function SkeletonToolbar({
+  filters = 1,
+  searchWidth = 'w-64',
+  action = 'w-44',
+}: {
+  filters?: number;
+  searchWidth?: string;
+  /** Width class of the primary action button, or null for none. */
+  action?: string | null;
+}) {
+  return (
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {Array.from({ length: filters }).map((_, i) => (
+          <Skeleton key={i} className="h-9 w-40 rounded-lg" />
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Skeleton className={`h-9 ${searchWidth} rounded-lg`} />
+        {action && <Skeleton className={`h-10 ${action} rounded-lg`} />}
+      </div>
+    </div>
+  );
+}
+
+/** Two-column edit page: cards on the left, status/save panel on the right. */
+export function SkeletonEditPage({ cards = [2, 3, 2] }: { cards?: number[] }) {
+  return (
+    <div>
+      <Skeleton className="h-5 w-28" />
+      <div className="mt-2 flex items-center gap-3 border-b border-kiranam-border pb-5 lg:pr-14">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </div>
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="grid gap-6">
+          {cards.map((fields, c) => (
+            <div key={c} className={`${cardClass} p-5`}>
+              <Skeleton className="h-5 w-32" />
+              <div className="mt-4 grid gap-4">
+                {Array.from({ length: fields }).map((_, i) => (
+                  <Skeleton key={i} className={i === 0 && fields > 2 ? 'h-24 w-full' : 'h-10 w-full'} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className={`${cardClass} grid gap-4 p-5`}>
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A titled settings-style card with a few lines. */
+export function SkeletonCard({ lines = 3, className = '' }: { lines?: number; className?: string }) {
+  return (
+    <div className={`${cardClass} grid gap-3 p-5 ${className}`}>
+      <Skeleton className="h-5 w-40" />
+      {Array.from({ length: lines }).map((_, i) => (
+        <Skeleton key={i} className={i === lines - 1 ? 'h-10 w-40' : 'h-4 w-full max-w-md'} />
+      ))}
     </div>
   );
 }

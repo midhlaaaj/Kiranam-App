@@ -17,8 +17,12 @@ export const buttonDanger =
 export const linkDanger =
   'inline-flex min-h-10 items-center text-sm font-semibold text-kiranam-danger transition hover:underline cursor-pointer';
 
+// NOTE: when overriding a property these strings already set (width, padding,
+// radius…), compose with `cn(inputClass, 'w-auto')` from '@/lib/utils', not a
+// template string — Tailwind resolves conflicts by stylesheet order, not class
+// order, so `${inputClass} w-auto` silently stays full-width.
 export const inputClass =
-  'w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+  'w-full rounded-lg border border-kiranam-input-border bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted-2 transition duration-150 focus:border-kiranam-primary focus:outline-none focus:ring-3 focus:ring-kiranam-primary/15 aria-invalid:border-kiranam-danger aria-invalid:focus:ring-kiranam-danger/15 disabled:cursor-not-allowed disabled:opacity-50';
 
 export const cardClass = 'rounded-lg border border-kiranam-border bg-kiranam-surface shadow-elevation-md';
 

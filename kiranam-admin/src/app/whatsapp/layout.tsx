@@ -3,7 +3,6 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { NextIntlClientProvider } from 'next-intl';
 import { verifyAdmin } from '@/lib/dal';
 import { ThemeProvider } from '@/hooks/whatsapp/use-theme';
-import { ThemedToaster } from '@/components/whatsapp/themed-toaster';
 import { DashboardShell } from './dashboard-shell';
 
 // Deliberately a sibling of (admin), not nested inside it — (admin)/layout.tsx
@@ -38,8 +37,8 @@ export default async function WhatsAppLayout({ children }: { children: React.Rea
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
       <ThemeProvider>
+        {/* Toasts come from the single root Toaster in app/layout.tsx. */}
         <DashboardShell>{children}</DashboardShell>
-        <ThemedToaster />
       </ThemeProvider>
     </NextIntlClientProvider>
   );

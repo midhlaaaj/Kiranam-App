@@ -3,9 +3,9 @@
 import { useActionState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { createEvent, type CreateEventState } from './actions';
-import { buttonPrimary, cardClass, inputClass } from '@/lib/ui';
+import { buttonPrimary, inputClass } from '@/lib/ui';
 import { Form } from '@/components/Form';
-import { ImageCropField, COVER_CROP } from '@/components/ImageCropField';
+import { MediaManager } from '@/components/MediaManager';
 
 const initialState: CreateEventState = {};
 
@@ -26,15 +26,32 @@ export function CreateEventForm({ onDone }: { onDone?: () => void }) {
   }, [state, onDone]);
 
   return (
-    <Form ref={formRef} action={formAction} className={`grid gap-3 ${cardClass} p-5 sm:grid-cols-2`}>
-      <input name="title" placeholder="Title" required className={`${inputClass} sm:col-span-2`} />
-      <textarea name="description" placeholder="Description" className={`${inputClass} sm:col-span-2`} />
-      <input name="event_date" type="date" required className={inputClass} />
-      <input name="time_label" placeholder="Time (e.g. 9:00 AM – 1:00 PM)" className={inputClass} />
-      <input name="location" placeholder="Location" required className={`${inputClass} sm:col-span-2`} />
+    <Form ref={formRef} action={formAction} className="grid gap-4 sm:grid-cols-2">
       <div className="sm:col-span-2">
-        <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">Cover image (optional)</label>
-        <ImageCropField name="cover" crop={COVER_CROP} />
+        <label htmlFor="e-title" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Title</label>
+        <input id="e-title" name="title" required className={inputClass} />
+      </div>
+      <div className="sm:col-span-2">
+        <label htmlFor="e-desc" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Description</label>
+        <textarea id="e-desc" name="description" rows={3} className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor="e-date" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Date</label>
+        <input id="e-date" name="event_date" type="date" required className={inputClass} />
+      </div>
+      <div>
+        <label htmlFor="e-time" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Time <span className="font-normal text-kiranam-muted">— optional</span></label>
+        <input id="e-time" name="time_label" placeholder="e.g. 9:00 AM – 1:00 PM" className={inputClass} />
+      </div>
+      <div className="sm:col-span-2">
+        <label htmlFor="e-loc" className="mb-1.5 block text-sm font-medium text-kiranam-ink">Location</label>
+        <input id="e-loc" name="location" required className={inputClass} />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">
+          Photos <span className="font-normal text-kiranam-muted">— optional · the first photo is the cover</span>
+        </label>
+        <MediaManager />
       </div>
 
       {state?.error && <p className="text-sm text-kiranam-danger sm:col-span-2" role="alert">{state.error}</p>}

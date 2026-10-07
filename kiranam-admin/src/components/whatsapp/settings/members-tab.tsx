@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import {
   AlertTriangle,
   Loader2,
+  Lock,
   Mail,
   MailX,
   Plus,
@@ -425,6 +426,7 @@ export function MembersTab() {
                         changes go through transfer, which lands later). */}
                     {canManageMembers && !isOwnerRow && !isSelf ? (
                       <Select
+                        items={Object.fromEntries(EDITABLE_ROLES.map((r) => [r.value, tRoles(r.value)]))}
                         value={member.role}
                         onValueChange={(v) =>
                           // Base UI Select can emit null on clear. We
@@ -448,7 +450,33 @@ export function MembersTab() {
                           ))}
                         </SelectContent>
                       </Select>
+                    ) : canManageMembers ? (
+                      // Admin+ viewing a row the inline editor deliberately
+                      // excludes (themselves, or the owner) — explain why
+                      // it's locked rather than leaving a silent pill that
+                      // looks inconsistent next to every editable row.
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <span
+                              tabIndex={0}
+                              className={`inline-flex cursor-not-allowed items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium opacity-80 ${roleMeta.className}`}
+                            >
+                              <RoleIcon className="size-3.5" />
+                              {tRoles(member.role)}
+                              <Lock className="size-3" aria-hidden />
+                            </span>
+                          }
+                        />
+                        <TooltipContent>
+                          {isSelf ? t('cantEditSelfRole') : t('cantEditOwnerRole')}
+                        </TooltipContent>
+                      </Tooltip>
                     ) : (
+                      // Read-only viewer/agent — no permission to manage
+                      // anyone's role, so no "why is this locked" tooltip
+                      // to show; a plain badge is the correct, unambiguous
+                      // state here.
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${roleMeta.className}`}
                       >

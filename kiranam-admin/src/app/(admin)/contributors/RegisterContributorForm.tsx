@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
 import { getAutoAssignKkNumberSetting, getVolunteersForAssignment, registerContributor, type RegisterState } from './actions';
 import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
-import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
+import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
 import { PersonCombobox } from '@/components/PersonCombobox';
@@ -28,8 +28,11 @@ const nativeControlClass =
 export function RegisterContributorForm({
   onDone,
   onEditExisting,
+  bare = false,
 }: {
   onDone?: () => void;
+  /** Render without its own card + heading (when a dialog already provides them). */
+  bare?: boolean;
   /** Called instead of opening a quick-view modal locally, so the caller can
    * close this registration panel first (it would otherwise unmount along
    * with any modal it rendered itself, since it's the AddNewPanel's content). */
@@ -116,10 +119,11 @@ export function RegisterContributorForm({
         setPhoneTouched(true);
         if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate) e.preventDefault();
       }}
-      className={`${cardClass} p-5`}
+      className={bare ? undefined : `${cardClass} p-5`}
     >
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-kiranam-ink">Register contributor</h3>
+        {/* In a dialog the popup already shows the title — keep the helper text. */}
+        <h3 className={bare ? 'sr-only' : 'text-sm font-semibold text-kiranam-ink'}>Register contributor</h3>
         <p className="mt-0.5 text-xs text-kiranam-muted">
           For someone who signed up in person. They&apos;ll claim this by logging into the app with the same
           phone number.
@@ -133,7 +137,7 @@ export function RegisterContributorForm({
             className={`flex overflow-hidden rounded-lg border bg-kiranam-surface transition duration-150 ${
               phoneError
                 ? 'border-kiranam-danger'
-                : 'border-kiranam-border-strong focus-within:border-kiranam-primary'
+                : 'border-kiranam-input-border focus-within:border-kiranam-primary focus-within:ring-3 focus-within:ring-kiranam-primary/15'
             }`}
           >
             <div className="relative flex shrink-0 items-stretch border-r border-kiranam-border-strong">
@@ -217,7 +221,7 @@ export function RegisterContributorForm({
                 name="full_name"
                 placeholder="Enter full name"
                 required
-                className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+                className={inputClass}
               />
             </div>
 
@@ -231,7 +235,7 @@ export function RegisterContributorForm({
                   name="kk_number"
                   placeholder="e.g. KK1"
                   required
-                  className="w-full rounded-lg border border-kiranam-border-strong bg-kiranam-surface px-3.5 py-2.5 text-sm text-kiranam-ink placeholder:text-kiranam-muted transition duration-150 focus:border-kiranam-primary focus:outline-none"
+                  className={inputClass}
                 />
               </div>
             )}
@@ -240,7 +244,7 @@ export function RegisterContributorForm({
               <label htmlFor="monthly_amount" className={fieldLabelClass}>
                 Monthly amount <span className="font-normal text-kiranam-muted-2">— optional</span>
               </label>
-              <div className="flex items-center rounded-lg border border-kiranam-border-strong bg-kiranam-surface pl-3.5 transition duration-150 focus-within:border-kiranam-primary">
+              <div className="flex items-center rounded-lg border border-kiranam-input-border bg-kiranam-surface pl-3.5 transition duration-150 focus-within:border-kiranam-primary focus-within:ring-3 focus-within:ring-kiranam-primary/15">
                 <span aria-hidden className="text-sm text-kiranam-muted">
                   ₹
                 </span>
@@ -266,6 +270,7 @@ export function RegisterContributorForm({
                 name="volunteerId"
                 placeholder="Search volunteers by name or phone…"
                 emptyLabel="No volunteers match."
+                className="max-w-none"
               />
             </div>
           </>
@@ -279,9 +284,11 @@ export function RegisterContributorForm({
       )}
 
       {!duplicate && (
-        <button type="submit" disabled={pending} className={`${buttonPrimary} mt-5 w-full`}>
-          {pending ? 'Registering…' : 'Register Contributor'}
+      <div className={bare ? 'sticky bottom-0 z-10 mt-5 border-t border-kiranam-border bg-kiranam-surface pb-1 pt-4' : 'mt-5'}>
+        <button type="submit" disabled={pending} className={`${buttonPrimary} w-full`}>
+          {pending ? 'Registering…' : 'Register contributor'}
         </button>
+      </div>
       )}
     </form>
   );

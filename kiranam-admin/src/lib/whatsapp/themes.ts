@@ -18,9 +18,11 @@ export const MODES = ["light", "dark"] as const;
 
 export type Mode = (typeof MODES)[number];
 
-export const DEFAULT_MODE: Mode = "dark";
+// Light by default, matching the admin panel (DESIGN.md: light mode only).
+// Storage key bumped so everyone starts from light once; dark stays opt-in.
+export const DEFAULT_MODE: Mode = "light";
 
-export const MODE_STORAGE_KEY = "wacrm.mode";
+export const MODE_STORAGE_KEY = "wacrm.mode.v2";
 
 export function isMode(value: unknown): value is Mode {
   return (

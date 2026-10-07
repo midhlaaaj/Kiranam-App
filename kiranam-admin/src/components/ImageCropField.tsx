@@ -26,11 +26,18 @@ export function ImageCropField({
   crop: cropTarget,
   multiple = false,
   required = false,
+  onFiles,
+  buttonLabel,
 }: {
   name: string;
   crop: { aspect: number; outputWidth: number; outputHeight: number };
   multiple?: boolean;
   required?: boolean;
+  /** When set, cropped images are handed to this callback instead of being
+   * attached to a hidden form input (used by MediaManager, which owns the
+   * list). Renders an "add" button instead of a native file input. */
+  onFiles?: (files: File[]) => void;
+  buttonLabel?: string;
 }) {
   const pickerRef = useRef<HTMLInputElement>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -97,13 +104,17 @@ export function ImageCropField({
         setQueuePos(nextPos);
         openCropperFor(queue[nextPos]);
       } else {
-        // All queued images cropped — hand the finished File[] to the
-        // hidden, form-submitted input via a DataTransfer (the only way to
-        // programmatically set an <input type="file">'s FileList).
-        const dt = new DataTransfer();
-        doneFilesRef.current.forEach((f) => dt.items.add(f));
-        if (hiddenRef.current) hiddenRef.current.files = dt.files;
-        setReadyCount(doneFilesRef.current.length);
+        if (onFiles) {
+          onFiles(doneFilesRef.current);
+        } else {
+          // All queued images cropped — hand the finished File[] to the
+          // hidden, form-submitted input via a DataTransfer (the only way to
+          // programmatically set an <input type="file">'s FileList).
+          const dt = new DataTransfer();
+          doneFilesRef.current.forEach((f) => dt.items.add(f));
+          if (hiddenRef.current) hiddenRef.current.files = dt.files;
+          setReadyCount(doneFilesRef.current.length);
+        }
         closeAndReset();
       }
     } finally {
@@ -125,9 +136,18 @@ export function ImageCropField({
         accept="image/*"
         multiple={multiple}
         onChange={handlePick}
-        className={fileInputClass}
+        className={onFiles ? 'sr-only' : fileInputClass}
+        tabIndex={onFiles ? -1 : undefined}
+        aria-hidden={onFiles ? true : undefined}
       />
-      <input ref={hiddenRef} type="file" name={name} multiple={multiple} required={required} className="hidden" />
+      {onFiles ? (
+        <button type="button" onClick={() => pickerRef.current?.click()} className={buttonSecondary}>
+          <ImageUp size={16} aria-hidden />
+          {buttonLabel ?? 'Add photos'}
+        </button>
+      ) : (
+        <input ref={hiddenRef} type="file" name={name} multiple={multiple} required={required} className="hidden" />
+      )}
       {readyCount > 0 && (
         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-kiranam-success">
           <ImageUp size={13} strokeWidth={2.5} />
@@ -136,20 +156,31 @@ export function ImageCropField({
       )}
 
       <Dialog open={imageSrc !== null} onOpenChange={(open) => !open && handleCancelCrop()}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               Crop image{queue.length > 1 ? ` (${queuePos + 1} of ${queue.length})` : ''}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="relative h-80 w-full overflow-hidden rounded-lg bg-kiranam-surface-alt">
+          <div className="relative h-[24rem] w-full overflow-hidden rounded-lg bg-black/80 touch-none">
             {imageSrc && (
               <Cropper
                 image={imageSrc}
                 crop={crop}
                 zoom={zoom}
                 aspect={cropTarget.aspect}
+                // "cover": the crop frame fills the stage and the photo is
+                // scaled to cover it, so every edge of a wide or tall image can
+                // be dragged into the frame. The default "contain" shrank the
+                // frame to the photo's shortest side and left the ends out of reach.
+                objectFit="cover"
+                restrictPosition
+                minZoom={1}
+                maxZoom={4}
+                // Tailwind's img reset (max-width: 100%) fights the library's
+                // own sizing and skews the pan limits.
+                style={{ mediaStyle: { maxWidth: 'none', maxHeight: 'none' } }}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
@@ -160,7 +191,7 @@ export function ImageCropField({
           <input
             type="range"
             min={1}
-            max={3}
+            max={4}
             step={0.01}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}

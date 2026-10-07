@@ -15,7 +15,7 @@ export default function AuthSuccessPage() {
       />
 
       <div className="relative w-full max-w-sm rounded-lg bg-kiranam-surface p-8 text-center shadow-elevation-lg">
-        <p className="text-4xl font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
+        <p className="text-4xl font-extrabold tracking-tight text-kiranam-brand">Kiranam</p>
         <p className="mt-5 text-base font-semibold text-kiranam-ink">Email confirmed</p>
         <p className="mt-2 text-sm text-kiranam-muted">
           Your new email address is confirmed. You can close this page and return to the Kiranam app.

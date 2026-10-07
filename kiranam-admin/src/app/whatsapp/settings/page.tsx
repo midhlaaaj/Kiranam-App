@@ -7,8 +7,6 @@ import { useTranslations } from 'next-intl';
 import { useTheme } from '@/hooks/whatsapp/use-theme';
 import { SettingsRail } from '@/components/whatsapp/settings/settings-rail';
 import { SettingsOverview } from '@/components/whatsapp/settings/settings-overview';
-import { ProfileForm } from '@/components/whatsapp/settings/profile-form';
-import { SecurityPanel } from '@/components/whatsapp/settings/security-panel';
 import { AppearancePanel } from '@/components/whatsapp/settings/appearance-panel';
 import { WhatsAppConfig } from '@/components/whatsapp/settings/whatsapp-config';
 import { QuickRepliesManager } from '@/components/whatsapp/settings/quick-replies-manager';
@@ -65,8 +63,6 @@ function SettingsPageInner() {
 
   const panel: Record<SettingsSection, ReactNode> = {
     overview: <SettingsOverview onSelect={go} />,
-    profile: <ProfileForm />,
-    security: <SecurityPanel />,
     appearance: <AppearancePanel />,
     whatsapp: <WhatsAppConfig />,
     'quick-replies': <QuickRepliesManager />,

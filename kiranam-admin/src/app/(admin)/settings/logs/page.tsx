@@ -1,141 +1,204 @@
-import { Suspense } from 'react';
-import { ScrollText } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
-import { PageHeading } from '@/components/PageHeading';
+import { Fragment, Suspense } from 'react';
+import Link from 'next/link';
+import { Download, ScrollText } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { Pagination } from '@/components/Pagination';
-import { LogsFilters } from '@/components/LogsFilters';
-import { SettingsTabs } from '../SettingsTabs';
-import { describeLogEntry } from '@/lib/auditDescriptions';
-import { Skeleton, SkeletonTable } from '@/components/Skeleton';
-import { staggerDelay, tableCellClass, tableHeadRowClass, tableRowClass, tableWrapClass } from '@/lib/ui';
-
-interface LogRow {
-  id: string;
-  action: string;
-  entity_type: string;
-  entity_id: string | null;
-  details: Record<string, unknown> | null;
-  created_at: string;
-  profiles: { full_name: string; email: string | null } | null;
-}
-
-interface AdminRow {
-  id: string;
-  full_name: string;
-  email: string;
-}
+import { SkeletonTable } from '@/components/Skeleton';
+import {
+  ActiveFilters,
+  FilterBar,
+  FilterPeriod,
+  FilterResults,
+  FilterRoot,
+  FilterSearch,
+  FilterSelect,
+  type ActiveChip,
+  type FilterOption,
+} from '@/components/filters/FilterBar';
+import { AUDIT_AREAS, areaLabel, areaOf, describeLogEntry, type LogPart } from '@/lib/auditDescriptions';
+import {
+  auditAdminOptions,
+  parseAuditFilters,
+  queryAuditLog,
+  resolveLogNames,
+  type AuditLogFilters,
+} from '@/lib/auditLogQuery';
+import {
+  describePeriod,
+  formatDateTimeFull,
+  formatDayHeading,
+  formatRelative,
+  formatTime,
+  isoDay,
+  periodPresets,
+} from '@/lib/format';
+import { badgeClass, buttonSecondary, tableCellClass, tableHeadRowClass, tableWrapClass } from '@/lib/ui';
+import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 25;
-const ENTITY_TYPES = [
-  'campaigns',
-  'campaign_images',
-  'events',
-  'event_images',
-  'volunteer_applications',
-  'contributor_assignments',
-  'notifications',
-  'admin_invites',
-  'profiles',
-];
+type SearchParams = { page?: string; q?: string; area?: string; adminId?: string; from?: string; to?: string };
 
-export default async function LogsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; entityType?: string; adminId?: string }>;
-}) {
-  const { page: pageParam, entityType, adminId } = await searchParams;
-  const page = Math.max(1, Number(pageParam) || 1);
+// Heading + tabs come from settings/layout.tsx.
+export default async function ActivityLogPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const sp = await searchParams;
+  const filters = parseAuditFilters(sp);
+  const page = Math.max(1, Number(sp.page) || 1);
+  const exportParams = new URLSearchParams(
+    Object.entries(filters).filter((e): e is [string, string] => !!e[1])
+  ).toString();
 
   return (
-    <div>
-      <PageHeading title="Settings" description="Most recent admin actions." />
-      <div className="mb-6">
-        <SettingsTabs active="logs" />
-      </div>
-
-      <div className="mb-4">
-        <Suspense fallback={<div className="flex flex-wrap gap-3"><Skeleton className="h-10 w-44" /><Skeleton className="h-10 w-44" /></div>}>
-          <LogsFiltersData entityType={entityType} adminId={adminId} />
-        </Suspense>
-      </div>
-
-      <Suspense fallback={<SkeletonTable rows={8} cols={4} />}>
-        <LogsTable entityType={entityType} adminId={adminId} page={page} />
+    <FilterRoot>
+      <Suspense fallback={<div className="h-9" />}>
+        <LogToolbar filters={filters} exportHref={`/settings/logs/export${exportParams ? `?${exportParams}` : ''}`} />
       </Suspense>
-    </div>
+      <div className="mt-4">
+        <FilterResults>
+          <Suspense key={JSON.stringify(filters) + page} fallback={<SkeletonTable rows={8} cols={4} />}>
+            <LogsTable filters={filters} page={page} />
+          </Suspense>
+        </FilterResults>
+      </div>
+    </FilterRoot>
   );
 }
 
-async function LogsFiltersData({ entityType, adminId }: { entityType?: string; adminId?: string }) {
-  const supabase = await createClient();
-  const { data: adminData } = await supabase.rpc('admin_directory');
-  const admins = (adminData || []) as AdminRow[];
+async function LogToolbar({ filters, exportHref }: { filters: AuditLogFilters; exportHref: string }) {
+  const admins: FilterOption[] = await auditAdminOptions();
+  const areaOptions: FilterOption[] = AUDIT_AREAS.map((a) => ({ value: a.value, label: a.label }));
+  const period = describePeriod(filters.from, filters.to);
 
-  return <LogsFilters entityType={entityType} adminId={adminId} entityTypes={ENTITY_TYPES} admins={admins} />;
+  const chips: ActiveChip[] = [];
+  if (filters.q) chips.push({ label: `“${filters.q}”`, params: ['q'] });
+  if (period) chips.push({ label: period, params: ['from', 'to'] });
+  if (filters.area) chips.push({ label: `Area: ${areaLabel(filters.area as never)}`, params: ['area'] });
+  if (filters.adminId) {
+    const name = admins.find((a) => a.value === filters.adminId)?.label ?? 'Unknown';
+    chips.push({ label: `By: ${name}`, params: ['adminId'] });
+  }
+
+  return (
+    <>
+      <FilterBar
+        actions={
+          <Link href={exportHref} prefetch={false} className={cn(buttonSecondary, 'h-9 px-3.5 py-0')}>
+            <Download size={16} aria-hidden />
+            Export CSV
+          </Link>
+        }
+      >
+        <FilterSearch placeholder="Search names, titles, emails…" label="Search activity" />
+        <FilterPeriod presets={periodPresets()} activeLabel={period} />
+        <FilterSelect param="area" label="Area" options={areaOptions} />
+        <FilterSelect param="adminId" label="By" allLabel="Anyone" options={admins} />
+      </FilterBar>
+      <ActiveFilters chips={chips} />
+    </>
+  );
 }
 
-async function LogsTable({ entityType, adminId, page }: { entityType?: string; adminId?: string; page: number }) {
+function renderParts(parts: LogPart[]) {
+  return parts.map((part, i) =>
+    typeof part === 'string' ? (
+      <Fragment key={i}>{part}</Fragment>
+    ) : part.href ? (
+      <Link key={i} href={part.href} className="font-semibold text-kiranam-ink underline-offset-2 hover:underline">
+        {part.text}
+      </Link>
+    ) : (
+      <span key={i} className="font-semibold text-kiranam-ink">
+        {part.text}
+      </span>
+    )
+  );
+}
+
+async function LogsTable({ filters, page }: { filters: AuditLogFilters; page: number }) {
   const from = (page - 1) * PAGE_SIZE;
-  const supabase = await createClient();
+  const { rows, count } = await queryAuditLog(filters, { from, to: from + PAGE_SIZE - 1 });
+  const names = await resolveLogNames(rows);
+  const filtered = Boolean(filters.q || filters.area || filters.adminId || filters.from);
 
-  let query = supabase
-    .from('admin_audit_log')
-    .select('id, action, entity_type, entity_id, details, created_at, profiles!admin_audit_log_admin_id_fkey(full_name, email)')
-    .order('created_at', { ascending: false });
-  if (entityType) query = query.eq('entity_type', entityType);
-  if (adminId) query = query.eq('admin_id', adminId);
+  if (rows.length === 0) {
+    return (
+      <div className={tableWrapClass}>
+        <EmptyState
+          icon={ScrollText}
+          title={filtered ? 'No activity matches these filters' : 'No admin activity yet'}
+          description={filtered ? 'Try a wider date range, or clear a filter.' : 'Changes admins make will show up here.'}
+        />
+      </div>
+    );
+  }
 
-  const { data } = await query.range(from, from + PAGE_SIZE);
-
-  const rows = (data || []) as unknown as LogRow[];
-  const hasNext = rows.length > PAGE_SIZE;
-  const logs = rows.slice(0, PAGE_SIZE);
+  const now = new Date();
+  const dayHeadings = rows.map((log, i) => {
+    const day = isoDay(log.created_at);
+    return i === 0 || day !== isoDay(rows[i - 1].created_at) ? formatDayHeading(log.created_at, now) : null;
+  });
 
   return (
     <>
       <div className={tableWrapClass}>
-        {logs.length === 0 ? (
-          <EmptyState
-            icon={ScrollText}
-            title={entityType || adminId ? 'No actions match these filters' : 'No admin actions logged yet'}
-            description={entityType || adminId ? 'Try a different entity type or admin.' : undefined}
-          />
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className={tableHeadRowClass}>
-                <th className={tableCellClass}>When</th>
-                <th className={tableCellClass}>Admin</th>
-                <th className={tableCellClass}>Action</th>
-                <th className={tableCellClass}>What changed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log, i) => (
-                <tr key={log.id} className={tableRowClass} style={staggerDelay(i)}>
-                  <td className={`${tableCellClass} text-kiranam-muted`}>
-                    {new Date(log.created_at).toLocaleString('en-IN')}
-                  </td>
-                  <td className={`${tableCellClass} text-kiranam-ink`}>
-                    {log.profiles?.full_name || log.profiles?.email || 'Unknown'}
-                  </td>
-                  <td className={`${tableCellClass} text-kiranam-muted`}>{log.entity_type}</td>
-                  <td className={tableCellClass}>{describeLogEntry(log.action, log.details)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <table className="w-full text-sm">
+          <thead>
+            <tr className={tableHeadRowClass}>
+              <th className={cn(tableCellClass, 'w-28')}>Time</th>
+              <th className={tableCellClass}>Who</th>
+              <th className={tableCellClass}>What happened</th>
+              <th className={cn(tableCellClass, 'hidden md:table-cell')}>Area</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((log, i) => {
+              const dayHeading = dayHeadings[i];
+              const recent = now.getTime() - new Date(log.created_at).getTime() < 6 * 3600 * 1000;
+              return (
+                <Fragment key={log.id}>
+                  {dayHeading && (
+                    <tr className="bg-kiranam-surface-alt">
+                      <th
+                        colSpan={4}
+                        scope="colgroup"
+                        className="px-5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-kiranam-muted"
+                      >
+                        {dayHeading}
+                      </th>
+                    </tr>
+                  )}
+                  <tr className="border-b border-kiranam-border last:border-0 align-top">
+                    <td className={cn(tableCellClass, 'whitespace-nowrap tabular-nums text-kiranam-muted')}>
+                      <time dateTime={log.created_at} title={formatDateTimeFull(log.created_at)}>
+                        {recent ? formatRelative(log.created_at, now) : formatTime(log.created_at)}
+                      </time>
+                    </td>
+                    <td className={cn(tableCellClass, 'whitespace-nowrap text-kiranam-ink')}>
+                      {log.profiles?.full_name || log.profiles?.email || 'Unknown'}
+                    </td>
+                    <td className={cn(tableCellClass, 'text-kiranam-ink')}>
+                      {renderParts(describeLogEntry(log, names))}
+                    </td>
+                    <td className={cn(tableCellClass, 'hidden md:table-cell')}>
+                      <span className={badgeClass('neutral')}>{areaLabel(areaOf(log.action))}</span>
+                    </td>
+                  </tr>
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       <Pagination
         page={page}
-        hasNext={hasNext}
+        hasNext={from + rows.length < count}
+        total={count}
+        pageSize={PAGE_SIZE}
+        noun="actions"
         buildHref={(p) => {
-          const params = new URLSearchParams();
-          if (entityType) params.set('entityType', entityType);
-          if (adminId) params.set('adminId', adminId);
+          const params = new URLSearchParams(
+            Object.entries(filters).filter((e): e is [string, string] => !!e[1])
+          );
           params.set('page', String(p));
           return `/settings/logs?${params.toString()}`;
         }}

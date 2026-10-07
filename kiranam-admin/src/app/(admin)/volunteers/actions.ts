@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { logAction } from '@/lib/audit';
+import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { validatePhoneNumber } from '@/lib/phone';
 import { COUNTRIES } from '@/lib/countries';
@@ -103,7 +103,7 @@ export async function registerVolunteer(
     return { error: message };
   }
 
-  await logAction(admin.id, 'register_volunteer', 'profiles', volunteerId, { fullName, kkNumber });
+  await logAction(admin.id, 'register_volunteer', 'profiles', volunteerId, { fullName, label: fullName, kkNumber });
   revalidatePath('/volunteers');
   return { message: `${fullName} has been registered as a volunteer. They can log in with this phone number.` };
 }
@@ -140,7 +140,10 @@ export async function upgradeContributorToVolunteer(contributorId: string, kkNum
     throw new Error(message);
   }
 
-  await logAction(admin.id, 'upgrade_contributor_to_volunteer', 'profiles', contributorId, { kkNumber });
+  await logAction(admin.id, 'upgrade_contributor_to_volunteer', 'profiles', contributorId, {
+    kkNumber,
+    label: profile.full_name,
+  });
   revalidatePath('/volunteers');
   revalidatePath('/contributors');
   revalidatePath(`/contributors/${contributorId}`);
@@ -172,7 +175,9 @@ export async function demoteVolunteerToContributor(volunteerId: string) {
   const { error } = await supabase.from('profiles').update({ role: 'contributor' }).eq('id', volunteerId);
   if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'demote_volunteer_to_contributor', 'profiles', volunteerId, {});
+  await logAction(admin.id, 'demote_volunteer_to_contributor', 'profiles', volunteerId, {
+    label: profile.full_name,
+  });
   revalidatePath('/volunteers');
   revalidatePath('/contributors');
   revalidatePath(`/volunteers/${volunteerId}`);
@@ -220,7 +225,10 @@ export async function updateVolunteerKkNumber(volunteerId: string, kkNumberInput
     throw new Error(message);
   }
 
-  await logAction(admin.id, 'assign_kk_number', 'profiles', volunteerId, { kkNumber });
+  await logAction(admin.id, 'assign_kk_number', 'profiles', volunteerId, {
+    kkNumber,
+    label: await lookupLabel('profiles', volunteerId),
+  });
   revalidatePath('/volunteers');
 }
 
@@ -235,7 +243,12 @@ export async function assignContributor(volunteerId: string, formData: FormData)
     .insert({ volunteer_id: volunteerId, contributor_id: contributorId });
   if (error && !error.message.includes('duplicate')) throw new Error(error.message);
 
-  await logAction(admin.id, 'assign_contributor', 'contributor_assignments', volunteerId, { contributorId });
+  await logAction(admin.id, 'assign_contributor', 'contributor_assignments', volunteerId, {
+    volunteerId: volunteerId,
+    contributorId: contributorId,
+    label: await lookupLabel('profiles', contributorId),
+    otherLabel: await lookupLabel('profiles', volunteerId),
+  });
   revalidatePath(`/volunteers/${volunteerId}`);
 }
 
@@ -249,7 +262,12 @@ export async function unassignContributor(volunteerId: string, contributorId: st
     .eq('contributor_id', contributorId);
   if (error) throw new Error(error.message);
 
-  await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', volunteerId, { contributorId });
+  await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', volunteerId, {
+    volunteerId: volunteerId,
+    contributorId: contributorId,
+    label: await lookupLabel('profiles', contributorId),
+    otherLabel: await lookupLabel('profiles', volunteerId),
+  });
   revalidatePath(`/volunteers/${volunteerId}`);
 }
 
@@ -286,7 +304,10 @@ export async function rejectApplication(applicationId: string, profileId: string
     .eq('id', applicationId);
   if (error) throw new Error(error.message);
 
-  await logAction(admin.id, 'reject_volunteer_application', 'volunteer_applications', applicationId, { profileId });
+  await logAction(admin.id, 'reject_volunteer_application', 'volunteer_applications', applicationId, {
+    profileId,
+    label: await lookupLabel('profiles', profileId),
+  });
   revalidatePath(`/volunteers/${profileId}`);
   revalidatePath('/volunteers');
 }

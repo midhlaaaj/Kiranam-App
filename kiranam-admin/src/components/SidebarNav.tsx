@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Bell,
   Calendar,
   HeartHandshake,
   LayoutDashboard,
   Megaphone,
   MessageCircle,
+  Send,
   Settings,
   Users,
   Wallet,
@@ -23,7 +23,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/events', label: 'Events', icon: Calendar },
   { href: '/contributions', label: 'Contributions', icon: Wallet },
-  { href: '/notifications', label: 'Notifications', icon: Bell },
+  // Sends push messages to contributors/volunteers. Kept distinct from the
+  // header bell (the admin's own notification inbox, /my-notifications).
+  { href: '/notifications', label: 'Announcements', icon: Send },
   // WhatsApp comm center — merged in as a normal internal route (used to
   // be a separate deployment reached via a magic-link SSO bridge; now
   // it's just part of this app and shares the same session natively).
@@ -31,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+export function SidebarNav({ onNavigate, badges }: { onNavigate?: () => void; badges?: Record<string, React.ReactNode> }) {
   const pathname = usePathname();
 
   return (
@@ -44,6 +46,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             key={item.href}
             href={item.href}
             onClick={onNavigate}
+            aria-current={isActive ? 'page' : undefined}
             className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ease-out ${
               isActive
                 ? 'bg-kiranam-primary-soft text-kiranam-primary'
@@ -53,8 +56,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             {isActive && (
               <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-kiranam-primary" />
             )}
-            <Icon size={17} strokeWidth={2} />
-            {item.label}
+            <Icon size={17} strokeWidth={2} aria-hidden />
+            <span className="flex-1">{item.label}</span>
+            {badges?.[item.href]}
           </Link>
         );
       })}

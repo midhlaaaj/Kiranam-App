@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { toast } from 'sonner';
 import type { Contact, Tag, ContactTag } from '@/types/whatsapp';
@@ -23,14 +24,6 @@ import {
   DropdownMenuSeparator,
 } from '@/components/whatsapp/ui/dropdown-menu';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/whatsapp/ui/dialog';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -42,15 +35,20 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
-  Loader2,
   Users,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
   Filter,
   X,
+  Download,
+  Tag as TagIcon,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { searchTerm } from '@/lib/search';
 import { ContactForm } from '@/components/whatsapp/contacts/contact-form';
+import { RegisterContributorForm } from '@/app/(admin)/contributors/RegisterContributorForm';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/whatsapp/ui/dialog';
 import { ContactDetailView } from '@/components/whatsapp/contacts/contact-detail-view';
 import { ImportModal } from '@/components/whatsapp/contacts/import-modal';
 import { CustomFieldsManager } from '@/components/whatsapp/contacts/custom-fields-manager';
@@ -72,14 +70,31 @@ export default function ContactsPage() {
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
+  // What's typed vs. what's queried — debounced so typing a name doesn't
+  // fire a request (and clear the selection) on every keystroke.
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   // Tag filter — contacts shown must have ANY of these tags (OR).
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Modals
+  // `?new=1` (dashboard "Add contact") opens the form straight away.
+  const searchParams = useSearchParams();
   const [formOpen, setFormOpen] = useState(false);
+  // "Add contact" registers a real Kiranam contributor (same form as the
+  // admin panel's Register contributor) — the database sync then creates the
+  // WhatsApp contact, linked to the profile. A hand-made contact with the
+  // same phone would collide with that sync and never link.
+  const [registerOpen, setRegisterOpen] = useState(() => searchParams.get('new') === '1');
   const [editContact, setEditContact] = useState<Contact | null>(null);
   const [editContactTags, setEditContactTags] = useState<ContactTag[]>([]);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -128,7 +143,7 @@ export default function ContactsPage() {
 
     const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const term = search.trim();
+    const term = searchTerm(search);
 
     let contactRows: Contact[];
     let count: number;
@@ -161,7 +176,7 @@ export default function ContactsPage() {
         .range(from, to);
 
       if (term) {
-        const like = `%${term}%`;
+        const like = `*${term}*`;
         query = query.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like}`);
       }
 
@@ -222,9 +237,7 @@ export default function ContactsPage() {
   }, [fetchContacts]);
 
   function openAddForm() {
-    setEditContact(null);
-    setEditContactTags([]);
-    setFormOpen(true);
+    setRegisterOpen(true);
   }
 
   async function openEditForm(contact: Contact) {
@@ -312,6 +325,60 @@ export default function ContactsPage() {
     setBulkDeleteOpen(false);
   }
 
+  async function bulkTag(tagId: string, add: boolean) {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    const tagName = tagsMap[tagId]?.name ?? 'tag';
+    const { error } = add
+      ? await supabase
+          .from('contact_tags')
+          .upsert(ids.map((contact_id) => ({ contact_id, tag_id: tagId })), {
+            onConflict: 'contact_id,tag_id',
+            ignoreDuplicates: true,
+          })
+      : await supabase.from('contact_tags').delete().eq('tag_id', tagId).in('contact_id', ids);
+    if (error) {
+      toast.error(add ? `Couldn't add “${tagName}”.` : `Couldn't remove “${tagName}”.`);
+      return;
+    }
+    toast.success(
+      add ? `Tagged ${ids.length} ${ids.length === 1 ? 'contact' : 'contacts'} “${tagName}”.` : `Removed “${tagName}” from ${ids.length}.`,
+    );
+    fetchContacts();
+  }
+
+  function exportSelected() {
+    const rows = contacts.filter((c) => selected.has(c.id));
+    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
+    const csv = [
+      ['Name', 'Phone', 'Email', 'Company', 'Tags', 'WhatsApp opt-out'].map(esc).join(','),
+      ...rows.map((c) =>
+        [
+          c.name ?? '',
+          c.phone,
+          c.email ?? '',
+          c.company ?? '',
+          (c.tags ?? []).map((tg) => tg.name).join('; '),
+          c.whatsapp_consent === false ? 'yes' : '',
+        ]
+          .map(esc)
+          .join(','),
+      ),
+    ].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `whatsapp-contacts-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const selectedSynced = contacts.filter((c) => selected.has(c.id) && c.kiranam_profile_id).length;
+  const syncedDeleteNote = [
+    'Delete their conversation history in the inbox',
+    'If they’re a Kiranam contributor or volunteer, they’ll be re-added automatically the next time their profile changes — to stop messages, keep them and rely on their WhatsApp opt-out instead',
+  ];
+
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
   const hasNext = page < totalPages - 1;
   const hasPrev = page > 0;
@@ -321,7 +388,7 @@ export default function ContactsPage() {
   const allTags = Object.values(tagsMap).sort((a, b) =>
     a.name.localeCompare(b.name)
   );
-  const hasActiveFilters = search.trim().length > 0 || selectedTagIds.length > 0;
+  const hasActiveFilters = searchInput.trim().length > 0 || selectedTagIds.length > 0;
 
   function toggleTagFilter(tagId: string) {
     setSelectedTagIds((prev) =>
@@ -347,7 +414,7 @@ export default function ContactsPage() {
             {totalCount > 0 ? t('subtitle', { count: totalCount }) : t('subtitleZero')}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canEditSettings && (
             <Button
               variant="outline"
@@ -386,14 +453,11 @@ export default function ContactsPage() {
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                // Reset pagination when the query changes — the result
-                // set shrinks/grows, page N may no longer be valid.
-                setPage(0);
-              }}
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder={t('searchPlaceholder')}
+              aria-label={t('searchPlaceholder')}
               className="pl-8 bg-card border-border text-foreground placeholder:text-muted-foreground"
             />
           </div>
@@ -498,11 +562,11 @@ export default function ContactsPage() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-4 py-2">
           <p className="text-sm text-foreground">
             {t('selectedCount', { count: selected.size })}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -510,6 +574,39 @@ export default function ContactsPage() {
               className="text-muted-foreground hover:text-foreground"
             >
               {t('clearSelection')}
+            </Button>
+            {allTags.length > 0 && canEdit && (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+                    <TagIcon className="size-4" aria-hidden />
+                    Add tag
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-64 bg-popover border-border">
+                    {allTags.map((tg) => (
+                      <DropdownMenuItem key={tg.id} onClick={() => void bulkTag(tg.id, true)}>
+                        <span className="size-2 rounded-full" style={{ backgroundColor: tg.color }} aria-hidden />
+                        {tg.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>Remove tag</DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-64 bg-popover border-border">
+                    {allTags.map((tg) => (
+                      <DropdownMenuItem key={tg.id} onClick={() => void bulkTag(tg.id, false)}>
+                        <span className="size-2 rounded-full" style={{ backgroundColor: tg.color }} aria-hidden />
+                        {tg.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+            <Button variant="outline" size="sm" onClick={exportSelected}>
+              <Download className="size-4" aria-hidden />
+              Export
             </Button>
             <GatedButton
               variant="destructive"
@@ -526,7 +623,7 @@ export default function ContactsPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-border overflow-hidden">
+      <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
@@ -550,14 +647,13 @@ export default function ContactsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow className="border-border">
-                <TableCell colSpan={8} className="text-center py-12">
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="size-6 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">{t('loading')}</p>
-                  </div>
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 6 }).map((_, i) => (
+                <TableRow key={i} className="border-border" aria-hidden>
+                  <TableCell colSpan={8}>
+                    <div className="h-5 animate-pulse rounded bg-muted" />
+                  </TableCell>
+                </TableRow>
+              ))
             ) : contacts.length === 0 ? (
               <TableRow className="border-border">
                 <TableCell colSpan={8} className="text-center py-12">
@@ -586,22 +682,36 @@ export default function ContactsPage() {
               </TableRow>
             ) : (
               contacts.map((contact) => (
-                <TableRow
-                  key={contact.id}
-                  className="border-border hover:bg-muted/50 cursor-pointer"
-                  onClick={() => openDetail(contact.id)}
-                >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableRow key={contact.id} className="border-border hover:bg-muted/50">
+                  <TableCell>
                     <Checkbox
                       checked={selected.has(contact.id)}
                       onCheckedChange={() => toggleSelect(contact.id)}
                       aria-label={`Select ${contact.name || contact.phone}`}
                     />
                   </TableCell>
-                  <TableCell className="text-foreground font-medium">
-                    {contact.name || <span className="text-muted-foreground italic">{t('unnamed')}</span>}
+                  <TableCell className="font-medium">
+                    <button
+                      type="button"
+                      onClick={() => openDetail(contact.id)}
+                      className="text-left text-foreground underline-offset-2 hover:underline"
+                    >
+                      {contact.name || <span className="italic text-muted-foreground">{t('unnamed')}</span>}
+                    </button>
+                    <span className="mt-0.5 flex flex-wrap gap-1">
+                      {contact.whatsapp_consent === false && (
+                        <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[11px] font-semibold text-destructive">
+                          Opted out
+                        </span>
+                      )}
+                      {contact.kiranam_profile_id && (
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground" title="Synced from the Kiranam app">
+                          From Kiranam
+                        </span>
+                      )}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
+                  <TableCell className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
                     {contact.phone}
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell text-sm">
@@ -616,12 +726,9 @@ export default function ContactsPage() {
                         contact.tags.slice(0, 3).map((tag) => (
                           <span
                             key={tag.id}
-                            className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                            style={{
-                              backgroundColor: tag.color + '20',
-                              color: tag.color,
-                            }}
+                            className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
                           >
+                            <span className="size-1.5 rounded-full" style={{ backgroundColor: tag.color }} aria-hidden />
                             {tag.name}
                           </span>
                         ))
@@ -636,9 +743,9 @@ export default function ContactsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs hidden lg:table-cell">
-                    {new Date(contact.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
+                    {new Date(contact.created_at).toLocaleDateString('en-IN', {
                       day: 'numeric',
+                      month: 'short',
                       year: 'numeric',
                     })}
                   </TableCell>
@@ -650,7 +757,7 @@ export default function ContactsPage() {
                             variant="ghost"
                             size="icon-sm"
                             className="text-muted-foreground hover:text-foreground"
-                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`Actions for ${contact.name || contact.phone}`}
                           />
                         }
                       >
@@ -661,10 +768,7 @@ export default function ContactsPage() {
                         className="bg-popover border-border"
                       >
                         <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openEditForm(contact);
-                          }}
+                          onClick={() => openEditForm(contact)}
                           className="text-popover-foreground focus:bg-muted focus:text-foreground"
                         >
                           <Pencil className="size-4" />
@@ -673,10 +777,7 @@ export default function ContactsPage() {
                         <DropdownMenuSeparator className="bg-border" />
                         <DropdownMenuItem
                           variant="destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            confirmDelete(contact);
-                          }}
+                          onClick={() => confirmDelete(contact)}
                         >
                           <Trash2 className="size-4" />
                           {t('deleteAction')}
@@ -706,6 +807,7 @@ export default function ContactsPage() {
               variant="outline"
               size="icon-sm"
               disabled={!hasPrev}
+              aria-label="Previous page"
               onClick={() => setPage((p) => p - 1)}
               className="border-border text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
             >
@@ -718,6 +820,7 @@ export default function ContactsPage() {
               variant="outline"
               size="icon-sm"
               disabled={!hasNext}
+              aria-label="Next page"
               onClick={() => setPage((p) => p + 1)}
               className="border-border text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
             >
@@ -727,7 +830,39 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* Contact Form Dialog */}
+      {/* Add contact = register contributor */}
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add contact</DialogTitle>
+            <DialogDescription>
+              Adds a Kiranam contributor. They appear here automatically and can log in to the app with this phone
+              number.
+            </DialogDescription>
+          </DialogHeader>
+          <RegisterContributorForm
+            bare
+            onDone={() => {
+              setRegisterOpen(false);
+              // The profile→contact sync runs just after registration.
+              setTimeout(() => fetchContacts(), 600);
+            }}
+            onEditExisting={async (match) => {
+              // Already registered: open their existing contact instead.
+              const { data } = await supabase
+                .from('contacts')
+                .select('id')
+                .eq('kiranam_profile_id', match.id)
+                .maybeSingle();
+              setRegisterOpen(false);
+              if (data?.id) openDetail(data.id as string);
+              else toast.info('They’re registered, but not in WhatsApp contacts yet.');
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit existing contact */}
       <ContactForm
         open={formOpen}
         onOpenChange={setFormOpen}
@@ -766,65 +901,32 @@ export default function ContactsPage() {
         />
       )}
 
-      {/* Delete Confirmation */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">{t('deleteContactTitle')}</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {t('deleteContactDesc', { name: deleteTarget?.name || deleteTarget?.phone || '' })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="bg-popover border-border">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t('cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting && <Loader2 className="size-4 animate-spin" />}
-              {t('deleteBtn')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t('deleteContactTitle')}
+        description={t('deleteContactDesc', { name: deleteTarget?.name || deleteTarget?.phone || '' })}
+        consequences={deleteTarget?.kiranam_profile_id ? syncedDeleteNote : undefined}
+        confirmLabel={deleting ? '…' : t('deleteBtn')}
+        destructive
+        onConfirm={handleDelete}
+      />
 
-      {/* Bulk Delete Confirmation */}
-      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-        <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">
-              {t('deleteBulkTitle')}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {t('deleteBulkDesc', { count: selected.size })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="bg-popover border-border">
-            <Button
-              variant="outline"
-              onClick={() => setBulkDeleteOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t('cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-              disabled={deleting}
-            >
-              {deleting && <Loader2 className="size-4 animate-spin" />}
-              {t('deleteBtn')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onOpenChange={setBulkDeleteOpen}
+        title={t('deleteBulkTitle')}
+        description={t('deleteBulkDesc', { count: selected.size })}
+        consequences={
+          selectedSynced > 0
+            ? [`${selectedSynced} of them ${selectedSynced === 1 ? 'is' : 'are'} synced from Kiranam`, ...syncedDeleteNote]
+            : undefined
+        }
+        confirmLabel={`Delete ${selected.size}`}
+        confirmText={selected.size >= 10 ? 'DELETE' : undefined}
+        destructive
+        onConfirm={handleBulkDelete}
+      />
     </div>
   );
 }

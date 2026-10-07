@@ -22,7 +22,9 @@
  * /flows/[id]/runs) — those don't belong in the hook.
  */
 
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import {
   ArrowLeft,
   CircleDot,
@@ -43,7 +45,6 @@ import {
 } from "./flow-editor-state";
 
 export function EditorHeader() {
-  const router = useRouter();
   const {
     flow,
     state,
@@ -56,6 +57,9 @@ export function EditorHeader() {
     setStatus,
     deleteFlow,
   } = useFlowEditor();
+  const guard = useUnsavedChangesGuard(dirty);
+  const [confirm, setConfirm] = useState<null | "delete" | "activate" | "publish">(null);
+  const isActive = state.status === "active";
 
   return (
     <div className="flex flex-col gap-1.5 px-6 pt-5">
@@ -63,14 +67,14 @@ export function EditorHeader() {
         {/* ---- left: back · icon · name · status · edited ---- */}
         <button
           type="button"
-          onClick={() => router.push("/whatsapp/flows")}
+          onClick={() => guard.navigate("/whatsapp/flows")}
           title="Back to Flows"
           aria-label="Back to Flows"
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground" aria-hidden>
           <Workflow className="h-[18px] w-[18px]" />
         </span>
         <input
@@ -84,12 +88,12 @@ export function EditorHeader() {
         <StatusChip status={state.status} />
         {dirty && (
           <span
-            className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
-            title="Unsaved changes — hit Save to persist"
+            className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-warning"
+            title={isActive ? "Not live yet — publish to apply" : "Unsaved changes"}
             aria-live="polite"
           >
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-            Edited
+            <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
+            {isActive ? "Unpublished changes" : "Unsaved"}
           </span>
         )}
 
@@ -98,7 +102,7 @@ export function EditorHeader() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push(`/whatsapp/flows/${flow.id}/runs`)}
+            onClick={() => guard.navigate(`/whatsapp/flows/${flow.id}/runs`)}
           >
             <History className="h-3.5 w-3.5" />
             Runs
@@ -109,8 +113,8 @@ export function EditorHeader() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => void deleteFlow()}
-            className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            onClick={() => setConfirm("delete")}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete
@@ -133,7 +137,7 @@ export function EditorHeader() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void setStatus("active")}
+              onClick={() => setConfirm("activate")}
               disabled={activating || !canActivate}
               title={
                 !canActivate
@@ -149,16 +153,64 @@ export function EditorHeader() {
               Activate
             </Button>
           )}
-          <Button onClick={() => void save()} disabled={saving} size="sm">
+          <Button
+            onClick={() => (isActive ? setConfirm("publish") : void save())}
+            disabled={saving || !dirty}
+            size="sm"
+          >
             {saving ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <Save className="h-3.5 w-3.5" />
             )}
-            Save
+            {isActive ? "Publish changes" : dirty ? "Save" : "Saved"}
           </Button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirm === "delete"}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title={`Delete “${state.name || "this flow"}”?`}
+        consequences={["End any conversations currently running through it", "Remove its run history"]}
+        confirmLabel="Delete flow"
+        destructive
+        onConfirm={() => {
+          setConfirm(null);
+          void deleteFlow();
+        }}
+      />
+      <ConfirmDialog
+        open={confirm === "activate"}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Turn this flow on?"
+        description="It will start replying to matching incoming WhatsApp messages straight away."
+        confirmLabel="Activate"
+        onConfirm={() => {
+          setConfirm(null);
+          void setStatus("active");
+        }}
+      />
+      <ConfirmDialog
+        open={confirm === "publish"}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Publish changes to a live flow?"
+        description="This flow is active — people messaging you will get the new version immediately."
+        confirmLabel="Publish changes"
+        onConfirm={() => {
+          setConfirm(null);
+          void save();
+        }}
+      />
+      <ConfirmDialog
+        open={guard.open}
+        onOpenChange={guard.setOpen}
+        title="Leave without saving?"
+        description="Your changes to this flow haven’t been saved."
+        confirmLabel="Leave"
+        destructive
+        onConfirm={guard.proceed}
+      />
 
       {/* ---- description note (subtle, inline-editable) ---- */}
       <input
@@ -183,7 +235,7 @@ function StatusChip({ status }: { status: BuilderState["status"] }) {
       label: "Draft",
     },
     active: {
-      cls: "border-emerald-600/40 bg-emerald-500/10 text-emerald-300",
+      cls: "border-success/30 bg-success-soft text-success",
       label: "Active",
     },
     archived: {

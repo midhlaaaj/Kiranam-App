@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/whatsapp/supabase/client'
 import {
   MessageSquare,
-  UserPlus,
+  MessageSquarePlus,
   Send,
+  UserPlus,
 } from 'lucide-react'
+import { Button } from '@/components/whatsapp/ui/button'
 
 import {
   loadActivity,
@@ -55,6 +57,16 @@ export default function DashboardPage() {
   const [activity, setActivity] = useState<ActivityItem[] | null>(null)
   const [activityLoading, setActivityLoading] = useState(true)
 
+  const [metricsError, setMetricsError] = useState(false)
+  const retryMetrics = useCallback(() => {
+    setMetricsError(false)
+    setMetricsLoading(true)
+    loadMetrics(createClient())
+      .then((m) => setMetrics(m))
+      .catch(() => setMetricsError(true))
+      .finally(() => setMetricsLoading(false))
+  }, [])
+
   const loadAll = useCallback(() => {
     const db = createClient()
 
@@ -62,8 +74,14 @@ export default function DashboardPage() {
     // setState + finally so a slow query doesn't hold up faster
     // sections — each widget shows its own skeleton independently.
     void loadMetrics(db)
-      .then((m) => setMetrics(m))
-      .catch((err) => console.error('[dashboard] metrics failed:', err))
+      .then((m) => {
+        setMetrics(m)
+        setMetricsError(false)
+      })
+      .catch((err) => {
+        console.error('[dashboard] metrics failed:', err)
+        setMetricsError(true)
+      })
       .finally(() => setMetricsLoading(false))
 
     void loadConversationsSeries(db, 30)
@@ -118,21 +136,34 @@ export default function DashboardPage() {
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metricsLoading || !metrics ? (
-          Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {metricsError ? (
+          <div role="alert" className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 sm:col-span-2 xl:col-span-4">
+            <p className="text-sm text-foreground">{t('metricsError')}</p>
+            <Button variant="outline" size="sm" onClick={retryMetrics}>
+              {t('retry')}
+            </Button>
+          </div>
+        ) : metricsLoading || !metrics ? (
+          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <MetricCard
-              title={t('activeConversations')}
-              value={metrics.activeConversations.current.toLocaleString()}
+              title={t('openConversations')}
+              value={metrics.openConversations.toLocaleString()}
               icon={MessageSquare}
+              subtitle={t('unassigned', { count: metrics.unassignedOpen })}
+            />
+            <MetricCard
+              title={t('newConversationsToday')}
+              value={metrics.newConversations.current.toLocaleString()}
+              icon={MessageSquarePlus}
               delta={{
-                sign: metrics.activeConversations.previous,
+                sign: metrics.newConversations.current - metrics.newConversations.previous,
                 label: deltaLabel(
-                  metrics.activeConversations.previous,
-                  t('newTodayVsYesterday'),
-                  t('noChange', { suffix: t('newTodayVsYesterday') })
+                  metrics.newConversations.current - metrics.newConversations.previous,
+                  t('vsYesterday'),
+                  t('noChange', { suffix: t('vsYesterday') })
                 ),
               }}
             />
@@ -166,8 +197,7 @@ export default function DashboardPage() {
             />
           </>
         )}
-        {/* Own fetch/loading cycle, independent of the three metrics
-            above — renders even while they're still loading. */}
+        {/* Own fetch/loading cycle, independent of the metrics above. */}
         <UsageCard />
       </div>
 

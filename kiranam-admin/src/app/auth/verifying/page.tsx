@@ -43,7 +43,7 @@ function VerifyingContent() {
       />
 
       <div className="relative w-full max-w-sm rounded-lg bg-kiranam-surface p-8 text-center shadow-elevation-lg">
-        <p className="text-4xl font-extrabold tracking-tight text-kiranam-primary">Kiranam</p>
+        <p className="text-4xl font-extrabold tracking-tight text-kiranam-brand">Kiranam</p>
 
         <div className="mt-6 flex justify-center">
           {stage === 'authenticating' ? (

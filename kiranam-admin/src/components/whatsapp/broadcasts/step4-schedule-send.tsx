@@ -1,38 +1,64 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, Loader2, Send } from 'lucide-react';
+import { MessageTemplate, Tag } from '@/types/whatsapp';
 import { createClient } from '@/lib/whatsapp/supabase/client';
-import { MessageTemplate } from '@/types/whatsapp';
 import { Button } from '@/components/whatsapp/ui/button';
 import { Input } from '@/components/whatsapp/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/whatsapp/ui/dialog';
-import { ArrowLeft, Send, Loader2, Users, Save } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-
-interface AudienceConfig {
-  type: string;
-  tagIds?: string[];
-  csvContacts?: { phone: string; name?: string }[];
-}
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { TemplatePreview, fillPlaceholders } from '@/components/whatsapp/template-preview';
+import type { AudienceConfig } from '@/lib/whatsapp/broadcast-audience';
+import type { VariableMapping } from '@/hooks/whatsapp/use-broadcast-sending';
+import { AudienceSummary, audienceKey } from './audience-summary';
+import { languageName } from '@/lib/whatsapp/language-names';
 
 interface Step4Props {
   name: string;
   onNameChange: (name: string) => void;
   template: MessageTemplate;
   audience: AudienceConfig;
+  variables: Record<string, VariableMapping>;
+  headerMediaUrl?: string;
   onSend: () => void;
-  onSaveDraft?: () => void;
   onBack: () => void;
   isProcessing: boolean;
-  progress: number;
+  sentSoFar: number;
+  totalToSend: number;
+}
+
+const FIELD_LABEL: Record<string, string> = { name: 'Name', phone: 'Phone', email: 'Email', company: 'Company' };
+
+/** Placeholder values for the review preview: static text as-is, per-contact
+ * fields as a readable token, e.g. "[Name]". */
+function previewValues(variables: Record<string, VariableMapping>) {
+  return Object.fromEntries(
+    Object.entries(variables).map(([k, v]) => [
+      k,
+      v.type === 'static' ? v.value : v.type === 'field' ? `[${FIELD_LABEL[v.value] ?? v.value}]` : '[custom field]',
+    ])
+  );
+}
+
+function useCostEstimate(category: string) {
+  const [rate, setRate] = useState<{ perMessage: number; currency: string } | null | 'unavailable'>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/whatsapp/whatsapp/usage?days=30')
+      .then((r) => r.json())
+      .then((json: { available?: boolean; currency?: string | null; byCategory?: { category: string; conversations: number; cost: number }[] }) => {
+        if (cancelled) return;
+        const row = json.byCategory?.find((c) => c.category === category.toLowerCase());
+        if (!json.available || !row || !row.conversations) setRate('unavailable');
+        else setRate({ perMessage: row.cost / row.conversations, currency: json.currency || 'INR' });
+      })
+      .catch(() => !cancelled && setRate('unavailable'));
+    return () => {
+      cancelled = true;
+    };
+  }, [category]);
+  return rate;
 }
 
 export function Step4ScheduleSend({
@@ -40,199 +66,184 @@ export function Step4ScheduleSend({
   onNameChange,
   template,
   audience,
+  variables,
+  headerMediaUrl,
   onSend,
-  onSaveDraft,
   onBack,
   isProcessing,
-  progress,
+  sentSoFar,
+  totalToSend,
 }: Step4Props) {
   const t = useTranslations('Broadcasts.wizard');
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [estimatedReach, setEstimatedReach] = useState<number>(0);
-  const [loadingReach, setLoadingReach] = useState(true);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [count, setCount] = useState<{ value: number; key: string } | null>(null);
+  const [tagNames, setTagNames] = useState<Record<string, string>>({});
+  const rate = useCostEstimate(template.category);
+
+  const currentKey = audienceKey(audience);
+  const recipients = count?.key === currentKey ? count.value : null;
+  const values = previewValues(variables);
 
   useEffect(() => {
-    async function calculateReach() {
-      setLoadingReach(true);
-      try {
-        const supabase = createClient();
+    const ids = [...(audience.tagIds ?? []), ...(audience.excludeTagIds ?? [])];
+    if (!ids.length) return;
+    createClient()
+      .from('tags')
+      .select('id, name')
+      .in('id', ids)
+      .then(({ data }) => setTagNames(Object.fromEntries(((data ?? []) as Pick<Tag, 'id' | 'name'>[]).map((x) => [x.id, x.name]))));
+  }, [audience.tagIds, audience.excludeTagIds]);
 
-        if (audience.type === 'all') {
-          const { count } = await supabase
-            .from('contacts')
-            .select('*', { count: 'exact', head: true });
-          setEstimatedReach(count ?? 0);
-        } else if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
-          const { data: contactTags } = await supabase
-            .from('contact_tags')
-            .select('contact_id')
-            .in('tag_id', audience.tagIds);
+  // A send runs from this tab — closing it mid-way would stop it.
+  useEffect(() => {
+    if (!isProcessing) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isProcessing]);
 
-          const uniqueIds = new Set((contactTags ?? []).map((ct) => ct.contact_id));
-          setEstimatedReach(uniqueIds.size);
-        } else if (audience.type === 'csv' && audience.csvContacts) {
-          setEstimatedReach(audience.csvContacts.length);
-        } else {
-          setEstimatedReach(0);
-        }
-      } finally {
-        setLoadingReach(false);
-      }
-    }
-
-    calculateReach();
-  }, [audience]);
-
-  const audienceLabel =
+  const audienceDescription =
     audience.type === 'all'
       ? t('scheduleSend.audienceAll')
       : audience.type === 'tags'
-        ? t('scheduleSend.audienceTags')
+        ? `Tagged ${(audience.tagIds ?? []).map((id) => tagNames[id] ?? '…').join(', ')}`
         : audience.type === 'csv'
           ? t('scheduleSend.audienceCsv')
           : t('scheduleSend.audienceField');
+  const excluded = (audience.excludeTagIds ?? []).map((id) => tagNames[id] ?? '…');
+
+  const fmt = (n: number, currency: string) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: n < 100 ? 2 : 0 }).format(n);
+
+  const canSend = !!name.trim() && recipients !== null && recipients > 0 && !isProcessing;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold text-foreground">{t('scheduleSend.title')}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('scheduleSend.subtitle')}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Check everything below — a sent broadcast can’t be recalled.</p>
       </div>
 
-      {/* Broadcast Name */}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">{t('scheduleSend.broadcastName')}</label>
+        <label htmlFor="broadcast-name" className="mb-1.5 block text-sm font-medium text-foreground">
+          {t('scheduleSend.broadcastName')}
+        </label>
         <Input
+          id="broadcast-name"
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder={t('scheduleSend.broadcastNamePlaceholder')}
-          className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
+          aria-describedby="broadcast-name-hint"
         />
+        <p id="broadcast-name-hint" className="mt-1 text-xs text-muted-foreground">
+          Only your team sees this name.
+        </p>
       </div>
 
-      {/* Summary Card */}
-      <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
-        <p className="text-sm font-medium text-foreground">{t('scheduleSend.summary')}</p>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-xs text-muted-foreground">{t('scheduleSend.template')}</p>
-            <p className="text-foreground">{template.name}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">{t('scheduleSend.audience')}</p>
-            <p className="text-foreground">{audienceLabel}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Estimated Reach</p>
-            <div className="flex items-center gap-1.5">
-              {loadingReach ? (
-                <Loader2 className="h-3 w-3 animate-spin text-primary" />
-              ) : (
-                <>
-                  <Users className="h-3.5 w-3.5 text-primary" />
-                  <p className="font-medium text-foreground">{estimatedReach.toLocaleString()}</p>
-                </>
-              )}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Language</p>
-            <p className="text-foreground">{template.language ?? 'en_US'}</p>
-          </div>
-        </div>
-      </div>
+      <ol className="space-y-4">
+        <li className="rounded-xl border border-border bg-card p-4">
+          <p className="text-sm font-medium text-foreground">1. The message</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Template <span className="font-medium text-foreground">{template.name}</span> · {template.category} ·{' '}
+            {languageName(template.language)}. Words in [brackets] are filled in per person.
+          </p>
+          <TemplatePreview
+            className="mt-3"
+            headerType={template.header_type}
+            headerText={template.header_content ? fillPlaceholders(template.header_content, values) : null}
+            headerMediaUrl={headerMediaUrl || template.header_media_url}
+            body={fillPlaceholders(template.body_text, values)}
+            footer={template.footer_text}
+            buttons={template.buttons}
+          />
+        </li>
 
-      {/* Processing overlay */}
+        <li className="space-y-3 rounded-xl border border-border bg-card p-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">2. Who receives it</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {audienceDescription}
+              {excluded.length > 0 && <> · excluding {excluded.join(', ')}</>}
+            </p>
+          </div>
+          <AudienceSummary audience={audience} onCount={(value, key) => setCount({ value, key })} />
+        </li>
+
+        <li className="rounded-xl border border-border bg-card p-4">
+          <p className="text-sm font-medium text-foreground">3. Estimated cost</p>
+          <p className="mt-1 text-sm text-foreground">
+            {rate === null || recipients === null ? (
+              <span className="inline-flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Estimating…
+              </span>
+            ) : rate === 'unavailable' ? (
+              <span className="text-muted-foreground">
+                Meta bills each delivered {template.category.toLowerCase()} message to your WhatsApp account. There isn’t
+                enough recent spend data here to estimate this one.
+              </span>
+            ) : (
+              <>
+                About <span className="font-semibold">{fmt(rate.perMessage * recipients, rate.currency)}</span>{' '}
+                <span className="text-muted-foreground">
+                  ({recipients.toLocaleString('en-IN')} × ~{fmt(rate.perMessage, rate.currency)}, based on your last 30 days of{' '}
+                  {template.category.toLowerCase()} messages)
+                </span>
+              </>
+            )}
+          </p>
+        </li>
+      </ol>
+
       {isProcessing && (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <p className="text-sm font-medium text-foreground">{t('scheduleSend.sending')}</p>
-            </div>
-            <span className="text-xs font-medium text-primary">{progress}%</span>
+        <div role="status" className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+            <p className="flex items-center gap-2 font-medium text-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              {totalToSend
+                ? `Sending ${sentSoFar.toLocaleString('en-IN')} of ${totalToSend.toLocaleString('en-IN')}…`
+                : 'Preparing recipients…'}
+            </p>
           </div>
           <div className="h-1.5 w-full rounded-full bg-muted">
             <div
-              className="h-1.5 rounded-full bg-primary transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-1.5 rounded-full bg-foreground transition-all duration-300"
+              style={{ width: `${totalToSend ? Math.round((sentSoFar / totalToSend) * 100) : 5}%` }}
             />
           </div>
+          <p className="mt-2 text-xs font-medium text-foreground">Keep this tab open until it finishes — closing it stops the send.</p>
         </div>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
-        <Button
-          variant="outline"
-          onClick={onBack}
-          disabled={isProcessing}
-          className="border-border text-muted-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
+        <Button variant="outline" onClick={onBack} disabled={isProcessing}>
+          <ArrowLeft className="h-4 w-4" aria-hidden />
           {t('back')}
         </Button>
-
-        <div className="flex items-center gap-2">
-          {onSaveDraft && (
-            <Button
-              variant="outline"
-              onClick={onSaveDraft}
-              disabled={!name.trim() || isProcessing}
-              className="border-border text-muted-foreground hover:bg-muted disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              {t('scheduleSend.saveDraft')}
-            </Button>
-          )}
-
-          <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-          <DialogTrigger
-            render={
-              <Button
-                disabled={!name.trim() || isProcessing}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              />
-            }
-          >
-            <Send className="h-4 w-4" />
-            {t('scheduleSend.sendNow')}
-          </DialogTrigger>
-          <DialogContent className="border-border bg-popover sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-popover-foreground">Confirm Broadcast</DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                You are about to send this broadcast to{' '}
-                <span className="font-medium text-popover-foreground">{estimatedReach.toLocaleString()}</span>{' '}
-                contacts using the{' '}
-                <span className="font-medium text-popover-foreground">{template.name}</span> template.
-                This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowConfirm(false)}
-                className="border-border text-muted-foreground"
-              >
-                {t('cancel')}
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowConfirm(false);
-                  onSend();
-                }}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Send className="h-4 w-4" />
-                {t('scheduleSend.sendNow')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        </div>
+        <Button onClick={() => setConfirmOpen(true)} disabled={!canSend}>
+          <Send className="h-4 w-4" aria-hidden />
+          {recipients === null ? t('scheduleSend.sendNow') : `Send to ${recipients.toLocaleString('en-IN')} people`}
+        </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Send to ${recipients?.toLocaleString('en-IN') ?? '…'} people now?`}
+        description={`“${template.name}” goes out on WhatsApp immediately. It can’t be unsent.`}
+        consequences={[
+          'Keep this tab open until sending finishes',
+          ...(rate && rate !== 'unavailable' && recipients
+            ? [`Cost roughly ${fmt(rate.perMessage * recipients, rate.currency)}, billed by Meta`]
+            : []),
+        ]}
+        confirmLabel={`Send to ${recipients?.toLocaleString('en-IN') ?? ''} people`}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          onSend();
+        }}
+      />
     </div>
   );
 }

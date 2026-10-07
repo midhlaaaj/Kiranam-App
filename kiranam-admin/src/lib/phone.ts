@@ -1,4 +1,4 @@
-import { isValidPhoneNumber, getExampleNumber } from 'libphonenumber-js/min';
+import { isValidPhoneNumber, getExampleNumber, parsePhoneNumberFromString } from 'libphonenumber-js/min';
 import examples from 'libphonenumber-js/examples.mobile.json';
 import type { CountryCode } from 'libphonenumber-js/min';
 
@@ -15,4 +15,12 @@ export function validatePhoneNumber(nationalDigits: string, iso2: CountryCode): 
       : 'Enter a valid phone number.';
   }
   return null;
+}
+
+/** Display form of a stored phone number: "919846571425" / "+919846571425"
+ * → "+91 98465 71425". Returns the input unchanged if it can't be parsed. */
+export function formatPhone(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const parsed = parsePhoneNumberFromString(raw.startsWith('+') ? raw : `+${raw}`);
+  return parsed?.isValid() ? parsed.formatInternational() : raw;
 }

@@ -1,14 +1,23 @@
 import { Suspense } from 'react';
-import { ShieldCheck, ShieldOff } from 'lucide-react';
+import { MailPlus, ShieldCheck } from 'lucide-react';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { revokeAdmin } from './actions';
-import { PageHeading } from '@/components/PageHeading';
+import { revokeInvite } from '../actions';
+import { InviteAdminForm } from '../InviteAdminForm';
+import { ResendInviteButton } from './ResendInviteButton';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { SkeletonTable } from '@/components/Skeleton';
-import { SettingsTabs } from '../SettingsTabs';
-import { staggerDelay, tableCellClass, tableHeadRowClass, tableRowClass, tableWrapClass } from '@/lib/ui';
+import { formatDate, formatDateTimeFull, formatRelative } from '@/lib/format';
+import {
+  badgeClass,
+  staggerDelay,
+  tableCellClass,
+  tableHeadRowClass,
+  tableRowClass,
+  tableWrapClass,
+} from '@/lib/ui';
 
 interface AdminRow {
   id: string;
@@ -18,24 +27,113 @@ interface AdminRow {
   last_sign_in_at: string | null;
 }
 
-export default function AdminUsersPage() {
-  return (
-    <div>
-      <PageHeading title="Settings" />
-      <div className="mt-4">
-        <SettingsTabs active="admin-users" />
-      </div>
+const rowActionDangerClass =
+  'inline-flex min-h-9 cursor-pointer items-center rounded-lg px-2.5 text-sm font-semibold text-kiranam-danger transition hover:bg-kiranam-danger-soft';
 
-      <div className="mt-6">
-        <Suspense fallback={<SkeletonTable rows={5} cols={5} />}>
-          <AdminUsersTable />
-        </Suspense>
-      </div>
+function SectionHeading({ title, description }: { title: string; description?: string }) {
+  return (
+    <div className="mb-3">
+      <h2 className="text-base font-semibold text-kiranam-ink">{title}</h2>
+      {description && <p className="mt-0.5 text-sm text-kiranam-muted">{description}</p>}
     </div>
   );
 }
 
-async function AdminUsersTable() {
+// Heading + tabs come from settings/layout.tsx.
+export default function TeamPage() {
+  return (
+    <div className="grid gap-10">
+      <section>
+        <SectionHeading title="Invite an admin" />
+        <InviteAdminForm />
+      </section>
+
+      <section>
+        <SectionHeading title="Pending invites" description="Invites that haven’t been used to create an account yet." />
+        <Suspense fallback={<SkeletonTable rows={2} cols={4} />}>
+          <PendingInvites />
+        </Suspense>
+      </section>
+
+      <section>
+        <SectionHeading title="Admins" description="Everyone who can sign in to this panel." />
+        <Suspense fallback={<SkeletonTable rows={4} cols={4} />}>
+          <AdminsTable />
+        </Suspense>
+      </section>
+    </div>
+  );
+}
+
+async function PendingInvites() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from('admin_invites')
+    .select('id, email, created_at, expires_at')
+    .is('used_at', null)
+    .order('created_at', { ascending: false });
+  const invites = data || [];
+  const now = new Date();
+
+  return (
+    <div className={tableWrapClass}>
+      {invites.length === 0 ? (
+        <EmptyState icon={MailPlus} title="No pending invites" description="Invites you send will wait here until they’re used." />
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className={tableHeadRowClass}>
+              <th className={tableCellClass}>Email</th>
+              <th className={tableCellClass}>Status</th>
+              <th className={tableCellClass}>Sent</th>
+              <th className={tableCellClass}>
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {invites.map((invite, i) => {
+              const expired = new Date(invite.expires_at) <= now;
+              return (
+                <tr key={invite.id} className={tableRowClass} style={staggerDelay(i)}>
+                  <td className={`${tableCellClass} font-medium text-kiranam-ink`}>{invite.email}</td>
+                  <td className={tableCellClass}>
+                    <span className={badgeClass(expired ? 'danger' : 'warning')}>
+                      {expired ? 'Expired' : `Expires ${formatDate(invite.expires_at)}`}
+                    </span>
+                  </td>
+                  <td className={`${tableCellClass} text-kiranam-muted`}>
+                    <time dateTime={invite.created_at} title={formatDateTimeFull(invite.created_at)}>
+                      {formatDate(invite.created_at)}
+                    </time>
+                  </td>
+                  <td className={`${tableCellClass} text-right`}>
+                    <div className="flex justify-end gap-1">
+                      <ResendInviteButton inviteId={invite.id} email={invite.email} />
+                      <ConfirmSubmitButton
+                        action={revokeInvite.bind(null, invite.id)}
+                        label={expired ? 'Delete' : 'Revoke'}
+                        title={expired ? 'Delete this invite?' : 'Revoke this invite?'}
+                        description={`${invite.email} won’t be able to create an admin account with this invite.`}
+                        confirmLabel={expired ? 'Delete invite' : 'Revoke invite'}
+                        successMessage={expired ? 'Invite deleted.' : 'Invite revoked.'}
+                        pendingMessage="Removing invite…"
+                        destructive
+                        className={rowActionDangerClass}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+async function AdminsTable() {
   const currentAdmin = await verifyAdmin();
   const supabase = await createClient();
   const { data } = await supabase.rpc('admin_directory');
@@ -43,50 +141,68 @@ async function AdminUsersTable() {
 
   return (
     <div className={tableWrapClass}>
-        {admins.length === 0 ? (
-          <EmptyState icon={ShieldCheck} title="No admins found" />
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className={tableHeadRowClass}>
-                <th className={tableCellClass}>Name</th>
-                <th className={tableCellClass}>Email</th>
-                <th className={tableCellClass}>Granted</th>
-                <th className={tableCellClass}>Last Sign In</th>
-                <th className={tableCellClass}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {admins.map((a, i) => (
+      {admins.length === 0 ? (
+        <EmptyState icon={ShieldCheck} title="No admins found" />
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className={tableHeadRowClass}>
+              <th className={tableCellClass}>Name</th>
+              <th className={tableCellClass}>Email</th>
+              <th className={tableCellClass}>Admin since</th>
+              <th className={tableCellClass}>Last sign-in</th>
+              <th className={tableCellClass}>
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {admins.map((a, i) => {
+              const isSelf = a.id === currentAdmin.id;
+              return (
                 <tr key={a.id} className={tableRowClass} style={staggerDelay(i)}>
-                  <td className={`${tableCellClass} font-semibold text-kiranam-ink`}>{a.full_name || 'Unnamed'}</td>
-                  <td className={`${tableCellClass} text-kiranam-muted`}>{a.email}</td>
-                  <td className={`${tableCellClass} text-kiranam-muted`}>
-                    {new Date(a.created_at).toLocaleDateString('en-IN')}
+                  <td className={`${tableCellClass} font-semibold text-kiranam-ink`}>
+                    <span className="inline-flex items-center gap-2">
+                      {a.full_name || 'Unnamed'}
+                      {isSelf && <span className={badgeClass('neutral')}>You</span>}
+                    </span>
                   </td>
+                  <td className={`${tableCellClass} text-kiranam-muted`}>{a.email}</td>
+                  <td className={`${tableCellClass} text-kiranam-muted`}>{formatDate(a.created_at)}</td>
                   <td className={`${tableCellClass} text-kiranam-muted`}>
-                    {a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString('en-IN') : 'Never'}
+                    {a.last_sign_in_at ? (
+                      <time dateTime={a.last_sign_in_at} title={formatDateTimeFull(a.last_sign_in_at)}>
+                        {formatRelative(a.last_sign_in_at)}
+                      </time>
+                    ) : (
+                      'Never'
+                    )}
                   </td>
                   <td className={`${tableCellClass} text-right`}>
-                    {a.id !== currentAdmin.id && (
+                    {isSelf ? (
+                      <span className="text-xs text-kiranam-muted" title="Ask another admin to remove your access.">
+                        Can’t remove yourself
+                      </span>
+                    ) : (
                       <ConfirmSubmitButton
                         action={revokeAdmin.bind(null, a.id)}
-                        label={<ShieldOff size={16} strokeWidth={2} />}
-                        title="Revoke admin access?"
-                        description={`${a.full_name || a.email || 'This admin'} will immediately lose admin access and be demoted to a contributor.`}
-                        confirmLabel="Revoke access"
-                        successMessage="Admin access revoked."
-                        pendingMessage="Revoking access…"
-                        className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"
-                        aria-label="Revoke admin access"
+                        label="Remove access"
+                        title={`Remove ${a.full_name || a.email}’s admin access?`}
+                        description="They’ll be signed out of the admin panel immediately and become a regular contributor. You can invite them again later."
+                        confirmLabel="Remove access"
+                        successMessage="Admin access removed."
+                        pendingMessage="Removing access…"
+                        destructive
+                        className={rowActionDangerClass}
                       />
                     )}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              );
+            })}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

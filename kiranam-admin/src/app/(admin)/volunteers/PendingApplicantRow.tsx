@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { friendlyErrorMessage } from '@/lib/errors';
+import { formatDate } from '@/lib/format';
+import { formatPhone } from '@/lib/phone';
 import { approveApplication, rejectApplication } from './actions';
 import {
   Dialog,
@@ -22,7 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { buttonDanger, buttonPrimary, inputClass, staggerDelay, tableCellClass, tableRowClass } from '@/lib/ui';
+import { buttonPrimary, buttonSecondary, inputClass, staggerDelay, tableCellClass, tableRowClass } from '@/lib/ui';
+import { cn } from '@/lib/utils';
 
 export function PendingApplicantRow({
   applicant,
@@ -37,24 +40,22 @@ export function PendingApplicantRow({
   index: number;
 }) {
   const [open, setOpen] = useState(false);
-  // Which action is awaiting a second, explicit confirmation — approving
-  // promotes the profile's role and rejecting is only reversible by having
-  // the applicant reapply, so neither should fire straight off the review
-  // dialog's buttons the way it used to.
-  const [confirmStep, setConfirmStep] = useState<'approve' | 'reject' | null>(null);
+  // Rejecting is only undone by the applicant reapplying, so it gets its own
+  // confirm step (which is also where the optional reason is written).
+  // Approving is reversible (Demote) and fires straight from the review.
+  const [confirmReject, setConfirmReject] = useState(false);
   const [reason, setReason] = useState('');
   const [isPending, startTransition] = useTransition();
   const profileId = applicant.profiles?.id;
-  const applicantName = applicant.profiles?.full_name || 'This applicant';
+  const name = applicant.profiles?.full_name || 'Unnamed applicant';
 
   function handleApprove() {
     if (!profileId) return;
-    setConfirmStep(null);
     setOpen(false);
     startTransition(() => {
       toast.promise(approveApplication(applicant.id, profileId), {
         loading: 'Approving…',
-        success: 'Application approved.',
+        success: `${name} is now a volunteer.`,
         error: (err) => (err instanceof Error ? friendlyErrorMessage(err.message) : 'Something went wrong.'),
       });
     });
@@ -62,7 +63,7 @@ export function PendingApplicantRow({
 
   function handleReject() {
     if (!profileId) return;
-    setConfirmStep(null);
+    setConfirmReject(false);
     setOpen(false);
     const reasonToSend = reason;
     setReason('');
@@ -77,84 +78,82 @@ export function PendingApplicantRow({
 
   return (
     <>
-      <tr
-        className={`${tableRowClass} cursor-pointer`}
-        style={staggerDelay(index)}
-        onClick={() => setOpen(true)}
-      >
+      <tr className={tableRowClass} style={staggerDelay(index)}>
         <td className={tableCellClass}>
-          <span className="font-semibold text-kiranam-ink">{applicant.profiles?.full_name || 'Unnamed'}</span>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="cursor-pointer text-left font-semibold text-kiranam-ink underline-offset-2 hover:underline"
+          >
+            {name}
+          </button>
+          <p className="text-xs tabular-nums text-kiranam-muted">{formatPhone(applicant.profiles?.phone)}</p>
         </td>
-        <td className={`${tableCellClass} text-kiranam-muted`}>{applicant.profiles?.phone}</td>
-        <td className={`${tableCellClass} text-kiranam-muted`}>
-          {new Date(applicant.created_at).toLocaleDateString('en-IN')}
+        <td className={cn(tableCellClass, 'hidden max-w-sm text-kiranam-muted md:table-cell')}>
+          <p className="line-clamp-2">{applicant.motivation || '—'}</p>
+        </td>
+        <td className={cn(tableCellClass, 'whitespace-nowrap text-kiranam-muted')}>{formatDate(applicant.created_at)}</td>
+        <td className={cn(tableCellClass, 'text-right')}>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            disabled={isPending}
+            className={cn(buttonSecondary, 'h-9 px-3.5 py-0')}
+          >
+            Review
+          </button>
         </td>
       </tr>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{applicant.profiles?.full_name || 'Unnamed'}</DialogTitle>
-            <DialogDescription>{applicant.profiles?.phone}</DialogDescription>
+            <DialogTitle>{name}</DialogTitle>
+            <DialogDescription>
+              {formatPhone(applicant.profiles?.phone) || 'No phone on file'} · Applied {formatDate(applicant.created_at)}
+            </DialogDescription>
           </DialogHeader>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-kiranam-muted">Motivation</p>
-            <p className="mt-1.5 text-sm text-kiranam-ink/80">{applicant.motivation || '—'}</p>
-          </div>
-
-          <div>
-            <label htmlFor={`reject-reason-${applicant.id}`} className="text-xs font-semibold uppercase tracking-wide text-kiranam-muted">
-              Rejection reason (optional)
-            </label>
-            <textarea
-              id={`reject-reason-${applicant.id}`}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={2}
-              placeholder="Shown to the applicant if you reject this application…"
-              className={`${inputClass} mt-1.5 resize-none`}
-            />
+            <p className="text-sm font-medium text-kiranam-ink">Why they want to volunteer</p>
+            <p className="mt-1.5 whitespace-pre-line text-sm text-kiranam-ink">{applicant.motivation || '—'}</p>
           </div>
 
           <DialogFooter>
-            <button type="button" onClick={() => setConfirmStep('reject')} disabled={isPending} className={buttonDanger}>
-              Reject
+            <button
+              type="button"
+              onClick={() => setConfirmReject(true)}
+              disabled={isPending}
+              className={cn(buttonSecondary, 'text-kiranam-danger')}
+            >
+              Reject…
             </button>
-            <button type="button" onClick={() => setConfirmStep('approve')} disabled={isPending} className={buttonPrimary}>
-              Approve
+            <button type="button" onClick={handleApprove} disabled={isPending} className={buttonPrimary}>
+              Approve as volunteer
             </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={confirmStep === 'approve'} onOpenChange={(v) => !v && setConfirmStep(null)}>
+      <AlertDialog open={confirmReject} onOpenChange={setConfirmReject}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Approve this application?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {applicantName} will be promoted to a volunteer and can start being assigned contributors.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Reject {name}’s application?</AlertDialogTitle>
+            <AlertDialogDescription>They won’t become a volunteer, but they can apply again later.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleApprove}>Approve</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmStep === 'reject'} onOpenChange={(v) => !v && setConfirmStep(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reject this application?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {applicantName} will not be made a volunteer. They can reapply later.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <label className="grid gap-1.5 text-sm font-medium text-kiranam-ink">
+            Reason <span className="font-normal text-kiranam-muted">(optional — shown to the applicant)</span>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              className={cn(inputClass, 'resize-none font-normal')}
+            />
+          </label>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={handleReject}>
-              Reject
+              Reject application
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

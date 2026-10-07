@@ -89,8 +89,8 @@ export function ConversationsChart({ series, loading, range, onRangeChange }: Co
       </div>
 
       <footer className="flex items-center gap-4 border-t border-border px-5 py-3 text-xs text-muted-foreground">
-        <LegendDot color="#3b82f6" label={t('incoming')} />
-        <LegendDot color="#7c3aed" label={t('outgoing')} />
+        <LegendDot color="var(--foreground)" label={t('incoming')} />
+        <LegendDot color="var(--primary)" label={t('outgoing')} />
       </footer>
     </section>
   )
@@ -243,20 +243,20 @@ function LineSvg({
           ) : null,
         )}
 
-        {/* Outgoing polyline (violet) */}
+        {/* Outgoing polyline (brand) */}
         <path
           d={outgoingPath}
           fill="none"
-          stroke="#7c3aed"
+          className="stroke-primary"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        {/* Incoming polyline (blue) */}
+        {/* Incoming polyline (ink) */}
         <path
           d={incomingPath}
           fill="none"
-          stroke="#3b82f6"
+          className="stroke-foreground"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -273,8 +273,8 @@ function LineSvg({
               stroke="var(--muted-foreground)"
               strokeDasharray="3 3"
             />
-            <circle cx={hoverX} cy={yFor(data[hover.idx].incoming)} r={3.5} fill="#3b82f6" />
-            <circle cx={hoverX} cy={yFor(data[hover.idx].outgoing)} r={3.5} fill="#7c3aed" />
+            <circle cx={hoverX} cy={yFor(data[hover.idx].incoming)} r={3.5} className="fill-foreground" />
+            <circle cx={hoverX} cy={yFor(data[hover.idx].outgoing)} r={3.5} className="fill-primary" />
           </g>
         )}
       </svg>
@@ -290,12 +290,12 @@ function LineSvg({
         >
           <div className="font-medium text-popover-foreground">{longDayLabel(hovered.day)}</div>
           <div className="mt-1 flex flex-col gap-0.5">
-            <span className="flex items-center gap-1.5 text-[#3b82f6]">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#3b82f6]" />
+            <span className="flex items-center gap-1.5 text-foreground">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-foreground" />
               {t('tooltipIncoming', { count: hovered.incoming })}
             </span>
-            <span className="flex items-center gap-1.5 text-[#7c3aed]">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#7c3aed]" />
+            <span className="flex items-center gap-1.5 text-primary">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
               {t('tooltipOutgoing', { count: hovered.outgoing })}
             </span>
           </div>

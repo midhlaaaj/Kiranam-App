@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -15,7 +17,6 @@ import {
   Clock,
   Users,
   PhoneCall,
-  Loader2,
 } from "lucide-react"
 
 import { createClient } from "@/lib/whatsapp/supabase/client"
@@ -32,17 +33,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/whatsapp/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/whatsapp/ui/dialog"
 import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/whatsapp/automations/templates"
 import { triggerMeta, formatRelative } from "@/lib/whatsapp/automations/trigger-meta"
 import { cn } from "@/lib/whatsapp/utils"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
   "welcome_message",
@@ -84,6 +78,13 @@ export default function AutomationsPage() {
   useEffect(() => {
     load()
   }, [])
+
+  // Switching ON starts auto-messaging people immediately — confirm first.
+  const [pendingActivate, setPendingActivate] = useState<Automation | null>(null)
+  function requestToggle(a: Automation, next: boolean) {
+    if (next) setPendingActivate(a)
+    else void toggleActive(a, false)
+  }
 
   async function toggleActive(a: Automation, next: boolean) {
     // Optimistic flip so the switch feels instant.
@@ -140,8 +141,8 @@ export default function AutomationsPage() {
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-red-400">{error}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
+        <p className="text-sm text-destructive">{error}</p>
+        <Button variant="outline" onClick={() => load()}>
           {t("retry")}
         </Button>
       </div>
@@ -150,8 +151,11 @@ export default function AutomationsPage() {
 
   if (automations === null) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="space-y-3" aria-busy="true" aria-label="Loading automations">
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-muted" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-20 animate-pulse rounded-xl bg-muted/70" />
+        ))}
       </div>
     )
   }
@@ -165,6 +169,13 @@ export default function AutomationsPage() {
           <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {t("subtitle")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Automations are background rules (tag, assign, auto-reply). For a guided question-and-answer chat, use{" "}
+            <Link href="/whatsapp/flows" className="font-medium text-foreground underline underline-offset-2">
+              Flows
+            </Link>
+            .
           </p>
         </div>
         <GatedButton
@@ -189,9 +200,9 @@ export default function AutomationsPage() {
                 <button
                   key={slug}
                   onClick={() => startFromTemplate(slug)}
-                  className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/50 hover:bg-card/80"
+                  className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-foreground/40"
                 >
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15">
+                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-foreground">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="text-sm font-semibold text-foreground">{t.name}</div>
@@ -205,8 +216,8 @@ export default function AutomationsPage() {
 
       {automations.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/40">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Zap className="h-6 w-6 text-primary" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+            <Zap className="h-6 w-6 text-muted-foreground" aria-hidden />
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">{t("emptyTitle")}</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -219,7 +230,7 @@ export default function AutomationsPage() {
             <AutomationCard
               key={a.id}
               automation={a}
-              onToggle={(next) => toggleActive(a, next)}
+              onToggle={(next) => requestToggle(a, next)}
               onEdit={() => router.push(`/whatsapp/automations/${a.id}/edit`)}
               onDuplicate={() => duplicate(a)}
               onLogs={() => router.push(`/whatsapp/automations/${a.id}/logs`)}
@@ -230,33 +241,27 @@ export default function AutomationsPage() {
         </ul>
       )}
 
-      <Dialog open={!!pendingDelete} onOpenChange={(v) => !v && setPendingDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("deleteTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("deleteDesc", { name: pendingDelete?.name ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setPendingDelete(null)}
-              disabled={deleting}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleting}
-            >
-              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              {t("delete")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(v) => !v && setPendingDelete(null)}
+        title={t("deleteTitle")}
+        description={t("deleteDesc", { name: pendingDelete?.name ?? "" })}
+        confirmLabel={deleting ? "…" : t("delete")}
+        destructive
+        onConfirm={confirmDelete}
+      />
+      <ConfirmDialog
+        open={!!pendingActivate}
+        onOpenChange={(v) => !v && setPendingActivate(null)}
+        title={`Turn on “${pendingActivate?.name ?? ""}”?`}
+        description="It starts acting on matching WhatsApp messages straight away — including sending replies to people."
+        confirmLabel="Turn on"
+        onConfirm={() => {
+          const a = pendingActivate
+          setPendingActivate(null)
+          if (a) void toggleActive(a, true)
+        }}
+      />
     </div>
   )
 }
@@ -283,10 +288,10 @@ function AutomationCard({
     <li className="rounded-xl border border-border bg-card transition-colors hover:border-border">
       <div className="flex items-center gap-4 p-4">
         <div
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-muted"
           aria-hidden
         >
-          <Zap className="h-5 w-5 text-primary" />
+          <Zap className="h-5 w-5 text-muted-foreground" />
         </div>
 
         <button
@@ -298,12 +303,16 @@ function AutomationCard({
             <span className="truncate text-sm font-semibold text-foreground">
               {automation.name}
             </span>
-            {automation.is_active && (
-              <span className="relative flex h-2 w-2" aria-label="active">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-              </span>
-            )}
+            <span
+              className={cn(
+                "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                automation.is_active
+                  ? "border-success/20 bg-success-soft text-success"
+                  : "border-border bg-muted text-muted-foreground",
+              )}
+            >
+              {automation.is_active ? "Active" : "Paused"}
+            </span>
           </div>
           {automation.description && (
             <p className="mt-0.5 truncate text-xs text-muted-foreground">{automation.description}</p>
@@ -331,12 +340,12 @@ function AutomationCard({
           <Switch
             checked={automation.is_active}
             onCheckedChange={(v) => onToggle(!!v)}
-            aria-label={automation.is_active ? t("deactivate") : t("activate")}
+            aria-label={`Enable ${automation.name}`}
           />
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              aria-label="Open menu"
+              aria-label={`More actions for ${automation.name}`}
               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[popup-open]:bg-muted"
             >
               <MoreVertical className="h-4 w-4" />

@@ -129,25 +129,27 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
             key={i}
             className={cn(
               'flex gap-2',
-              t.role === 'user' ? 'justify-end' : 'justify-start',
+              // Same sides as the inbox: the customer (you, testing) on the
+              // left in grey, the bot's replies on the right.
+              t.role === 'user' ? 'justify-start' : 'justify-end',
             )}
           >
-            {t.role === 'assistant' && (
-              <Bot className="mt-1 h-5 w-5 shrink-0 text-primary" />
+            {t.role === 'user' && (
+              <UserCircle2 className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
             )}
             <div
               className={cn(
                 'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm',
                 t.role === 'user'
-                  ? 'rounded-br-sm bg-primary text-primary-foreground'
-                  : 'rounded-bl-sm bg-muted text-foreground',
+                  ? 'rounded-bl-sm bg-muted text-foreground'
+                  : 'rounded-br-sm bg-primary-soft text-foreground',
               )}
             >
               {t.content && <p className="whitespace-pre-wrap">{t.content}</p>}
               {t.role === 'assistant' && t.handoff && (
                 <p
                   className={cn(
-                    'flex items-center gap-1 text-xs text-amber-500',
+                    'flex items-center gap-1 text-xs font-medium text-warning',
                     t.content && 'mt-1.5 border-t border-border/50 pt-1.5',
                   )}
                 >
@@ -156,8 +158,8 @@ export function AiPlayground({ onGoToSetup }: { onGoToSetup?: () => void }) {
                 </p>
               )}
             </div>
-            {t.role === 'user' && (
-              <UserCircle2 className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
+            {t.role === 'assistant' && (
+              <Bot className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
             )}
           </div>
         ))}

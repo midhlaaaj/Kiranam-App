@@ -249,7 +249,7 @@ async function DashboardBody({
           <div className="flex flex-col">
             <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Contributions Over Time</h2>
             <div className="flex flex-wrap items-baseline gap-2 mt-0.5">
-              <span className="text-2xl font-extrabold tracking-tight text-kiranam-primary">
+              <span className="text-2xl font-extrabold tracking-tight tabular-nums text-kiranam-primary">
                 {formatMoney(data.totalInPeriod)}
               </span>
               {data.activeRangeLabel && (
@@ -286,6 +286,7 @@ async function DashboardBody({
               </span>
             )}
             <PillTabs
+              label="Group by"
               items={(['daily', 'weekly', 'monthly'] as const).map((g) => ({
                 key: g,
                 label: g.charAt(0).toUpperCase() + g.slice(1),

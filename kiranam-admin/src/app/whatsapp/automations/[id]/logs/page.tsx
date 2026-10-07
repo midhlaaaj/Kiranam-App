@@ -19,6 +19,7 @@ import type {
   AutomationLogStepResult,
 } from "@/types/whatsapp"
 import { Button } from "@/components/whatsapp/ui/button"
+import { stepLabel, triggerEventLabel } from "@/lib/whatsapp/automations/labels"
 import { cn } from "@/lib/whatsapp/utils"
 import { formatRelative } from "@/lib/whatsapp/automations/trigger-meta"
 
@@ -135,7 +136,7 @@ export default function AutomationLogsPage({
                       {log.contact?.name ?? log.contact?.phone ?? t("unknownContact")}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {log.trigger_event} · {log.steps_executed?.length ?? 0}{" "}
+                      {triggerEventLabel(log.trigger_event)} · {log.steps_executed?.length ?? 0}{" "}
                       {log.steps_executed?.length === 1 ? t("step", { count: 1 }).replace("1 ", "") : t("stepPlural", { count: log.steps_executed?.length ?? 0 }).replace(/^[0-9]+ /, "")}
                     </div>
                   </div>
@@ -146,7 +147,7 @@ export default function AutomationLogsPage({
                 {isOpen && (
                   <div className="border-t border-border px-4 py-3">
                     {log.error_message && (
-                      <p className="mb-3 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                      <p className="mb-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-foreground">
                         {log.error_message}
                       </p>
                     )}
@@ -172,10 +173,10 @@ export default function AutomationLogsPage({
 function StatusBadge({ status, t }: { status: AutomationLog["status"], t: ReturnType<typeof useTranslations> }) {
   const classes =
     status === "success"
-      ? "border-primary/30 bg-primary/10 text-primary"
+      ? "border-success/20 bg-success-soft text-success"
       : status === "partial"
-      ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-      : "border-red-500/30 bg-red-500/10 text-red-300"
+      ? "border-warning/25 bg-warning-soft text-warning"
+      : "border-destructive/20 bg-destructive/10 text-destructive"
   return (
     <span
       className={cn(
@@ -195,13 +196,13 @@ function StepRow({ result }: { result: AutomationLogStepResult }) {
       <span
         className={cn(
           "mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full",
-          ok ? "bg-primary/20 text-primary" : "bg-red-500/20 text-red-400",
+          ok ? "bg-success-soft text-success" : "bg-destructive/10 text-destructive",
         )}
         aria-hidden
       >
         {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
       </span>
-      <span className="text-muted-foreground">{result.step_type}</span>
+      <span className="text-foreground">{stepLabel(result.step_type)}</span>
       {result.detail && (
         <span className="truncate text-muted-foreground">— {result.detail}</span>
       )}

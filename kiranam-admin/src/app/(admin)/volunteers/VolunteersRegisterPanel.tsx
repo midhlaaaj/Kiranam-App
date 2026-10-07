@@ -28,7 +28,6 @@ export function VolunteersRegisterPanel({
       <AddNewPanel
         title="Volunteers"
         label="Register volunteer"
-        description="For someone recruited offline who hasn't applied in the app yet."
         modal
         filters={filters}
         search={search}
@@ -36,6 +35,7 @@ export function VolunteersRegisterPanel({
         onOpenChange={setOpen}
       >
         <RegisterVolunteerForm
+          bare
           onDone={() => setOpen(false)}
           onEditExisting={(match) => {
             setOpen(false);

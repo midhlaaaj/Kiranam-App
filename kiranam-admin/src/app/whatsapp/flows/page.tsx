@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -33,6 +35,7 @@ import {
 import { Input } from "@/components/whatsapp/ui/input";
 import { Badge } from "@/components/whatsapp/ui/badge";
 import { cn } from "@/lib/whatsapp/utils";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 /**
  * Flows list page.
@@ -180,9 +183,13 @@ export default function FlowsPage() {
     }
   }
 
-  async function handleDelete(flow: FlowRow) {
-    const yes = window.confirm(t("deleteConfirm", { name: flow.name }));
-    if (!yes) return;
+  const [pendingDelete, setPendingDelete] = useState<FlowRow | null>(null);
+  function handleDelete(flow: FlowRow) {
+    setPendingDelete(flow);
+  }
+
+  async function deleteFlow(flow: FlowRow) {
+    setPendingDelete(null);
     try {
       const res = await fetch(`/api/whatsapp/flows/${flow.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
@@ -203,17 +210,25 @@ export default function FlowsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-foreground">{t("title")}</h1>
-            <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+            <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
+            <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning-soft px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-warning">
               {t("beta")}
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {t("description")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Flows are guided back-and-forth conversations (questions and answers).{" "}
+            For one-off background rules — tag, assign, auto-reply — use{" "}
+            <Link href="/whatsapp/automations" className="font-medium text-foreground underline underline-offset-2">
+              Automations
+            </Link>
+            . Don’t point both at the same keyword.
           </p>
         </div>
         <GatedButton
@@ -322,6 +337,15 @@ export default function FlowsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title={pendingDelete ? t("deleteConfirm", { name: pendingDelete.name }) : ""}
+        consequences={["End any conversations currently running through it"]}
+        confirmLabel="Delete flow"
+        destructive
+        onConfirm={() => pendingDelete && void deleteFlow(pendingDelete)}
+      />
     </div>
   );
 }

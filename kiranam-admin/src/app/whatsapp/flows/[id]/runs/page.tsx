@@ -15,7 +15,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistance } from "date-fns";
+import { flowEventLabel, nodeLabel } from "@/lib/whatsapp/automations/labels";
 
 import { useTranslations } from "next-intl";
 
@@ -231,10 +232,9 @@ function RunCard({
   const StatusIcon = meta.icon;
   const contactLabel =
     run.contact?.name?.trim() || run.contact?.phone || t("unknownContact");
+  // How long the run took (start → end), not how long ago it ended.
   const duration = run.ended_at
-    ? formatDistanceToNow(new Date(run.ended_at), {
-        addSuffix: false,
-      })
+    ? formatDistance(new Date(run.started_at), new Date(run.ended_at))
     : null;
   return (
     <div className="rounded-lg border border-border bg-card">
@@ -270,9 +270,9 @@ function RunCard({
               )}
             </Badge>
             {run.status === "active" && run.current_node_key && (
-              <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                {t("atNode", { node: run.current_node_key })}
-              </code>
+              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                {t("atNode", { node: nodeLabel(run.current_node_key) })}
+              </span>
             )}
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
@@ -291,9 +291,14 @@ function RunCard({
               <summary className="cursor-pointer text-xs text-muted-foreground">
                 {t("capturedVars", { count: Object.keys(run.vars).length })}
               </summary>
-              <pre className="mt-2 overflow-x-auto rounded-md bg-background p-2 text-[11px] text-muted-foreground">
-                {JSON.stringify(run.vars, null, 2)}
-              </pre>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-md bg-muted/50 p-2 text-xs">
+                {Object.entries(run.vars).map(([k, v]) => (
+                  <div key={k} className="contents">
+                    <dt className="text-muted-foreground">{nodeLabel(k)}</dt>
+                    <dd className="break-words text-foreground">{typeof v === "string" ? v : JSON.stringify(v)}</dd>
+                  </div>
+                ))}
+              </dl>
             </details>
           )}
           <div className="flex flex-col gap-1">
@@ -312,31 +317,31 @@ function RunCard({
 }
 
 const EVENT_COLOR: Record<string, string> = {
-  started: "text-emerald-300",
+  started: "text-foreground",
   node_entered: "text-muted-foreground",
-  message_sent: "text-sky-300",
-  reply_received: "text-primary",
-  fallback_fired: "text-amber-300",
-  handoff: "text-amber-300",
+  message_sent: "text-foreground",
+  reply_received: "text-foreground",
+  fallback_fired: "text-warning",
+  handoff: "text-warning",
   timeout: "text-muted-foreground",
-  error: "text-red-300",
-  completed: "text-emerald-300",
+  error: "text-destructive",
+  completed: "text-success",
 };
 
 function EventLine({ ev }: { ev: EventRow }) {
   const cls = EVENT_COLOR[ev.event_type] ?? "text-muted-foreground";
   return (
     <div className="flex items-start gap-2 rounded-md px-2 py-1 text-xs">
-      <span className="w-32 shrink-0 text-[10px] text-muted-foreground">
+      <span className="w-16 shrink-0 tabular-nums text-muted-foreground">
         {format(new Date(ev.created_at), "HH:mm:ss")}
       </span>
-      <span className={cn("w-32 shrink-0 font-mono text-[10px]", cls)}>
-        {ev.event_type}
+      <span className={cn("w-40 shrink-0 font-medium", cls)}>
+        {flowEventLabel(ev.event_type)}
       </span>
       {ev.node_key && (
-        <code className="shrink-0 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
-          {ev.node_key}
-        </code>
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+          {nodeLabel(ev.node_key)}
+        </span>
       )}
       {Object.keys(ev.payload).length > 0 && (
         <span className="min-w-0 truncate text-[10px] text-muted-foreground">

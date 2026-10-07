@@ -1,15 +1,15 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Search } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { NotificationBell } from '@/components/NotificationBell';
 import { MobileToolbar } from '@/components/MobileToolbar';
 import { SkeletonTable } from '@/components/Skeleton';
 import { ContributorsRegisterPanel } from './ContributorsRegisterPanel';
 import { ContributorsTableClient } from './ContributorsTableClient';
 import { deriveContributorStatus, type ContributorStatus } from '@/lib/volunteerStats';
 import { PillTabs } from '@/components/PillTabs';
-import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
+import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
+import { searchTerm } from '@/lib/search';
+import { buttonSecondary } from '@/lib/ui';
 
 const STATUS_LABEL: Record<ContributorStatus, string> = {
   active: 'Active',
@@ -27,6 +27,7 @@ export default async function ContributorsPage({
 
   const filterPills = (
     <PillTabs
+      label="Status"
       items={[
         {
           key: 'all',
@@ -44,45 +45,29 @@ export default async function ContributorsPage({
     />
   );
 
-  const searchForm = (
-    <form className="flex flex-wrap items-center gap-3">
-      <div className="relative">
-        <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by name or phone…"
-          className={`${inputClass} w-64 pl-9`}
-        />
-      </div>
-      {status && <input type="hidden" name="status" value={status} />}
-      <button type="submit" className={buttonPrimary}>
-        Search
-      </button>
-    </form>
-  );
+  const searchBox = <FilterSearch placeholder="Search by name or phone" label="Search contributors" />;
 
   return (
-    <div>
+    <FilterRoot>
       <ContributorsRegisterPanel
-        bell={<NotificationBell />}
         filters={filterPills}
         search={
           <div className="flex flex-wrap items-center gap-3">
-            {searchForm}
+            {searchBox}
             <Link href="/contributors/export" className={buttonSecondary}>
               Export CSV
             </Link>
           </div>
         }
-        mobileToolbar={<MobileToolbar filters={filterPills} search={searchForm} exportHref="/contributors/export" />}
+        mobileToolbar={<MobileToolbar filters={filterPills} search={searchBox} exportHref="/contributors/export" />}
       />
 
-      <Suspense fallback={<SkeletonTable rows={7} cols={4} />}>
-        <ContributorsTable q={q} status={status} />
-      </Suspense>
-    </div>
+      <FilterResults>
+        <Suspense key={`${q ?? ''}:${status ?? ''}`} fallback={<SkeletonTable rows={7} cols={4} />}>
+          <ContributorsTable q={q} status={status} />
+        </Suspense>
+      </FilterResults>
+    </FilterRoot>
   );
 }
 
@@ -95,8 +80,9 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
     .eq('role', 'contributor')
     .order('created_at', { ascending: false });
 
-  if (q) {
-    request = request.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`);
+  const term = searchTerm(q);
+  if (term) {
+    request = request.or(`full_name.ilike.*${term}*,phone.ilike.*${term.replace(/\D/g, '') || term}*`);
   }
 
   const { data: rawContributors } = await request;

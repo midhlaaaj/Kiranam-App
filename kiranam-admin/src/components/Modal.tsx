@@ -11,11 +11,14 @@ export function Modal({
   open,
   onClose,
   title,
+  description,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  /** Short line under the title (counts, context) — keeps it out of the body. */
+  description?: React.ReactNode;
   children: React.ReactNode;
 }) {
   useEffect(() => {
@@ -41,8 +44,11 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
       >
-        <div className="mb-4 flex shrink-0 items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">{title}</h2>
+        <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">{title}</h2>
+            {description && <p className="mt-0.5 text-sm text-kiranam-muted">{description}</p>}
+          </div>
           <button
             type="button"
             onClick={onClose}

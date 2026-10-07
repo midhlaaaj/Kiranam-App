@@ -8,13 +8,12 @@ import { useAuth } from "@/hooks/whatsapp/use-auth";
 import { useTotalUnread } from "@/hooks/whatsapp/use-total-unread";
 import { useUnreadNotifications } from "@/hooks/whatsapp/use-unread-notifications";
 import {
+  ArrowLeft,
   Bell,
   Bot,
   Crown,
-  ExternalLink,
   FileText,
   LayoutDashboard,
-  LogOut,
   MessageSquare,
   Radio,
   Settings,
@@ -23,6 +22,7 @@ import {
   UserCog,
   Users,
   UsersRound,
+  Workflow,
   X,
   Zap,
 } from "lucide-react";
@@ -48,7 +48,7 @@ const ROLE_CHIP: Record<
     labelKey: "roleOwner",
     // Amber: scarce, immutable, "the boss" — gets visual emphasis.
     className:
-      "border-amber-500/40 bg-amber-500/10 text-amber-300",
+      "border-warning/30 bg-warning-soft text-warning",
   },
   admin: {
     icon: Shield,
@@ -77,13 +77,6 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/whatsapp/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/whatsapp/ui/dropdown-menu";
 
 interface NavItem {
   href: string;
@@ -104,6 +97,7 @@ const navItems: NavItem[] = [
   { href: "/whatsapp/broadcasts", labelKey: "broadcasts", icon: Radio },
   { href: "/whatsapp/templates", labelKey: "templates", icon: FileText },
   { href: "/whatsapp/automations", labelKey: "automations", icon: Zap },
+  { href: "/whatsapp/flows", labelKey: "flows", icon: Workflow },
   { href: "/whatsapp/agents", labelKey: "aiAgents", icon: Bot },
 ];
 
@@ -122,7 +116,7 @@ import { useTranslations } from "next-intl";
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { profile, profileLoading, account, accountRole } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   // Only surface the account-name strip when it actually carries
@@ -137,6 +131,13 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     !profileLoading &&
     !!account?.name &&
     account.name !== profile?.full_name;
+
+  // Unread count in the browser tab ("(3) Inbox — …") so a waiting customer
+  // is visible from another tab. Writes to document.title (external).
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\+?\)\s*/, "");
+    document.title = totalUnread > 0 ? `(${totalUnread > 99 ? "99+" : totalUnread}) ${base}` : base;
+  }, [totalUnread, pathname]);
 
   // Close the drawer when route changes — users opened it to navigate,
   // so once they pick a destination the drawer should get out of the way.
@@ -167,39 +168,36 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       {/* Backdrop — only exists on mobile and only when open. Clicking
           it closes the drawer. Hidden from lg+ since the sidebar is
           part of the main flex row there. */}
-      <button
-        type="button"
-        aria-label={t("closeMenu")}
-        onClick={onClose}
-        className={cn(
-          "fixed inset-0 z-30 bg-background/70 backdrop-blur-sm transition-opacity lg:hidden",
-          open
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0",
-        )}
-      />
+      {open && (
+        <div
+          aria-hidden
+          onClick={onClose}
+          className="fixed inset-0 z-30 bg-background/70 backdrop-blur-sm lg:hidden"
+        />
+      )}
 
       <aside
         className={cn(
           // Mobile: fixed drawer that slides in from the left.
           "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-border bg-card",
-          "transition-transform duration-200 ease-out will-change-transform",
-          open ? "translate-x-0" : "-translate-x-full",
+          // `invisible` when closed takes the off-screen drawer's links out
+          // of the tab order; visibility is transitioned so the slide-out
+          // still animates. lg:visible keeps the desktop sidebar unaffected.
+          "transition-[transform,visibility] duration-200 ease-out will-change-transform",
+          open ? "visible translate-x-0" : "invisible -translate-x-full lg:visible",
           // Desktop: static, always visible — reset all the mobile framing.
           "lg:static lg:z-0 lg:w-60 lg:translate-x-0 lg:transition-none",
         )}
-        aria-label="Primary"
+        aria-label="WhatsApp navigation"
       >
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
           <Link href="/whatsapp/dashboard" className="flex items-baseline gap-1.5">
-            <span className="text-lg font-extrabold tracking-tight text-primary">
+            <span className="text-lg font-extrabold tracking-tight text-kiranam-brand">
               Kiranam
             </span>
-            <span className="text-xs font-medium text-muted-foreground">
-              Comm Center
-            </span>
+            <span className="text-xs font-medium text-muted-foreground">WhatsApp</span>
           </Link>
           <button
             type="button"
@@ -211,16 +209,24 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           </button>
         </div>
 
+        {/* Always-visible way back to the main admin panel. */}
+        <Link
+          href={ADMIN_PANEL_URL}
+          className="mx-3 mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          {t("menuBackToAdmin")}
+        </Link>
+
         {/* Main navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 overflow-y-auto px-3 py-3">
           <ul className="flex flex-col gap-1">
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/whatsapp/dashboard" && pathname.startsWith(item.href));
 
-              const showUnreadDot =
-                item.href === "/whatsapp/inbox" && totalUnread > 0 && !isActive;
+              const showUnreadCount = item.href === "/whatsapp/inbox" && totalUnread > 0;
 
               // Unlike the inbox dot, the notifications count stays visible
               // even while the page is active — it reflects unread state
@@ -233,6 +239,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       // Taller on mobile so fingers can hit the row reliably (≥44px).
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
@@ -241,29 +248,28 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-4 w-4" aria-hidden />
                     <span className="flex-1">{t(item.labelKey as string)}</span>
                     {item.beta && (
                       <span
                         aria-label={t("beta")}
-                        className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300"
+                        className="rounded-full border border-warning/30 bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning"
                       >
                         {t("beta")}
                       </span>
                     )}
-                    {showUnreadDot && (
+                    {showUnreadCount && (
                       <span
                         aria-label={t("unreadConversations", { count: totalUnread })}
-                        className="relative flex h-2 w-2"
+                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold tabular-nums text-primary-foreground"
                       >
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                        {totalUnread > 99 ? "99+" : totalUnread}
                       </span>
                     )}
                     {showNotificationBadge && (
                       <span
                         aria-label={t("unreadNotifications", { count: unreadNotifications })}
-                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground"
+                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-[11px] font-semibold tabular-nums text-foreground"
                       >
                         {unreadNotifications > 9 ? "9+" : unreadNotifications}
                       </span>
@@ -283,6 +289,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
                       isActive
@@ -290,7 +297,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-4 w-4" aria-hidden />
                     {t(item.labelKey as string)}
                   </Link>
                 </li>
@@ -336,81 +343,29 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               ) : null}
             </div>
           ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/60 focus:bg-muted/60 focus:outline-none data-popup-open:bg-muted/60">
-              <Avatar className="size-8 shrink-0">
-                {profile?.avatar_url ? (
-                  <AvatarImage
-                    src={profile.avatar_url}
-                    alt={profile.full_name ?? t("defaultAvatar")}
-                  />
-                ) : null}
-                <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
-                  {profile?.full_name?.charAt(0)?.toUpperCase() ??
-                    profile?.email?.charAt(0)?.toUpperCase() ??
-                    "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {profile?.full_name ?? t("defaultUser")}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {profile?.email ?? ""}
-                </p>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side="top"
-              sideOffset={6}
-              className="min-w-56 bg-popover text-popover-foreground ring-border"
-            >
-              <DropdownMenuItem
-                render={
-                  <Link
-                    href="/whatsapp/settings?tab=profile"
-                    onClick={onClose}
-                    className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-                  />
-                }
-              >
-                <User className="size-4" />
-                {t("menuProfile")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                render={
-                  <Link
-                    href="/whatsapp/settings?tab=whatsapp"
-                    onClick={onClose}
-                    className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-                  />
-                }
-              >
-                <Settings className="size-4" />
-                {t("menuSettings")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                render={
-                  <a
-                    href={ADMIN_PANEL_URL}
-                    className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-                  />
-                }
-              >
-                <ExternalLink className="size-4" />
-                {t("menuBackToAdmin")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem
-                onClick={signOut}
-                className="text-popover-foreground focus:bg-accent focus:text-accent-foreground"
-              >
-                <LogOut className="size-4" />
-                {t("menuSignOut")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Account actions live in the header menu (visible on every
+              screen size); this is a quick link to your profile. */}
+          <a
+            href={`${ADMIN_PANEL_URL.replace(/\/$/, "")}/settings/account`}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/60"
+          >
+            <Avatar className="size-8 shrink-0">
+              {profile?.avatar_url ? (
+                <AvatarImage src={profile.avatar_url} alt="" />
+              ) : null}
+              <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
+                {profile?.full_name?.charAt(0)?.toUpperCase() ??
+                  profile?.email?.charAt(0)?.toUpperCase() ??
+                  "U"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-foreground">
+                {profile?.full_name ?? t("defaultUser")}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">{profile?.email ?? ""}</span>
+            </span>
+          </a>
         </div>
       </aside>
     </>

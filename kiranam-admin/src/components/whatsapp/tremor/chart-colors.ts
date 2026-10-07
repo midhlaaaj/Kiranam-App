@@ -14,6 +14,19 @@
 export type ColorUtility = "bg" | "stroke" | "fill" | "text"
 
 const chartColors = {
+  // Theme-aware entries (local addition): follow the app's tokens.
+  ink: {
+    bg: "bg-foreground/70",
+    stroke: "stroke-foreground/70",
+    fill: "fill-foreground/70",
+    text: "text-foreground",
+  },
+  brand: {
+    bg: "bg-primary",
+    stroke: "stroke-primary",
+    fill: "fill-primary",
+    text: "text-primary",
+  },
   blue: {
     bg: "bg-blue-500",
     stroke: "stroke-blue-500",

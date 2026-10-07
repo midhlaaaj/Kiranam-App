@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Search, UserRoundCheck } from 'lucide-react';
+import { UserRoundCheck } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
@@ -7,7 +7,10 @@ import { PendingApplicantRow } from './PendingApplicantRow';
 import { VolunteersRegisterPanel } from './VolunteersRegisterPanel';
 import { VolunteersTableClient } from './VolunteersTableClient';
 import { PillTabs } from '@/components/PillTabs';
-import { buttonPrimary, inputClass, tableCellClass, tableHeadRowClass, tableWrapClass } from '@/lib/ui';
+import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
+import { tableCellClass, tableHeadRowClass, tableWrapClass } from '@/lib/ui';
+import { searchTerm } from '@/lib/search';
+import { cn } from '@/lib/utils';
 
 async function getApprovedVolunteers(query: string) {
   const supabase = await createClient();
@@ -18,8 +21,9 @@ async function getApprovedVolunteers(query: string) {
     .eq('role', 'volunteer')
     .order('created_at', { ascending: false });
 
-  if (query) {
-    request = request.or(`full_name.ilike.%${query}%,phone.ilike.%${query}%`);
+  const term = searchTerm(query);
+  if (term) {
+    request = request.or(`full_name.ilike.*${term}*,phone.ilike.*${term.replace(/\D/g, '') || term}*`);
   }
 
   const { data: volunteers } = await request;
@@ -70,6 +74,19 @@ async function getPendingApplicants(query: string) {
   );
 }
 
+async function VolunteerTabs({ render }: { render: (pendingCount: number) => React.ReactNode }) {
+  return render(await getPendingCount());
+}
+
+async function getPendingCount() {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from('volunteer_applications')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  return count ?? 0;
+}
+
 export default async function VolunteersPage({
   searchParams,
 }: {
@@ -78,8 +95,11 @@ export default async function VolunteersPage({
   const { tab, q } = await searchParams;
   const activeTab = tab === 'pending' ? 'pending' : 'approved';
 
-  const filterPills = (
+  // The title, search and tabs render straight away; only the pending count
+  // in the dropdown waits for the database (it streams in behind this).
+  const tabs = (pendingCount?: number) => (
     <PillTabs
+      label="Show"
       items={[
         {
           key: 'approved',
@@ -89,41 +109,33 @@ export default async function VolunteersPage({
         },
         {
           key: 'pending',
-          label: 'Pending',
+          label: 'Pending applications',
           href: `/volunteers?tab=pending${q ? `&q=${encodeURIComponent(q)}` : ''}`,
           active: activeTab === 'pending',
+          count: pendingCount,
         },
       ]}
     />
   );
-
-  const searchForm = (
-    <form className="flex flex-wrap items-center gap-3">
-      <div className="relative">
-        <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
-        <input
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder="Search by name or phone…"
-          className={`${inputClass} w-64 pl-9`}
-        />
-      </div>
-      {tab && <input type="hidden" name="tab" value={tab} />}
-      <button type="submit" className={buttonPrimary}>
-        Search
-      </button>
-    </form>
+  const filterPills = (
+    <Suspense fallback={tabs()}>
+      <VolunteerTabs render={tabs} />
+    </Suspense>
   );
 
   return (
-    <div>
-      <VolunteersRegisterPanel filters={filterPills} search={searchForm} />
+    <FilterRoot>
+      <VolunteersRegisterPanel
+        filters={filterPills}
+        search={<FilterSearch placeholder="Search by name or phone" label="Search volunteers" />}
+      />
 
-      <Suspense fallback={<SkeletonTable rows={7} cols={4} />}>
-        <VolunteersTable activeTab={activeTab} q={q} />
-      </Suspense>
-    </div>
+      <FilterResults>
+        <Suspense key={`${activeTab}:${q ?? ''}`} fallback={<SkeletonTable rows={7} cols={4} />}>
+          <VolunteersTable activeTab={activeTab} q={q} />
+        </Suspense>
+      </FilterResults>
+    </FilterRoot>
   );
 }
 
@@ -152,9 +164,12 @@ async function VolunteersTable({ activeTab, q }: { activeTab: 'approved' | 'pend
         <table className="w-full text-sm">
           <thead>
             <tr className={tableHeadRowClass}>
-              <th className={tableCellClass}>Name</th>
-              <th className={tableCellClass}>Phone</th>
+              <th className={tableCellClass}>Applicant</th>
+              <th className={cn(tableCellClass, 'hidden md:table-cell')}>Why they applied</th>
               <th className={tableCellClass}>Applied</th>
+              <th className={tableCellClass}>
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>

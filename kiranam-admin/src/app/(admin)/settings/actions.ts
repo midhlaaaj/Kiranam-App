@@ -5,6 +5,7 @@ import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
+import { friendlyErrorMessage } from '@/lib/errors';
 import { sendEmail } from '@/lib/email/resend';
 import { adminInviteEmail } from '@/lib/email/templates';
 
@@ -18,12 +19,30 @@ const ADMIN_INVITE_EXPIRY_DAYS = 7;
 export interface InviteState {
   message?: string;
   error?: string;
+  /** Invite was saved but the email didn't go out — the admin needs to share
+   * `signupUrl` themselves. */
+  warning?: string;
+  signupUrl?: string;
 }
 
 export async function createInvite(_prevState: InviteState, formData: FormData): Promise<InviteState> {
   const admin = await verifyAdmin();
   const email = String(formData.get('email') || '').trim().toLowerCase();
   if (!email) return { error: 'Email is required.' };
+  return issueInvite(admin.id, email);
+}
+
+/** Row action on the Team page's pending-invites list — same refresh-in-place
+ * path as re-submitting the email in the invite form. */
+export async function resendInvite(inviteId: string): Promise<InviteState> {
+  const admin = await verifyAdmin();
+  const supabase = await createClient();
+  const { data: invite } = await supabase.from('admin_invites').select('email').eq('id', inviteId).maybeSingle();
+  if (!invite) return { error: 'That invite no longer exists.' };
+  return issueInvite(admin.id, invite.email);
+}
+
+async function issueInvite(adminId: string, email: string): Promise<InviteState> {
 
   const supabase = await createClient();
   const expiresAt = new Date(Date.now() + ADMIN_INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
@@ -49,48 +68,54 @@ export async function createInvite(_prevState: InviteState, formData: FormData):
   if (existing) {
     const { error } = await supabase
       .from('admin_invites')
-      .update({ invited_by: admin.id, expires_at: expiresAt.toISOString(), created_at: new Date().toISOString() })
+      .update({ invited_by: adminId, expires_at: expiresAt.toISOString(), created_at: new Date().toISOString() })
       .eq('id', existing.id);
-    if (error) return { error: error.message };
+    if (error) return { error: friendlyErrorMessage(error.message) };
     inviteId = existing.id;
   } else {
     const { data, error } = await supabase
       .from('admin_invites')
-      .insert({ email, invited_by: admin.id, expires_at: expiresAt.toISOString() })
+      .insert({ email, invited_by: adminId, expires_at: expiresAt.toISOString() })
       .select('id')
       .single();
-    if (error) return { error: error.message };
+    if (error) return { error: friendlyErrorMessage(error.message) };
     inviteId = data.id;
   }
 
-  await logAction(admin.id, 'invite_admin', 'admin_invites', inviteId, { email });
+  await logAction(adminId, 'invite_admin', 'admin_invites', inviteId, { email, label: email });
 
   // Best-effort: the invite row is already created/refreshed and usable
-  // (someone who already knows to go to /signup can claim it regardless),
-  // so a failed send here shouldn't roll back the invite itself — just log
-  // it, and the admin can retry by re-submitting the same email.
+  // (anyone who signs up at /signup with this email claims it), so a failed
+  // send doesn't roll the invite back — but the admin is told, and handed
+  // the link to share directly, instead of a false "sent".
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const signupUrl = `${siteUrl}/signup`;
   const { error: emailError } = await sendEmail({
     to: email,
     subject: "You've been invited to manage Kiranam",
-    html: adminInviteEmail({ signupUrl: `${siteUrl}/signup`, invitedEmail: email, expiresAt }),
+    html: adminInviteEmail({ signupUrl, invitedEmail: email, expiresAt }),
   });
+
+  revalidatePath('/settings/admin-users');
   if (emailError) {
     console.error('Failed to send admin invite email:', emailError);
+    return {
+      warning: `Invite created for ${email}, but the email couldn't be sent. Share the sign-up link with them directly — they must sign up with this exact email within ${ADMIN_INVITE_EXPIRY_DAYS} days.`,
+      signupUrl,
+    };
   }
-
-  revalidatePath('/settings');
-  return { message: `Invite sent to ${email} — expires in ${ADMIN_INVITE_EXPIRY_DAYS} days.` };
+  return { message: `Invite emailed to ${email} — it expires in ${ADMIN_INVITE_EXPIRY_DAYS} days.` };
 }
 
 export async function revokeInvite(inviteId: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
+  const { data: invite } = await supabase.from('admin_invites').select('email').eq('id', inviteId).maybeSingle();
   const { error } = await supabase.from('admin_invites').delete().eq('id', inviteId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'revoke_invite', 'admin_invites', inviteId);
-  revalidatePath('/settings');
+  await logAction(admin.id, 'revoke_invite', 'admin_invites', inviteId, { label: invite?.email ?? null });
+  revalidatePath('/settings/admin-users');
 }
 
 export async function setAutoAssignKkNumber(enabled: boolean) {
@@ -102,7 +127,7 @@ export async function setAutoAssignKkNumber(enabled: boolean) {
   const { error } = await supabaseAdmin
     .from('app_settings')
     .upsert({ key: 'auto_assign_kk_number', value: String(enabled), updated_at: new Date().toISOString() });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyErrorMessage(error.message));
 
   await logAction(admin.id, 'set_auto_assign_kk_number', 'app_settings', 'app_settings', { enabled });
   revalidatePath('/settings');

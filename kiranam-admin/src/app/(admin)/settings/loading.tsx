@@ -1,16 +1,6 @@
-import { Skeleton, SkeletonForm, SkeletonPageHeading, SkeletonTable } from '@/components/Skeleton';
+import { SkeletonCard } from '@/components/Skeleton';
 
+// Renders under settings/layout.tsx (heading + tabs already on screen).
 export default function Loading() {
-  return (
-    <div>
-      <SkeletonPageHeading titleWidth="w-32" />
-      <Skeleton className="mt-4 h-9 w-64" />
-      <div className="mt-6">
-        <SkeletonForm fields={1} />
-      </div>
-      <div className="mt-6">
-        <SkeletonTable rows={4} cols={4} />
-      </div>
-    </div>
-  );
+  return <SkeletonCard lines={3} className="max-w-2xl" />;
 }

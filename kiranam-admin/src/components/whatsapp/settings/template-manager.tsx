@@ -11,8 +11,15 @@ import {
   X,
   Pencil,
   RotateCcw,
+  Search,
+  ExternalLink,
   Upload,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { PreviewImage } from '@/components/ImageLightbox';
+import { TemplatePreview, fillPlaceholders } from '@/components/whatsapp/template-preview';
+import { TEMPLATE_CATEGORY_INFO, templateDisplayName } from '@/lib/whatsapp/template-display';
+import { languageName } from '@/lib/whatsapp/language-names';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import {
   uploadAccountMedia,
@@ -51,17 +58,70 @@ import { templateStatusConfig } from '@/lib/whatsapp/template-status';
 import {
   extractVariableIndices,
   TEMPLATE_LIMITS,
+  validateBody,
+  validateButtons,
+  validateFooter,
+  validateHeader,
+  validateSampleValues,
+  validateTemplateName,
+  type TemplatePayload,
 } from '@/lib/whatsapp/whatsapp/template-validators';
 
 const CATEGORIES = ['Marketing', 'Utility', 'Authentication'] as const;
 type HeaderFormat = 'none' | 'text' | 'image' | 'video' | 'document';
 const HEADER_FORMATS: HeaderFormat[] = ['none', 'text', 'image', 'video', 'document'];
 
-const categoryColors: Record<string, string> = {
-  Marketing: 'bg-purple-600/20 text-purple-400 border-purple-600/30',
-  Utility: 'bg-muted text-muted-foreground border-border',
-  Authentication: 'bg-amber-600/20 text-amber-400 border-amber-600/30',
+// Meta's rejection enums → what an admin should change.
+const REJECTION_HELP: Record<string, string> = {
+  INVALID_FORMAT: 'The format broke a Meta rule — check the blanks ({{1}}…), buttons and length.',
+  TAG_CONTENT_MISMATCH: 'Meta thinks the category is wrong. Promotional wording belongs in Marketing.',
+  INCORRECT_CATEGORY: 'Meta thinks the category is wrong. Promotional wording belongs in Marketing.',
+  PROMOTIONAL: 'It reads as promotional. Submit it as Marketing, or remove the appeal wording.',
+  ABUSIVE_CONTENT: 'Meta flagged the wording as against its policies. Rephrase it.',
+  SCAM: 'Meta flagged it as possibly misleading. Avoid urgency and payment links in the first message.',
+  INVALID_VARIABLES: 'A blank ({{1}}…) is placed wrongly — not at the very start or end, and not two in a row.',
 };
+
+function rejectionHelp(reason: string | undefined) {
+  if (!reason) return null;
+  const key = reason.trim().toUpperCase().replace(/\s+/g, '_');
+  return REJECTION_HELP[key] ?? null;
+}
+
+const QUALITY_LABEL: Record<string, { text: string; className: string }> = {
+  GREEN: { text: 'Quality: high', className: 'text-success' },
+  YELLOW: { text: 'Quality: medium — people may be blocking or reporting it', className: 'text-warning' },
+  RED: { text: 'Quality: low — Meta may pause this template', className: 'text-destructive' },
+};
+
+type StatusTab = 'all' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'other';
+
+/** Every validator, run separately so the editor can list all problems at once. */
+function collectIssues(payload: TemplatePayload, bodyVarCount: number, headerVarCount: number): string[] {
+  const issues: string[] = [];
+  const run = (fn: () => void) => {
+    try {
+      fn();
+    } catch (e) {
+      if (e instanceof Error) issues.push(e.message);
+    }
+  };
+  run(() => validateTemplateName(payload.name));
+  run(() => validateBody(payload.body_text));
+  run(() => validateFooter(payload.footer_text));
+  run(() => validateHeader(payload));
+  run(() => validateButtons(payload.buttons));
+  run(() => validateSampleValues(payload, bodyVarCount, headerVarCount));
+  return issues;
+}
+
+function CharCount({ value, max }: { value: string; max: number }) {
+  return (
+    <span className={`text-xs tabular-nums ${value.length >= max ? 'text-destructive' : 'text-muted-foreground'}`}>
+      {value.length}/{max}
+    </span>
+  );
+}
 
 interface TemplateFormData {
   name: string;
@@ -136,6 +196,8 @@ export function TemplateManager() {
 
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  // user_id → display name, for "Created by" on each card.
+  const [creators, setCreators] = useState<Record<string, string>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -145,6 +207,12 @@ export function TemplateManager() {
   // dialog title + CTA. Set to the template id to pre-fill from a row.
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [statusTab, setStatusTab] = useState<StatusTab>('all');
+  const [query, setQuery] = useState('');
+  // Snapshot of the form when the dialog opened — closing with changes asks first.
+  const [initialForm, setInitialForm] = useState<TemplateFormData>(emptyForm);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [attempted, setAttempted] = useState(false);
   // Template selected for the confirm-delete dialog. The destructive
   // action goes through this two-step so a slip on the trash icon
   // doesn't take the template off Meta as well as locally.
@@ -188,20 +256,32 @@ export function TemplateManager() {
       setLoading(false);
       return;
     }
-    fetchTemplates(user.id);
+    fetchTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.id]);
 
-  async function fetchTemplates(userId: string) {
+  // Every admin shares one WhatsApp account, so list the whole account's
+  // templates (RLS scopes rows to the caller's account — same as the
+  // broadcast template picker).
+  async function fetchTemplates() {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('message_templates')
         .select('*')
-        .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       setTemplates(data || []);
+      const creatorIds = [...new Set((data || []).map((row) => row.user_id).filter(Boolean))];
+      if (creatorIds.length) {
+        const { data: people } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', creatorIds);
+        setCreators(
+          Object.fromEntries((people || []).map((p) => [p.user_id, p.full_name || p.email || 'Unknown']))
+        );
+      }
     } catch (err) {
       console.error('Failed to fetch templates:', err);
       toast.error(t('toastLoadFailed'));
@@ -240,7 +320,8 @@ export function TemplateManager() {
 
   function openEdit(template: MessageTemplate) {
     setEditingId(template.id);
-    setForm({
+    setAttempted(false);
+    const next: TemplateFormData = {
       name: template.name,
       category: template.category,
       language: template.language || 'en_US',
@@ -252,20 +333,39 @@ export function TemplateManager() {
       body_samples: template.sample_values?.body ?? [],
       footer_text: template.footer_text ?? '',
       buttons: template.buttons ?? [],
-    });
+    };
+    setForm(next);
+    setInitialForm(next);
     setDialogOpen(true);
   }
 
   function openCreate() {
     setEditingId(null);
+    setAttempted(false);
     setForm(emptyForm);
+    setInitialForm(emptyForm);
     setDialogOpen(true);
   }
+
+  function closeDialog() {
+    setDialogOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
+    setConfirmDiscard(false);
+  }
+
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
+  const livePayload = buildSubmitPayload();
+  const allIssues = collectIssues(livePayload, bodyVarCount, headerVarCount);
+  // "X is required" only after a submit attempt — don't nag on an empty form.
+  const issues = attempted ? allIssues : allIssues.filter((m) => !/required/i.test(m));
 
   async function handleSubmit() {
     // AUTHENTICATION is blocked by the persistent banner + disabled
     // submit button; this is a defensive second line of defense.
     if (form.category === 'Authentication') return;
+    setAttempted(true);
+    if (allIssues.length > 0) return;
     try {
       setSubmitting(true);
       const isEdit = editingId !== null;
@@ -285,7 +385,7 @@ export function TemplateManager() {
       }
       // Refresh first, then close — re-opening the dialog
       // immediately should not show a stale list.
-      if (user) await fetchTemplates(user.id);
+      if (user) await fetchTemplates();
       toast.success(
         data.dry_run
           ? isEdit
@@ -295,9 +395,7 @@ export function TemplateManager() {
             ? t('toastSubmitEditSuccess')
             : t('toastSubmitNewSuccess'),
       );
-      setDialogOpen(false);
-      setForm(emptyForm);
-      setEditingId(null);
+      closeDialog();
     } catch (err) {
       console.error('Submit error:', err);
       toast.error(err instanceof Error ? err.message : t('toastSubmitFailed'));
@@ -339,7 +437,7 @@ export function TemplateManager() {
           { duration: 10000 },
         );
       }
-      await fetchTemplates(user.id);
+      await fetchTemplates();
     } catch (err) {
       console.error('Template sync error:', err);
       toast.error(err instanceof Error ? err.message : t('toastSyncError'));
@@ -454,11 +552,40 @@ export function TemplateManager() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-primary" />
+      <div className="space-y-4" aria-busy="true" aria-label="Loading templates">
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-muted" />
+        <div className="grid gap-3 xl:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-36 animate-pulse rounded-xl bg-muted/70" />
+          ))}
+        </div>
       </div>
     );
   }
+
+  const tabOf = (tpl: MessageTemplate): StatusTab =>
+    tpl.status === 'APPROVED' || tpl.status === 'PENDING' || tpl.status === 'REJECTED' ? tpl.status : 'other';
+  const tabCounts = templates.reduce<Record<StatusTab, number>>(
+    (acc, tpl) => {
+      acc.all++;
+      acc[tabOf(tpl)]++;
+      return acc;
+    },
+    { all: 0, APPROVED: 0, PENDING: 0, REJECTED: 0, other: 0 },
+  );
+  const q = query.trim().toLowerCase();
+  const visibleTemplates = templates.filter(
+    (tpl) =>
+      (statusTab === 'all' || tabOf(tpl) === statusTab) &&
+      (!q || tpl.name.toLowerCase().includes(q.replace(/ /g, '_')) || tpl.body_text.toLowerCase().includes(q)),
+  );
+  const TAB_LABEL: Record<StatusTab, string> = {
+    all: 'All',
+    APPROVED: 'Approved',
+    PENDING: 'Waiting for Meta',
+    REJECTED: 'Rejected',
+    other: 'Other',
+  };
 
   const headerNeedsMedia =
     form.header_format !== 'none' && form.header_format !== 'text';
@@ -488,6 +615,7 @@ export function TemplateManager() {
 
   return (
     <section className="animate-in fade-in-50 space-y-4 duration-200">
+      <h1 className="sr-only">{t('title')}</h1>
       <SettingsPanelHead
         title={t('title')}
         description={t('description')}
@@ -512,93 +640,110 @@ export function TemplateManager() {
 
       {templates.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-muted-foreground text-sm">{t('noTemplates')}</p>
-            <p className="text-muted-foreground text-xs mt-1">
-              {t('createFirst')}
-            </p>
+          <CardContent className="flex flex-col items-center justify-center gap-1 py-12 text-center">
+            <p className="text-sm font-medium text-foreground">{t('noTemplates')}</p>
+            <p className="max-w-sm text-sm text-muted-foreground">{t('createFirst')}</p>
+            <Button className="mt-3" onClick={openCreate}>
+              <Plus className="size-4" aria-hidden />
+              {t('newTemplate')}
+            </Button>
           </CardContent>
         </Card>
       ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div role="tablist" aria-label="Filter by status" className="flex flex-wrap gap-1 rounded-full bg-muted p-1">
+              {(['all', 'APPROVED', 'PENDING', 'REJECTED', 'other'] as StatusTab[])
+                .filter((k) => k === 'all' || tabCounts[k] > 0)
+                .map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="tab"
+                    aria-selected={statusTab === k}
+                    onClick={() => setStatusTab(k)}
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition ${
+                      statusTab === k ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {TAB_LABEL[k]}
+                    <span className="text-xs tabular-nums text-muted-foreground">{tabCounts[k]}</span>
+                  </button>
+                ))}
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search templates"
+                aria-label="Search templates"
+                className="h-9 pl-9"
+              />
+            </div>
+          </div>
+
+          {visibleTemplates.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-10 text-center">
+              <p className="text-sm text-foreground">No templates match these filters.</p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStatusTab('all');
+                  setQuery('');
+                }}
+              >
+                Clear filters
+              </Button>
+            </div>
+          ) : (
         <div className="grid gap-3 xl:grid-cols-2">
-          {templates.map((template) => {
+          {visibleTemplates.map((template) => {
             const statusKey = template.status || 'DRAFT';
             const status = templateStatusConfig[statusKey];
+            const rejection = template.rejection_reason || template.submission_error;
+            const help = rejectionHelp(template.rejection_reason);
+            const quality = template.quality_score ? QUALITY_LABEL[template.quality_score] : null;
             return (
               <Card key={template.id}>
                 <CardContent className="flex items-start justify-between pt-4">
-                  <div className="space-y-2 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-medium text-foreground">{template.name}</h3>
-                      <Badge
-                        className={`text-xs border ${categoryColors[template.category] || ''}`}
-                      >
-                        {template.category}
-                      </Badge>
-                      <Badge className={`text-xs border ${status.classes}`}>
-                        {status.label}
-                      </Badge>
-                      {template.language && (
-                        <span className="text-xs text-muted-foreground uppercase">
-                          {template.language}
-                        </span>
-                      )}
-                      {template.quality_score && (
-                        <span
-                          className={`text-[10px] uppercase font-medium ${
-                            template.quality_score === 'GREEN'
-                              ? 'text-emerald-400'
-                              : template.quality_score === 'YELLOW'
-                                ? 'text-yellow-400'
-                                : 'text-red-400'
-                          }`}
-                          title="Meta quality score"
-                        >
-                          {template.quality_score}
-                        </span>
-                      )}
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-foreground">{templateDisplayName(template.name)}</h3>
+                      <Badge className={`border text-xs ${status.classes}`}>{status.label}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {template.body_text}
+                    <p className="text-xs text-muted-foreground">
+                      <span title={TEMPLATE_CATEGORY_INFO[template.category]?.hint}>{template.category}</span>
+                      {' · '}
+                      {languageName(template.language)}
+                      {template.user_id && creators[template.user_id] && <> · by {creators[template.user_id]}</>}
                     </p>
-                    {template.footer_text && (
-                      <p className="text-xs text-muted-foreground italic">
-                        {template.footer_text}
-                      </p>
-                    )}
-                    {(template.rejection_reason || template.submission_error) && (
-                      <div className="flex items-start gap-1.5 text-xs text-red-400 bg-red-950/20 border border-red-900/40 rounded px-2 py-1.5">
-                        <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
-                        <span>
-                          {template.rejection_reason || template.submission_error}
-                        </span>
+                    <p className="line-clamp-3 whitespace-pre-line text-sm text-foreground/80">{template.body_text}</p>
+                    {quality && <p className={`text-xs font-medium ${quality.className}`}>{quality.text}</p>}
+                    {rejection && (
+                      <div role="note" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
+                        <p className="flex items-start gap-1.5 font-medium text-foreground">
+                          <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+                          {help ?? 'Meta didn’t accept this template.'}
+                        </p>
+                        <details className="mt-1 pl-5 text-xs text-muted-foreground">
+                          <summary className="cursor-pointer">Technical details</summary>
+                          <p className="mt-1 break-words font-mono">{rejection}</p>
+                        </details>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <div className="ml-2 flex shrink-0 items-center gap-1">
                     {statusKey === 'APPROVED' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEdit(template)}
-                        title={t('editTitle')}
-                        aria-label={t('editLabel')}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 px-2"
-                      >
-                        <Pencil className="size-3.5" />
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(template)} title={t('editTitle')}>
+                        <Pencil className="size-3.5" aria-hidden />
                         {t('edit')}
                       </Button>
                     )}
                     {(statusKey === 'REJECTED' || statusKey === 'PAUSED') && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEdit(template)}
-                        title={t('resubmitTitle')}
-                        aria-label={t('resubmitLabel')}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 px-2"
-                      >
-                        <RotateCcw className="size-3.5" />
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(template)} title={t('resubmitTitle')}>
+                        <RotateCcw className="size-3.5" aria-hidden />
                         {t('resubmit')}
                       </Button>
                     )}
@@ -607,23 +752,11 @@ export function TemplateManager() {
                       size="icon"
                       onClick={() => setTemplateToDelete(template)}
                       disabled={deletingId === template.id}
-                      aria-label={
-                        template.meta_template_id
-                          ? t('deleteMetaLocallyAria')
-                          : t('deleteLocallyAria')
-                      }
-                      title={
-                        template.meta_template_id
-                          ? t('deleteMetaLocallyTitle')
-                          : t('deleteLocallyTitle')
-                      }
-                      className="text-muted-foreground hover:text-red-400 hover:bg-red-950/30 h-8 w-8"
+                      aria-label={`Delete ${templateDisplayName(template.name)}`}
+                      title={template.meta_template_id ? t('deleteMetaLocallyTitle') : t('deleteLocallyTitle')}
+                      className="size-9 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
-                      {deletingId === template.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
-                      )}
+                      {deletingId === template.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                     </Button>
                   </div>
                 </CardContent>
@@ -631,19 +764,20 @@ export function TemplateManager() {
             );
           })}
         </div>
+          )}
+        </>
       )}
 
       <Dialog
         open={dialogOpen}
         onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) {
-            setEditingId(null);
-            setForm(emptyForm);
-          }
+          if (open) return setDialogOpen(true);
+          // Long form — never throw away edits on Esc / outside click.
+          if (isDirty) setConfirmDiscard(true);
+          else closeDialog();
         }}
       >
-        <DialogContent className="bg-popover border-border sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-popover border-border sm:max-w-5xl max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">
               {editingId ? t('dialogEditTitle') : t('dialogNewTitle')}
@@ -655,20 +789,18 @@ export function TemplateManager() {
             </DialogDescription>
           </DialogHeader>
 
-          {form.category === 'Authentication' && (
-            <div className="flex items-start gap-2 rounded border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-300">
-              <AlertCircle className="size-4 mt-0.5 shrink-0" />
-              <p>{t.rich('authWarning', { bold: (chunks) => <strong>{chunks}</strong> })}</p>
-            </div>
-          )}
-
-          <div className="space-y-4 py-2">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-5 py-2">
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('templateName')}</Label>
+              <Label htmlFor="template-name" className="text-foreground">{t('templateName')}</Label>
               <Input
-                placeholder={t('namePlaceholder')}
+                id="template-name"
+                placeholder="e.g. donation_receipt"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) =>
+                  // Meta only accepts lowercase letters, digits and underscores.
+                  setForm({ ...form, name: e.target.value.toLowerCase().replace(/[^a-z0-9_]+/g, '_') })
+                }
                 disabled={editingId !== null}
                 className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
               />
@@ -679,38 +811,53 @@ export function TemplateManager() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('category')}</Label>
-                <Select
-                  value={form.category}
-                  onValueChange={(val) =>
-                    setForm({
-                      ...form,
-                      category: val as MessageTemplate['category'],
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-full bg-muted border-border text-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem
-                        key={cat}
-                        value={cat}
-                        className="text-popover-foreground focus:bg-muted focus:text-popover-foreground"
-                      >
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium text-foreground">{t('category')}</legend>
+              <div className="grid gap-2 sm:grid-cols-3" role="radiogroup">
+                {CATEGORIES.map((cat) => {
+                  const info = TEMPLATE_CATEGORY_INFO[cat];
+                  const selected = form.category === cat;
+                  const disabled = cat === 'Authentication';
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      aria-disabled={disabled}
+                      onClick={() => !disabled && setForm({ ...form, category: cat })}
+                      className={`rounded-lg border p-3 text-left transition ${
+                        disabled
+                          ? 'cursor-not-allowed border-border opacity-60'
+                          : selected
+                            ? 'border-foreground ring-1 ring-foreground'
+                            : 'border-border hover:border-foreground/40'
+                      }`}
+                    >
+                      <span className="block text-sm font-semibold text-foreground">{info.label}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{info.hint}</span>
+                      {disabled && (
+                        <a
+                          href="https://business.facebook.com/wa/manage/message-templates/"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-foreground underline underline-offset-2"
+                        >
+                          Open WhatsApp Manager <ExternalLink className="size-3" aria-hidden />
+                        </a>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
+            </fieldset>
 
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-muted-foreground">{t('language')}</Label>
+                <Label className="text-foreground">{t('language')}</Label>
                 <Select
+                  items={Object.fromEntries(LANGUAGE_OPTIONS.map((l) => [l.code, l.label]))}
                   value={form.language}
                   onValueChange={(val) => val && setForm({ ...form, language: val })}
                   disabled={editingId !== null}
@@ -725,7 +872,7 @@ export function TemplateManager() {
                         value={lang.code}
                         className="text-popover-foreground focus:bg-muted focus:text-popover-foreground"
                       >
-                        {lang.label} ({lang.code})
+                        {lang.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -741,8 +888,15 @@ export function TemplateManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('header')}</Label>
+              <Label className="text-foreground">{t('header')}</Label>
               <Select
+                items={{
+                  none: t('headerNone'),
+                  text: t('headerText'),
+                  image: t('headerImage'),
+                  video: t('headerVideo'),
+                  document: t('headerDocument'),
+                }}
                 value={form.header_format}
                 onValueChange={(val) =>
                   // Preserve header_content, header_media_url, and
@@ -783,6 +937,9 @@ export function TemplateManager() {
 
               {form.header_format === 'text' && (
                 <div className="space-y-2 mt-2">
+                  <div className="flex justify-end">
+                    <CharCount value={form.header_content} max={TEMPLATE_LIMITS.headerTextMaxLength} />
+                  </div>
                   <Input
                     id="template-header-text"
                     aria-label="Header text"
@@ -852,8 +1009,7 @@ export function TemplateManager() {
                     className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                   />
                   {form.header_format === 'image' && form.header_media_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <PreviewImage
                       src={form.header_media_url}
                       alt="Header sample"
                       className="max-h-28 rounded-md border border-border object-contain"
@@ -873,16 +1029,20 @@ export function TemplateManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('bodyText')}</Label>
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor="template-body" className="text-foreground">{t('bodyText')}</Label>
+                <CharCount value={form.body_text} max={TEMPLATE_LIMITS.bodyMaxLength} />
+              </div>
               <Textarea
+                id="template-body"
                 placeholder={t('bodyPlaceholder')}
                 value={form.body_text}
                 onChange={(e) =>
                   setForm({ ...form, body_text: e.target.value })
                 }
-                rows={4}
+                rows={6}
                 maxLength={TEMPLATE_LIMITS.bodyMaxLength}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground resize-none"
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground resize-y"
               />
               <p className="text-[11px] text-muted-foreground">
                 {t('bodyHint')}
@@ -916,8 +1076,12 @@ export function TemplateManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-muted-foreground">{t('footer')}</Label>
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor="template-footer" className="text-foreground">{t('footer')}</Label>
+                <CharCount value={form.footer_text} max={TEMPLATE_LIMITS.footerMaxLength} />
+              </div>
               <Input
+                id="template-footer"
                 placeholder={t('footerPlaceholder')}
                 value={form.footer_text}
                 onChange={(e) =>
@@ -930,7 +1094,7 @@ export function TemplateManager() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-muted-foreground">{t('buttons')}</Label>
+                <Label className="text-foreground">{t('buttons')}</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -956,6 +1120,12 @@ export function TemplateManager() {
                     >
                       <div className="flex items-center gap-2">
                         <Select
+                          items={{
+                            QUICK_REPLY: t('btnQuickReply'),
+                            URL: t('btnUrl'),
+                            PHONE_NUMBER: t('btnPhone'),
+                            COPY_CODE: t('btnCopyCode'),
+                          }}
                           value={btn.type}
                           onValueChange={(val) => {
                             // Same null guard as the Header Select
@@ -1009,9 +1179,10 @@ export function TemplateManager() {
                           variant="ghost"
                           size="icon"
                           onClick={() => removeButton(i)}
-                          className="text-muted-foreground hover:text-red-400 hover:bg-red-950/30 size-7"
+                          aria-label={`Remove button ${i + 1}`}
+                          className="size-8 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         >
-                          <X className="size-3.5" />
+                          <X className="size-3.5" aria-hidden />
                         </Button>
                       </div>
                       {btn.type === 'URL' && (
@@ -1063,17 +1234,44 @@ export function TemplateManager() {
             </div>
           </div>
 
+          <aside className="space-y-2 lg:sticky lg:top-0 lg:self-start">
+            <p className="text-sm font-medium text-foreground">Preview</p>
+            <TemplatePreview
+              headerType={form.header_format === 'none' ? null : form.header_format}
+              headerText={fillPlaceholders(form.header_content, { '1': form.header_sample })}
+              headerMediaUrl={form.header_media_url}
+              body={fillPlaceholders(
+                form.body_text,
+                Object.fromEntries(form.body_samples.map((v, i) => [String(i + 1), v])),
+              )}
+              footer={form.footer_text}
+              buttons={form.buttons}
+            />
+            <p className="text-xs text-muted-foreground">Blanks show your sample values. Meta reviews these samples.</p>
+          </aside>
+          </div>
+
+          {issues.length > 0 && (
+            <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm">
+              <p className="font-medium text-foreground">Fix before submitting:</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-foreground/90">
+                {issues.map((m) => (
+                  <li key={m}>{m}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <DialogFooter className="bg-popover border-border">
             <Button
               variant="outline"
-              onClick={() => setDialogOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
+              onClick={() => (isDirty ? setConfirmDiscard(true) : closeDialog())}
             >
               {t('cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={submitting || form.category === 'Authentication'}
+              disabled={submitting || form.category === 'Authentication' || (attempted && allIssues.length > 0)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {submitting ? (
@@ -1091,50 +1289,34 @@ export function TemplateManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirm-delete dialog. Surfacing the meta_template_id case
-          separately so users understand a real Meta delete is happening,
-          not just a local cleanup. */}
-      <Dialog
+      <ConfirmDialog
         open={templateToDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) setTemplateToDelete(null);
-        }}
-      >
-        <DialogContent className="bg-popover border-border sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">{t('deleteDialogTitle')}</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {templateToDelete?.meta_template_id
-                ? t('deleteMetaDesc', { name: templateToDelete.name })
-                : t('deleteLocalDesc', { name: templateToDelete?.name || '' })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="bg-popover border-border">
-            <Button
-              variant="outline"
-              onClick={() => setTemplateToDelete(null)}
-              disabled={deletingId !== null}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t('cancel')}
-            </Button>
-            <Button
-              onClick={confirmDelete}
-              disabled={deletingId !== null}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              {deletingId !== null ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  {t('deleting')}
-                </>
-              ) : (
-                t('delete')
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={(open) => !open && setTemplateToDelete(null)}
+        title={`Delete ${templateToDelete ? templateDisplayName(templateToDelete.name) : 'template'}?`}
+        description={
+          templateToDelete?.meta_template_id
+            ? t('deleteMetaDesc', { name: templateToDelete.name })
+            : t('deleteLocalDesc', { name: templateToDelete?.name || '' })
+        }
+        consequences={
+          templateToDelete?.meta_template_id
+            ? ['Remove it from Meta too — it can’t be used for broadcasts or replies any more', 'Its name can’t be reused for about 30 days']
+            : undefined
+        }
+        confirmLabel="Delete template"
+        destructive
+        onConfirm={confirmDelete}
+      />
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        onOpenChange={setConfirmDiscard}
+        title="Discard your changes?"
+        description="This template hasn’t been submitted. What you’ve written will be lost."
+        confirmLabel="Discard"
+        destructive
+        onConfirm={closeDialog}
+      />
     </section>
   );
 }

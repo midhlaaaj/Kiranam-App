@@ -153,6 +153,7 @@ export default async function VolunteerDetailPage({
                     title="Unassign this contributor?"
                     description={`${c.full_name || 'This contributor'} will no longer be assigned to this volunteer.`}
                     confirmLabel="Unassign"
+                    destructive
                     successMessage="Contributor unassigned."
                     pendingMessage="Unassigning…"
                     className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"

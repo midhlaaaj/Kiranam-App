@@ -50,20 +50,28 @@
   --secondary-foreground: #0c0c0d;
 
   --muted: #f9f8f6;
-  --muted-foreground: #7a756e;
+  --muted-foreground: #6b665f;
 
   --accent: #fbeaea;
   --accent-foreground: #ec2028;
 
   --destructive: #ba1a1a;
 
+  /* Semantic status — green means good, never the brand color. */
+  --success: #157a3e;
+  --success-soft: #e6f4ec;
+  --warning: #8a6100;
+  --warning-soft: #fdf1dc;
+  --info: #1f5f99;
+  --info-soft: #e7f0f9;
+
   --border: #f1eeea;
-  --input: #e4e1dc;
+  --input: #a8a29a;
   --ring: #ec2028;
 
   --chart-1: #ec2028;
-  --chart-2: #22a559;
-  --chart-3: #b8860b;
+  --chart-2: #157a3e;
+  --chart-3: #8a6100;
   --chart-4: #0c0c0d;
   --chart-5: #b0ada8;
 
@@ -101,11 +109,18 @@
   --color-kiranam-surface-alt: #f9f8f6;
   --color-kiranam-border: #f1eeea;
   --color-kiranam-border-strong: #e4e1dc;
+  /* Form-control boundary — darker than border-strong so empty inputs stay
+     findable against white (WCAG 1.4.11 non-text contrast). */
+  --color-kiranam-input-border: #a8a29a;
 
   --color-kiranam-ink: #0c0c0d;
-  --color-kiranam-muted: #7a756e;
-  --color-kiranam-muted-2: #b0ada8;
+  /* muted clears 4.5:1 on both bg and surface; muted-2 is for placeholders
+     and decorative glyphs only — never body text. */
+  --color-kiranam-muted: #6b665f;
+  --color-kiranam-muted-2: #8a857e;
 
+  /* Kiranam brand red — buttons, links, active nav, wordmark. */
+  --color-kiranam-brand: #ec2028;
   --color-kiranam-primary: #ec2028;
   --color-kiranam-primary-soft: #fbeaea;
   --color-kiranam-primary-strong: #c81920;
@@ -113,10 +128,10 @@
   --color-kiranam-danger: #ba1a1a;
   --color-kiranam-danger-soft: #f9e5e5;
 
-  --color-kiranam-success: #22a559;
+  --color-kiranam-success: #157a3e;
   --color-kiranam-success-soft: #eaf7ef;
 
-  --color-kiranam-warning: #b8860b;
+  --color-kiranam-warning: #8a6100;
   --color-kiranam-warning-soft: #fef3e0;
 
   --animate-shimmer: shimmer 1.8s ease-in-out infinite;
@@ -141,6 +156,12 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -186,15 +207,16 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Focus ring — visible keyboard focus everywhere, using the brand color.
-   Inputs/textareas/selects already show focus via their own border color
+/* Focus ring — visible keyboard focus everywhere, in ink rather than the
+   brand red so a focused control never reads as an error state.
+   Inputs/textareas/selects show focus via their own border + ring
    (see inputClass), so skip the outline there to avoid a doubled-up ring.
    No border-radius override here — modern browsers curve the outline to
    match the focused element's own radius, so forcing one just makes
    rounded pills/buttons look like they have a mismatched square ring. */
 :focus-visible {
   outline: 1.5px solid var(--color-kiranam-primary);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 input:focus-visible,
@@ -304,6 +326,12 @@ select:focus-visible {
   --accent: oklch(0.22 0.01 260);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.78 0.15 155);
+  --success-soft: oklch(0.78 0.15 155 / 0.14);
+  --warning: oklch(0.83 0.14 80);
+  --warning-soft: oklch(0.83 0.14 80 / 0.14);
+  --info: oklch(0.78 0.11 240);
+  --info-soft: oklch(0.78 0.11 240 / 0.14);
   --border: oklch(0.28 0.01 260);
   --input: oklch(0.28 0.01 260);
   --chart-2: oklch(0.556 0 0);
@@ -317,10 +345,7 @@ select:focus-visible {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.28 0.01 260);
 
-  /* ACCENT — Kiranam's real brand red (#EC2028), not the placeholder
-     blue this block shipped with. Single fixed identity: applies to
-     both light and dark (mode only governs the neutrals above), no
-     picker — see the removed [data-theme="..."] blocks this replaces. */
+  /* ACCENT — Kiranam's brand red, same in light and dark. */
   --primary: oklch(0.603 0.232 26.6);
   --primary-foreground: oklch(0.985 0 0);
   --primary-hover: oklch(0.533 0.205 26.6);
@@ -346,14 +371,29 @@ select:focus-visible {
   --secondary: oklch(0.979 0.003 84.6);
   --secondary-foreground: oklch(0.155 0.002 286.2);
   --muted: oklch(0.979 0.003 84.6);
-  --muted-foreground: oklch(0.565 0.012 76.5);
+  --muted-foreground: oklch(0.52 0.012 70);
   --accent: oklch(0.950 0.006 75.4);
   --accent-foreground: oklch(0.155 0.002 286.2);
   --destructive: oklch(0.506 0.193 27.7);
+  --success: oklch(0.50 0.12 150);
+  --success-soft: oklch(0.95 0.035 150);
+  --warning: oklch(0.52 0.11 75);
+  --warning-soft: oklch(0.96 0.045 80);
+  --info: oklch(0.47 0.11 250);
+  --info-soft: oklch(0.95 0.025 250);
   --border: oklch(0.950 0.006 75.4);
-  --input: oklch(0.911 0.007 80.7);
-  --chart-2: oklch(0.637 0.156 152.0);
-  --chart-3: oklch(0.652 0.132 81.6);
+  --input: oklch(0.72 0.012 75);
+  --chart-2: oklch(0.50 0.12 150);
+  --chart-3: oklch(0.52 0.11 75);
+  /* Brand accent + focus ring follow the admin panel in light mode. */
+  --primary: oklch(0.603 0.232 26.6);
+  --primary-hover: oklch(0.533 0.205 26.6);
+  --primary-soft: oklch(0.603 0.232 26.6 / 0.1);
+  --primary-soft-2: oklch(0.603 0.232 26.6 / 0.18);
+  --ring: oklch(0.603 0.232 26.6);
+  --chart-1: oklch(0.603 0.232 26.6);
+  --sidebar-primary: oklch(0.603 0.232 26.6);
+  --sidebar-ring: oklch(0.603 0.232 26.6);
   --chart-4: oklch(0.749 0.008 80.7);
   --chart-5: oklch(0.911 0.007 80.7);
   --radius: 0.75rem;

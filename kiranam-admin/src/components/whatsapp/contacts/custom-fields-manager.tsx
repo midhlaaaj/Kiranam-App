@@ -16,6 +16,7 @@ import { Button } from '@/components/whatsapp/ui/button';
 import { Input } from '@/components/whatsapp/ui/input';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface CustomFieldsManagerProps {
   open: boolean;
@@ -149,14 +150,14 @@ export function CustomFieldsPanel() {
     return true;
   }
 
-  async function handleDelete(field: CustomField) {
-    if (
-      !window.confirm(
-        t('deleteConfirm', { name: field.field_name })
-      )
-    ) {
-      return;
-    }
+  // Confirmation via ConfirmDialog (see render).
+  const [pendingDelete, setPendingDelete] = useState<CustomField | null>(null);
+  function handleDelete(field: CustomField) {
+    setPendingDelete(field);
+  }
+
+  async function deleteField(field: CustomField) {
+    setPendingDelete(null);
     setBusyId(field.id);
     const { error } = await supabase
       .from('custom_fields')
@@ -226,6 +227,15 @@ export function CustomFieldsPanel() {
           </ul>
         )}
       </div>
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onOpenChange={(o) => !o && setPendingDelete(null)}
+        title={pendingDelete ? t('deleteConfirm', { name: pendingDelete.field_name }) : ''}
+        consequences={['Remove this field’s value from every contact', 'Break broadcasts or automations that fill a blank from it']}
+        confirmLabel="Delete field"
+        destructive
+        onConfirm={() => pendingDelete && void deleteField(pendingDelete)}
+      />
     </div>
   );
 }

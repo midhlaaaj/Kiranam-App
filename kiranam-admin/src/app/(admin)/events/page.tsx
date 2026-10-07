@@ -1,19 +1,19 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { CalendarDays, Pencil, Search, Trash2 } from 'lucide-react';
+import { CalendarDays, Pencil, Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { deleteEvent } from './actions';
 import { CreateEventForm } from './CreateEventForm';
 import { EmptyState } from '@/components/EmptyState';
 import { AddNewPanel } from '@/components/AddNewPanel';
-import { NotificationBell } from '@/components/NotificationBell';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PillTabs } from '@/components/PillTabs';
+import { PreviewImage } from '@/components/ImageLightbox';
+import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
+import { searchTerm } from '@/lib/search';
 import {
   badgeClass,
-  buttonPrimary,
-  inputClass,
   staggerDelay,
   tableCellClass,
   tableHeadRowClass,
@@ -29,14 +29,14 @@ export default async function EventsPage({
   const { q, status } = await searchParams;
 
   return (
-    <div>
+    <FilterRoot>
       <AddNewPanel
         title="Events"
         label="Add new event"
-        bell={<NotificationBell />}
         modal
         filters={
           <PillTabs
+            label="When"
             items={[
               { key: 'all', label: 'All', href: `/events${q ? `?q=${encodeURIComponent(q)}` : ''}`, active: !status },
               {
@@ -54,32 +54,17 @@ export default async function EventsPage({
             ]}
           />
         }
-        search={
-          <form className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-kiranam-muted" />
-              <input
-                type="search"
-                name="q"
-                placeholder="Search events…"
-                defaultValue={q}
-                className={`${inputClass} w-56 pl-9`}
-              />
-            </div>
-            {status && <input type="hidden" name="status" value={status} />}
-            <button type="submit" className={buttonPrimary}>
-              Search
-            </button>
-          </form>
-        }
+        search={<FilterSearch placeholder="Search events" label="Search events" />}
       >
         <CreateEventForm />
       </AddNewPanel>
 
-      <Suspense fallback={<SkeletonTable rows={5} cols={5} />}>
-        <EventsTable q={q} status={status} />
-      </Suspense>
-    </div>
+      <FilterResults>
+        <Suspense key={`${q ?? ''}:${status ?? ''}`} fallback={<SkeletonTable rows={5} cols={5} />}>
+          <EventsTable q={q} status={status} />
+        </Suspense>
+      </FilterResults>
+    </FilterRoot>
   );
 }
 
@@ -102,8 +87,9 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
   let query = supabase
     .from('events')
     .select('id, title, event_date, location, is_past, cover_image_url')
-    .order('event_date', { ascending: false });
-  if (q) query = query.ilike('title', `%${q}%`);
+    .order('event_date', { ascending: status === 'upcoming' });
+  const term = searchTerm(q);
+  if (term) query = query.ilike('title', `%${term}%`);
   if (status === 'upcoming') query = query.eq('is_past', false);
   if (status === 'past') query = query.eq('is_past', true);
 
@@ -130,8 +116,7 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
                 <td className={tableCellClass}>
                   <div className="flex items-center gap-3">
                     {e.cover_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={e.cover_image_url} alt="" className="h-10 w-10 rounded-lg object-cover" />
+                      <PreviewImage src={e.cover_image_url} alt={e.title} className="h-10 w-10 rounded-lg object-cover" buttonClassName="shrink-0" />
                     ) : (
                       <div className="h-10 w-10 rounded-lg bg-kiranam-surface-alt" />
                     )}
@@ -161,6 +146,7 @@ async function EventsTable({ q, status }: { q?: string; status?: string }) {
                       title="Delete this event?"
                       description={`"${e.title}" and its images will be permanently deleted. This can't be undone.`}
                       confirmLabel="Delete event"
+                      destructive
                       successMessage="Event deleted."
                       pendingMessage="Deleting event…"
                       className="flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"

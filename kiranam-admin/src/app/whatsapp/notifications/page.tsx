@@ -145,8 +145,8 @@ export default function NotificationsPage() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
         <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" onClick={() => window.location.reload()}>
-          Retry
+        <Button variant="outline" onClick={() => load()}>
+          Try again
         </Button>
       </div>
     );
@@ -154,8 +154,10 @@ export default function NotificationsPage() {
 
   if (notifications === null) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <div className="space-y-2" aria-busy="true" aria-label="Loading alerts">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-16 animate-pulse rounded-xl bg-muted/70" />
+        ))}
       </div>
     );
   }
@@ -164,9 +166,9 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+          <h1 className="text-2xl font-bold text-foreground">Alerts</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Conversations other teammates assign to you show up here.
+            Conversations teammates assign to you. New customer messages show in the Inbox.
           </p>
         </div>
         <Button
@@ -186,11 +188,11 @@ export default function NotificationsPage() {
 
       {notifications.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/40">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Bell className="h-6 w-6 text-primary" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+            <Bell className="h-6 w-6 text-muted-foreground" aria-hidden />
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">
-            No notifications yet
+            No alerts yet
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             You&apos;ll see an alert here when someone assigns you a
@@ -210,8 +212,8 @@ export default function NotificationsPage() {
                   className={cn(
                     "flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors",
                     isUnread
-                      ? "border-primary/30 bg-primary/5 hover:border-primary/50"
-                      : "border-border bg-card hover:border-border/70",
+                      ? "border-foreground/20 bg-card font-semibold shadow-sm hover:border-foreground/40"
+                      : "border-border bg-card hover:border-foreground/20",
                   )}
                 >
                   <div
