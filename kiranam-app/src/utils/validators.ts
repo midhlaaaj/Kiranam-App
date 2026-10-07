@@ -17,9 +17,14 @@ export function validateEmail(email: string, opts?: { required?: boolean }): str
   return EMAIL_RE.test(trimmed) ? null : 'Please enter a valid email address.';
 }
 
+// +91 0000000000 is accepted as a fixed test number (pair it with a test OTP
+// in Supabase Auth). Keep in sync with kiranam-admin's lib/phone.ts.
+const TEST_NUMBER = { country: 'IN', digits: '0000000000' };
+
 export function validatePhoneNumber(nationalNumber: string, countryCode: CountryCode): string | null {
   const trimmed = nationalNumber.trim();
   if (!trimmed) return 'Please enter your phone number.';
+  if (countryCode === TEST_NUMBER.country && trimmed.replace(/\D/g, '') === TEST_NUMBER.digits) return null;
   if (!isValidPhoneNumber(trimmed, countryCode)) return 'Please enter a valid phone number.';
   return null;
 }
