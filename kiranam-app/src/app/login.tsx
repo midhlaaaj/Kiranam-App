@@ -47,7 +47,7 @@ export default function LoginScreen() {
       if (/network request failed/i.test(otpError)) {
         setToastMessage(friendlyError(otpError));
       } else {
-        setError(otpError);
+        setError(friendlyError(otpError));
       }
       return;
     }

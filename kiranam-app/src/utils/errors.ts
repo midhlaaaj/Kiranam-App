@@ -17,6 +17,17 @@ export function friendlyError(message: string): string {
   // (`{"type":"default","status":500,...}`) as the error message — a
   // technical dump, not something a donor should ever see. Log it for
   // debugging and show a generic message instead.
+  // Supabase Auth reports a failed Send SMS Hook (our WhatsApp OTP sender) as
+  // "Unexpected status code returned from hook: <status>" — plumbing, not
+  // something a donor can act on. 429 is our own OTP rate limit; 502 is
+  // WhatsApp refusing the send; anything else is a server-side fault.
+  const hook = message.match(/status code returned from hook:?\s*(\d{3})/i);
+  if (hook) {
+    console.error('[friendlyError] Send SMS hook failed:', message);
+    if (hook[1] === '429') return 'Too many code requests. Please wait a while and try again.';
+    if (hook[1] === '502') return "We couldn't send the code on WhatsApp. Check the number and try again.";
+    return "Couldn't send the code right now. Please try again in a moment.";
+  }
   if (/^\s*\{"type":"default"/.test(message)) {
     console.error('[friendlyError] Raw Response leaked as error message:', message);
     return "Something went wrong on our end. Please try again in a moment.";

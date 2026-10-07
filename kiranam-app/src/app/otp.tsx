@@ -19,6 +19,7 @@ import { Button } from '@/components/Button';
 import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { COUNTRIES, getCountryByIso2 } from '@/utils/countries';
 import { validatePhoneNumber } from '@/utils/validators';
+import { friendlyError } from '@/utils/errors';
 import { resolvePostAuthRoute } from '@/utils/volunteerRouting';
 import { ArrowLeft, Pencil, Check, X, ChevronDown } from 'lucide-react-native';
 
@@ -98,7 +99,7 @@ export default function OtpScreen() {
     // look like it worked, with no way to tell the user actually got nothing.
     const { error: resendError } = await signInWithPhone(phoneE164 || phone);
     if (resendError) {
-      setError(resendError);
+      setError(friendlyError(resendError));
       return;
     }
     setResendSeconds(30);
@@ -146,7 +147,7 @@ export default function OtpScreen() {
     const { error: verifyError } = await verifyOtpCode(phone, code);
     if (verifyError) {
       setVerifying(false);
-      setError(verifyError);
+      setError(friendlyError(verifyError));
       return;
     }
 
