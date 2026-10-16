@@ -50,6 +50,15 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isApi = pathname.startsWith('/api/');
 
+  // kiranam.online (no www) serves /api/* directly, because Razorpay, the
+  // Supabase OTP hook and others call it there and don't reliably follow
+  // redirects. Every page request still goes to www, as before. This replaces
+  // the domain-level kiranam.online → www redirect in Vercel, which also
+  // caught /api/*.
+  if (hostname(host) === 'kiranam.online' && !isApi) {
+    return NextResponse.redirect(`${MAIN_ORIGIN}${pathname}${search}`, 308);
+  }
+
   if (MAIN_HOSTS.includes(hostname(host)) && !isApi) {
     if (pathname === LANDING_PATH) {
       return NextResponse.redirect(new URL(`/${search}`, request.url), 308);
