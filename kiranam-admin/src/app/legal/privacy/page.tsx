@@ -127,7 +127,7 @@ export default function PrivacyPolicyPage() {
           the period required under applicable accounting and tax regulations
           (typically up to 8 years), even after account deletion, because
           we&apos;re legally required to keep them. Coordinator application data
-          is kept for the duration of your volunteering relationship and a
+          is kept for the duration of your coordinator relationship and a
           reasonable period after. When data is no longer needed, we securely
           delete, anonymize, or aggregate it.
         </Section>

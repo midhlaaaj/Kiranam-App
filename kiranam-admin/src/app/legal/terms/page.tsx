@@ -77,15 +77,15 @@ export default function TermsPage() {
           numbers should be added here.]
         </Section>
 
-        <Section title="6. Volunteering">
+        <Section title="6. Coordinators">
           If you apply to be a coordinator, we may review and verify your
           application and, at our discretion, assign you to support one or
-          more contributors or campaigns. Volunteering is unpaid and entirely
+          more contributors or campaigns. The coordinator role is unpaid and entirely
           voluntary, and nothing in these Terms creates an employment, agency,
           or partnership relationship between you and Kiranam. You agree to
           treat contributors and other users you interact with respectfully
           and in line with any coordinator conduct guidelines we communicate to
-          you. Either you or Kiranam may end a volunteering arrangement, with
+          you. Either you or Kiranam may end a coordinator arrangement, with
           or without cause, at any time.
         </Section>
 

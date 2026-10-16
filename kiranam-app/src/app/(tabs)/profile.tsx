@@ -182,8 +182,8 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Volunteering */}
-        <Text style={styles.sectionHeader}>Volunteering</Text>
+        {/* Coordinator */}
+        <Text style={styles.sectionHeader}>Coordinator</Text>
         <View style={styles.sectionCard}>
           <TouchableOpacity
             style={[styles.actionRow, styles.noBorder]}

@@ -72,7 +72,7 @@ export default function LoginScreen() {
         {/* Headers */}
         <Text style={styles.title}>
           {mode === 'volunteer' ? (
-            <>Let&apos;s get you{"\n"}<Text style={styles.titleAccent}>volunteering</Text></>
+            <>Let&apos;s get you{"\n"}<Text style={styles.titleAccent}>coordinating</Text></>
           ) : (
             <>Let&apos;s get you{"\n"}<Text style={styles.titleAccent}>contributing</Text></>
           )}
