@@ -12,7 +12,7 @@ const urbanist = Urbanist({
 
 export const metadata: Metadata = {
   title: "Kiranam Admin",
-  description: "Admin dashboard for Kiranam volunteer applications, campaigns, and contributions.",
+  description: "Admin dashboard for Kiranam coordinator applications, campaigns, and contributions.",
 };
 
 export default function RootLayout({

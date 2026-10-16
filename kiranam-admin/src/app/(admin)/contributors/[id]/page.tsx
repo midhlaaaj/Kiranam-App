@@ -142,7 +142,7 @@ export default async function ContributorDetailPage({
           </section>
 
           <section className={`${cardClass} p-4`}>
-            <h2 className="text-sm font-semibold text-kiranam-ink">Volunteer</h2>
+            <h2 className="text-sm font-semibold text-kiranam-ink">Coordinator</h2>
             {volunteer ? (
               <div className="mt-2 flex items-center justify-between gap-3">
                 <Link href={`/volunteers/${volunteer.id}`} className="min-w-0 truncate text-sm font-medium text-kiranam-ink hover:underline">
@@ -151,14 +151,14 @@ export default async function ContributorDetailPage({
                 <ConfirmSubmitButton
                   action={unassignVolunteer.bind(null, id, volunteer.id)}
                   label={<Trash2 size={16} strokeWidth={2} />}
-                  title="Unassign this volunteer?"
-                  description={`${volunteer.full_name || 'This volunteer'} will no longer be assigned to ${profile.full_name || 'this contributor'}.`}
+                  title="Unassign this coordinator?"
+                  description={`${volunteer.full_name || 'This coordinator'} will no longer be assigned to ${profile.full_name || 'this contributor'}.`}
                   confirmLabel="Unassign"
                   destructive
-                  successMessage="Volunteer unassigned."
+                  successMessage="Coordinator unassigned."
                   pendingMessage="Unassigning…"
                   className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-kiranam-danger transition hover:bg-kiranam-danger-soft"
-                  aria-label="Unassign volunteer"
+                  aria-label="Unassign coordinator"
                 />
               </div>
             ) : (
@@ -168,8 +168,8 @@ export default async function ContributorDetailPage({
               <PersonCombobox
                 people={(allVolunteers || []).filter((v) => v.id !== volunteer?.id)}
                 name="volunteerId"
-                placeholder={volunteer ? 'Change volunteer…' : 'Search volunteers…'}
-                emptyLabel="No volunteers match."
+                placeholder={volunteer ? 'Change coordinator…' : 'Search coordinators…'}
+                emptyLabel="No coordinators match."
                 className="max-w-none"
               />
               <button type="submit" className={buttonPrimary}>

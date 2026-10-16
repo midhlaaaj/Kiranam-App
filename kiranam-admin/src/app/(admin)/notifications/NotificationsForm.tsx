@@ -27,8 +27,8 @@ const TITLE_MAX = 80;
 const BODY_SOFT = 150;
 const BODY_MAX = 500;
 
-const AUDIENCE_LABEL: Record<Audience, string> = { contributor: 'contributors', volunteer: 'volunteers', all: 'people' };
-const AUDIENCE_OPTION: Record<Audience, string> = { contributor: 'Contributors', volunteer: 'Volunteers', all: 'All users' };
+const AUDIENCE_LABEL: Record<Audience, string> = { contributor: 'contributors', volunteer: 'coordinators', all: 'people' };
+const AUDIENCE_OPTION: Record<Audience, string> = { contributor: 'Contributors', volunteer: 'Coordinators', all: 'All users' };
 
 function Counter({ value, soft, max, id }: { value: string; soft: number; max: number; id: string }) {
   const over = value.length > soft;

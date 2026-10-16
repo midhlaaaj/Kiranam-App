@@ -54,7 +54,7 @@ export function RejectApplicationButton({
           <DialogHeader>
             <DialogTitle>Reject this application?</DialogTitle>
             <DialogDescription>
-              {applicantName || 'This applicant'} will not be made a volunteer. They can reapply later.
+              {applicantName || 'This applicant'} will not be made a coordinator. They can reapply later.
             </DialogDescription>
           </DialogHeader>
 

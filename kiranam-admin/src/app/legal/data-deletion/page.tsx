@@ -18,7 +18,7 @@ export default function DataDeletionPage() {
           You can permanently delete your account and associated data yourself, at
           any time, from within the app: open <strong>Profile → Delete Account</strong>
           {" "}and confirm. This immediately and irreversibly deletes your profile,
-          contribution and volunteer records, assignments, referrals, and
+          contribution and coordinator records, assignments, referrals, and
           notifications, subject only to the limited financial-record retention
           described in our{" "}
           <a href="/legal/privacy" className="underline">
@@ -53,7 +53,7 @@ export default function DataDeletionPage() {
 
         <Section title="3. What gets deleted">
           Deletion removes your profile/contact information, message and
-          conversation history, volunteer or contribution records tied to your
+          conversation history, coordinator or contribution records tied to your
           account, and consent/preference records. It does not remove information
           we&apos;re legally required to retain (e.g. financial records for tax and
           accounting purposes, as described in our Privacy Policy §6), or

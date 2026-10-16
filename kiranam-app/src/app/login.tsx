@@ -79,7 +79,7 @@ export default function LoginScreen() {
         </Text>
         <Text style={styles.subtitle}>
           {mode === 'volunteer'
-            ? 'Enter your phone number to continue as a volunteer.'
+            ? 'Enter your phone number to continue as a coordinator.'
             : 'Enter your phone number to continue.'}
         </Text>
 
@@ -136,7 +136,7 @@ export default function LoginScreen() {
         {/* Mode toggle */}
         <TouchableOpacity onPress={handleToggleMode} activeOpacity={0.7} style={styles.volunteerLink}>
           <Text style={styles.volunteerLinkText}>
-            {mode === 'volunteer' ? 'Start contributing instead?' : 'Want to volunteer instead?'}
+            {mode === 'volunteer' ? 'Start contributing instead?' : 'Want to be a coordinator instead?'}
           </Text>
         </TouchableOpacity>
 

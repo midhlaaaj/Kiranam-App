@@ -231,7 +231,7 @@ async function DashboardBody({
   const cards = [
     { label: 'Pending Applications', value: data.pendingApplications.toString(), icon: Clock3, href: '/volunteers?tab=pending' },
     { label: 'Contributors', value: data.contributors.toString(), icon: Users, href: '/contributors' },
-    { label: 'Volunteers', value: data.volunteers.toString(), icon: HeartHandshake, href: '/volunteers' },
+    { label: 'Coordinators', value: data.volunteers.toString(), icon: HeartHandshake, href: '/volunteers' },
     { label: 'Active Campaigns', value: data.activeCampaigns.toString(), icon: Megaphone, href: '/campaigns?status=active' },
     { label: 'Total Contributed', value: formatMoney(data.totalRaised), icon: Wallet, href: '/contributions' },
   ];
@@ -341,7 +341,7 @@ async function DashboardBody({
       </div>
 
       <div className={`mt-6 ${cardClass} p-5`}>
-        <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Volunteer Growth</h2>
+        <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Coordinator Growth</h2>
         <div className="mt-4">
           <VolunteerGrowthChart data={data.volunteerGrowth} />
         </div>

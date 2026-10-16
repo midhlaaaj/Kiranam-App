@@ -6,7 +6,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { ChartTypeToggle, type ChartKind } from '@/components/charts/ChartTypeToggle';
 
 const chartConfig = {
-  total: { label: 'Volunteers', color: 'var(--color-chart-2)' },
+  total: { label: 'Coordinators', color: 'var(--color-chart-2)' },
 } satisfies ChartConfig;
 
 export function VolunteerGrowthChart({ data }: { data: { label: string; total: number }[] }) {

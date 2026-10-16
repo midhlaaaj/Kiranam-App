@@ -60,7 +60,9 @@ export async function sendAnnouncement(_prevState: SendState, formData: FormData
   }
 
   const sent = ids.length - failedIds.length;
-  const noun = (n: number) => (audience === 'all' ? (n === 1 ? 'person' : 'people') : `${audience}${n === 1 ? '' : 's'}`);
+  // The role value is still 'volunteer'; the people are called coordinators.
+  const roleNoun = audience === 'volunteer' ? 'coordinator' : audience;
+  const noun = (n: number) => (audience === 'all' ? (n === 1 ? 'person' : 'people') : `${roleNoun}${n === 1 ? '' : 's'}`);
 
   if (sent > 0) {
     await logAction(admin.id, 'send_announcement', 'notifications', undefined, {

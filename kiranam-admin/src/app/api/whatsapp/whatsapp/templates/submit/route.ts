@@ -8,7 +8,7 @@ import {
   type TemplatePayload,
 } from '@/lib/whatsapp/whatsapp/template-validators'
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/whatsapp/template-components'
-import { ensureImageHeaderHandle } from '@/lib/whatsapp/whatsapp/template-header-handle'
+import { ensureMediaHeaderHandle } from '@/lib/whatsapp/whatsapp/template-header-handle'
 import { normalizeStatus } from '@/lib/whatsapp/whatsapp/template-status-normalize'
 import { hasMinRole, isAccountRole } from '@/lib/whatsapp/auth/roles'
 
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
       // building the payload. Surfaces a 400 with an actionable message
       // (missing META_APP_ID, unreachable URL, wrong type/size).
       try {
-        await ensureImageHeaderHandle(payload, accessToken)
+        await ensureMediaHeaderHandle(payload, accessToken)
       } catch (e) {
         return NextResponse.json(
           { error: e instanceof Error ? e.message : 'Header image upload failed.' },

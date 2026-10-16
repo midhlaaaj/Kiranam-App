@@ -110,7 +110,7 @@ export default function VolunteerProfileScreen() {
           <Text style={styles.userName}>{userName}</Text>
           <Text style={styles.userPhone}>{phone || '+91 98765 43210'}</Text>
           <View style={styles.volunteerBadge}>
-            <Text style={styles.volunteerBadgeText}>Volunteer · {myReferralCode}</Text>
+            <Text style={styles.volunteerBadgeText}>Coordinator · {myReferralCode}</Text>
           </View>
         </View>
 
@@ -225,7 +225,7 @@ export default function VolunteerProfileScreen() {
         onClose={() => setDeleteModalVisible(false)}
         onConfirmed={deleteAccount}
         onDeleted={handleAccountDeleted}
-        description="This permanently deletes your account and volunteer history. This cannot be undone."
+        description="This permanently deletes your account and coordinator history. This cannot be undone."
       />
 
       <EditProfileModal

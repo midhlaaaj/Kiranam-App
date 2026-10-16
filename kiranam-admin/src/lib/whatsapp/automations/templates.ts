@@ -44,7 +44,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
       {
         step_type: 'send_message',
         step_config: {
-          text: "Hi! 🙏 Thank you for reaching out to Kiranam. A volunteer will reply to you shortly.",
+          text: "Hi! 🙏 Thank you for reaching out to Kiranam. A coordinator will reply to you shortly.",
         },
       },
     ],
@@ -67,7 +67,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Thanks for your message! Our volunteers reply between 9am and 6pm — we'll get back to you first thing tomorrow.",
+            "Thanks for your message! Our coordinators reply between 9am and 6pm — we'll get back to you first thing tomorrow.",
         },
         parent_index: 0,
         branch: 'yes',
@@ -77,7 +77,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
   lead_qualifier: {
     slug: 'lead_qualifier',
     name: 'Donation enquiry',
-    description: 'Reply when someone asks how to give, and hand them to a volunteer.',
+    description: 'Reply when someone asks how to give, and hand them to a coordinator.',
     trigger_type: 'keyword_match',
     trigger_config: {
       keywords: ['donate', 'donation', 'contribute', 'give'],
@@ -88,7 +88,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Thank you for wanting to support Kiranam! 💛 You can give monthly through the Kiranam app, or a volunteer will message you here to help set it up.",
+            "Thank you for wanting to support Kiranam! 💛 You can give monthly through the Kiranam app, or a coordinator will message you here to help set it up.",
         },
       },
       {

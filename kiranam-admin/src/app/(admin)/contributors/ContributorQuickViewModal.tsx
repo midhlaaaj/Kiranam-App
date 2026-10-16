@@ -124,7 +124,7 @@ export function ContributorQuickViewModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className={fieldLabelClass}>Volunteer</label>
+            <label className={fieldLabelClass}>Coordinator</label>
             <PersonCombobox
               key={data.id}
               people={volunteers}
@@ -132,8 +132,8 @@ export function ContributorQuickViewModal({
               initial={data.volunteer}
               onSelect={(p) => setSelectedVolunteerId(p?.id ?? null)}
               className="max-w-none"
-              placeholder="Search volunteers by name or phone…"
-              emptyLabel="No volunteers match."
+              placeholder="Search coordinators by name or phone…"
+              emptyLabel="No coordinators match."
             />
           </div>
 
@@ -156,7 +156,7 @@ export function ContributorQuickViewModal({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              aria-label="Edit KK number and volunteer"
+              aria-label="Edit KK number and coordinator"
               className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-kiranam-muted transition hover:bg-kiranam-surface-alt hover:text-kiranam-ink"
             >
               <Pencil size={16} strokeWidth={2} />
@@ -169,7 +169,7 @@ export function ContributorQuickViewModal({
               <p className="mt-1 text-kiranam-ink">{data.kk_number || '—'}</p>
             </div>
             <div>
-              <p className={fieldLabelClass}>Volunteer</p>
+              <p className={fieldLabelClass}>Coordinator</p>
               <p className="mt-1 text-kiranam-ink">{data.volunteer?.full_name || 'Not assigned'}</p>
             </div>
           </div>

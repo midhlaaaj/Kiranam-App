@@ -50,7 +50,7 @@ export function VolunteerQuickViewModal({
       setData(view);
       setKkNumber(view.kk_number || '');
     } catch {
-      toast.error('Could not load this volunteer.');
+      toast.error('Could not load this coordinator.');
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ export function VolunteerQuickViewModal({
     setSaving(true);
     try {
       await updateVolunteerKkNumber(data.id, trimmedKk);
-      toast.success('Volunteer updated.');
+      toast.success('Coordinator updated.');
       setData({ ...data, kk_number: trimmedKk });
       setEditing(false);
     } catch (err) {
@@ -86,7 +86,7 @@ export function VolunteerQuickViewModal({
   }
 
   return (
-    <Modal open={!!volunteerId} onClose={onClose} title="Volunteer">
+    <Modal open={!!volunteerId} onClose={onClose} title="Coordinator">
       {loading || !data ? (
         <div className="py-6 text-center text-sm text-kiranam-muted">Loading…</div>
       ) : editing ? (
@@ -156,11 +156,11 @@ export function VolunteerQuickViewModal({
               }}
               label="Demote to contributor"
               title="Demote to contributor?"
-              description={`${data.full_name || 'This volunteer'} will become a plain contributor again. Any contributors currently assigned to them will be unassigned first.`}
+              description={`${data.full_name || 'This coordinator'} will become a plain contributor again. Any contributors currently assigned to them will be unassigned first.`}
               confirmLabel="Demote"
               destructive
               pendingMessage="Demoting…"
-              successMessage={`${data.full_name || 'Volunteer'} has been demoted to contributor.`}
+              successMessage={`${data.full_name || 'Coordinator'} has been demoted to contributor.`}
               onSuccess={onClose}
               className="text-sm font-medium text-kiranam-danger hover:underline"
             />

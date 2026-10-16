@@ -10,7 +10,7 @@
  */
 
 const META_API_VERSION = 'v21.0'
-const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`
+export const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`
 
 export interface MetaSendResult {
   messageId: string
@@ -499,6 +499,7 @@ export async function sendTemplateMessage(
       headerText: messageParams?.headerText,
       headerMediaUrl: messageParams?.headerMediaUrl,
       headerMediaId: messageParams?.headerMediaId,
+      headerDocumentFilename: messageParams?.headerDocumentFilename,
       buttonParams: messageParams?.buttonParams,
     })
     if (components.length > 0) {

@@ -45,7 +45,7 @@ export default function VolunteerWelcomeScreen() {
         </View>
 
         <Text style={styles.title}>
-          Welcome, {firstName || 'there'} — you&apos;re officially a Kiranam volunteer.
+          Welcome, {firstName || 'there'} — you&apos;re officially a Kiranam coordinator.
         </Text>
         <Text style={styles.subtitle}>
           Your referral code is ready to share, and you can start inviting contributors right away.

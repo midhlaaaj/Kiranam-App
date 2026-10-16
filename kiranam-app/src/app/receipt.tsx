@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Clipboard, TouchableOpacity, ScrollView, StatusBar, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Print from 'expo-print';
@@ -13,7 +13,7 @@ import { KIRANAM_LOGO_DATA_URI, HCF_LOGO_DATA_URI, HCF_SEAL_DATA_URI } from '@/c
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { userName, userEmail, phone, isEmailVerified, emailReceipt, isVolunteer } = useApp();
+  const { userName, userEmail, phone, isVolunteer } = useApp();
 
   const txnId = (params.id as string) || 'TXN9284KLM2';
   const amount = params.amount ? parseInt(params.amount as string, 10) : 500;
@@ -115,29 +115,9 @@ export default function ReceiptScreen() {
     }
   };
 
-  // Send the emailed receipt as soon as this success screen is shown, not
-  // gated behind the user remembering to tap "Download Receipt" — that was
-  // the actual reason receipts weren't going out. Guarded with a ref (not
-  // just the effect's dep array) so React StrictMode's double-invoke, or a
-  // re-render from unrelated state, can't fire a second send for the same
-  // payment.
-  const emailSentRef = useRef(false);
-  useEffect(() => {
-    if (!isEmailVerified || emailSentRef.current) return;
-    emailSentRef.current = true;
-    (async () => {
-      try {
-        const { base64 } = await Print.printToFileAsync({ html: receiptHtml, base64: true });
-        if (base64) {
-          await emailReceipt({ txnId, amount, label, dateStr, pdfBase64: base64 });
-        }
-      } catch {
-        // Best-effort — the on-screen success state and the download button
-        // already work regardless of whether this silent email goes out.
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEmailVerified]);
+  // The emailed (and WhatsApp) receipt is sent by the server for every
+  // successful payment — see kiranam-admin's /api/receipts/send — so this
+  // screen no longer emails it itself.
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>

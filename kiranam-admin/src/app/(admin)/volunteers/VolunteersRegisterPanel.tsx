@@ -26,8 +26,8 @@ export function VolunteersRegisterPanel({
   return (
     <>
       <AddNewPanel
-        title="Volunteers"
-        label="Register volunteer"
+        title="Coordinators"
+        label="Register coordinator"
         modal
         filters={filters}
         search={search}

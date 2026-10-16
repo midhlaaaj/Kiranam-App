@@ -127,7 +127,7 @@ export default async function VolunteersPage({
     <FilterRoot>
       <VolunteersRegisterPanel
         filters={filterPills}
-        search={<FilterSearch placeholder="Search by name or phone" label="Search volunteers" />}
+        search={<FilterSearch placeholder="Search by name or phone" label="Search coordinators" />}
       />
 
       <FilterResults>
@@ -146,7 +146,7 @@ async function VolunteersTable({ activeTab, q }: { activeTab: 'approved' | 'pend
     return (
       <VolunteersTableClient
         volunteers={volunteers}
-        emptyTitle={q ? 'No approved volunteers match your search' : 'No approved volunteers yet'}
+        emptyTitle={q ? 'No approved coordinators match your search' : 'No approved coordinators yet'}
         emptyDescription={q ? 'Try a different name or phone number.' : undefined}
       />
     );
@@ -158,7 +158,7 @@ async function VolunteersTable({ activeTab, q }: { activeTab: 'approved' | 'pend
         <EmptyState
           icon={UserRoundCheck}
           title={q ? 'No pending applications match your search' : 'No pending applications'}
-          description={q ? 'Try a different name or phone number.' : 'New volunteer applications will show up here.'}
+          description={q ? 'Try a different name or phone number.' : 'New coordinator applications will show up here.'}
         />
       ) : (
         <table className="w-full text-sm">

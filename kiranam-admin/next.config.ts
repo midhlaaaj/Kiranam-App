@@ -42,6 +42,11 @@ const SECURITY_HEADERS = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  // The receipt PDF reads its fonts/logos from disk at runtime — make sure
+  // they ship with the route's serverless function.
+  outputFileTracingIncludes: {
+    "/api/receipts/send": ["./src/lib/receipts/assets/**/*"],
+  },
   async redirects() {
     return [
       {

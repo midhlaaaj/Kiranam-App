@@ -91,7 +91,7 @@ export default function CampaignDetailScreen() {
 
           {/* Narrative Text */}
           <Text style={styles.storyText}>
-            Harsh winters leave hundreds of families without adequate warmth. Your contribution funds thick woollen blankets, distributed directly to elderly residents and children across rural Kerala communities identified by our on-ground volunteers.
+            Harsh winters leave hundreds of families without adequate warmth. Your contribution funds thick woollen blankets, distributed directly to elderly residents and children across rural Kerala communities identified by our on-ground coordinators.
           </Text>
 
           {/* Horizontal Gallery slider */}

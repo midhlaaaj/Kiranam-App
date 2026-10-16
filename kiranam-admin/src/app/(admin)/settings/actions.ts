@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { sendEmail } from '@/lib/email/resend';
-import { adminInviteEmail } from '@/lib/email/templates';
+import { adminInviteEmail, adminAccessRestoredEmail } from '@/lib/email/templates';
 
 // Must match the `expires_at` default set by the admin_invite_expiry
 // migration, and is what enforces the deadline server-side (is_email_invited
@@ -44,16 +44,19 @@ export async function resendInvite(inviteId: string): Promise<InviteState> {
 
 async function issueInvite(adminId: string, email: string): Promise<InviteState> {
 
-  const supabase = await createClient();
+  // Service-role client for admin_invites writes: the table has no UPDATE
+  // RLS policy, so a session-client update on resend silently matched 0
+  // rows. verifyAdmin() has already gated every caller.
+  const supabase = createAdminClient();
   const expiresAt = new Date(Date.now() + ADMIN_INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
   // `email` is UNIQUE on admin_invites, so a plain insert fails outright on
   // re-invite — including the common case of resending to someone whose
   // invite expired before they acted on it. Look up any existing row first:
-  // a *used* one means they already have an account (re-inviting makes no
-  // sense and must not reset used_at); anything else (never used — pending
-  // or expired) gets its invited_by/expires_at refreshed in place, which is
-  // how "resend" works — just submit the same email again.
+  // a *used* one means they already created an admin account at some point;
+  // anything else (never used — pending or expired) gets its
+  // invited_by/expires_at refreshed in place, which is how "resend" works —
+  // just submit the same email again.
   const { data: existing } = await supabase
     .from('admin_invites')
     .select('id, used_at')
@@ -61,7 +64,7 @@ async function issueInvite(adminId: string, email: string): Promise<InviteState>
     .maybeSingle();
 
   if (existing?.used_at) {
-    return { error: 'This email already has an admin account.' };
+    return restoreAdminAccess(adminId, email, existing.id);
   }
 
   let inviteId: string;
@@ -105,6 +108,54 @@ async function issueInvite(adminId: string, email: string): Promise<InviteState>
     };
   }
   return { message: `Invite emailed to ${email} — it expires in ${ADMIN_INVITE_EXPIRY_DAYS} days.` };
+}
+
+/** Re-invite of someone who already accepted an invite before (typically an
+ * admin whose access was revoked). Their auth account still exists, so the
+ * /signup path can't work for them (createUser fails with email_exists) and
+ * the confirm trigger that promotes invitees never fires again — instead,
+ * flip their profile straight back to admin and tell them to sign in. */
+async function restoreAdminAccess(adminId: string, email: string, inviteId: string): Promise<InviteState> {
+  const supabase = createAdminClient();
+
+  // ilike for case-insensitive match; escape its wildcards (_ is common in emails).
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, role, full_name')
+    .ilike('email', email.replace(/[\\%_]/g, (c) => `\\${c}`))
+    .maybeSingle();
+
+  if (!profile) {
+    // Account was deleted since the invite was used — start a fresh invite.
+    await supabase.from('admin_invites').delete().eq('id', inviteId);
+    return issueInvite(adminId, email);
+  }
+  if (profile.role === 'admin') {
+    return { error: 'This email already has admin access.' };
+  }
+
+  const { error } = await supabase.from('profiles').update({ role: 'admin' }).eq('id', profile.id);
+  if (error) return { error: friendlyErrorMessage(error.message) };
+
+  await logAction(adminId, 'restore_admin', 'profiles', profile.id, { email, label: profile.full_name || email });
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const loginUrl = `${siteUrl}/login`;
+  const { error: emailError } = await sendEmail({
+    to: email,
+    subject: 'Your Kiranam admin access has been restored',
+    html: adminAccessRestoredEmail({ loginUrl, email }),
+  });
+
+  revalidatePath('/settings/admin-users');
+  if (emailError) {
+    console.error('Failed to send admin access restored email:', emailError);
+    return {
+      warning: `Admin access restored for ${email}, but the email couldn't be sent. Let them know they can sign in with their existing password.`,
+      signupUrl: loginUrl,
+    };
+  }
+  return { message: `Admin access restored for ${email} — they can sign in with their existing password.` };
 }
 
 export async function revokeInvite(inviteId: string) {

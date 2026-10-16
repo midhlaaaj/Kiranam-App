@@ -25,11 +25,11 @@ export default function VolunteerApplicationScreen() {
   const handleSubmit = async () => {
     const motivationError = validateRequired(motivation, 'Motivation');
     if (motivationError) {
-      setError('Tell us a little about why you want to volunteer');
+      setError('Tell us a little about why you want to be a coordinator');
       return;
     }
     if (!agreed) {
-      setError('Please agree to the volunteer code of conduct');
+      setError('Please agree to the coordinator code of conduct');
       return;
     }
     setError('');
@@ -76,7 +76,7 @@ export default function VolunteerApplicationScreen() {
                   <Users size={18} color="#EC2028" strokeWidth={2} />
                 </View>
                 <Text style={styles.warningText}>
-                  Volunteers get assigned real contributors to follow up with on payments and
+                  Coordinators get assigned real contributors to follow up with on payments and
                   communication — it&apos;s a responsibility, not just a title.
                 </Text>
               </View>
@@ -98,7 +98,7 @@ export default function VolunteerApplicationScreen() {
                   </View>
                   <Text style={styles.warningText}>
                     You&apos;ll keep contributing exactly as you already do — this only adds
-                    volunteer duties on top, nothing about your existing giving changes.
+                    coordinator duties on top, nothing about your existing giving changes.
                   </Text>
                 </View>
               )}
@@ -111,7 +111,7 @@ export default function VolunteerApplicationScreen() {
         ) : (
           <>
             {/* Title */}
-            <Text style={styles.title}>Become a Kiranam Volunteer</Text>
+            <Text style={styles.title}>Become a Kiranam Coordinator</Text>
             <Text style={styles.subtitle}>
               Recruit new members with your own referral code and track your impact from a dedicated dashboard.
             </Text>
@@ -119,7 +119,7 @@ export default function VolunteerApplicationScreen() {
             {/* Motivation Field */}
             <Input
               variant="underline"
-              label="Why do you want to volunteer?"
+              label="Why do you want to be a coordinator?"
               value={motivation}
               onChangeText={(text) => {
                 setMotivation(text);
@@ -143,14 +143,14 @@ export default function VolunteerApplicationScreen() {
                 {agreed && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
               </View>
               <Text style={styles.agreeText}>
-                I agree to Kiranam&apos;s volunteer code of conduct and privacy policy.
+                I agree to Kiranam&apos;s coordinator code of conduct and privacy policy.
               </Text>
             </TouchableOpacity>
 
             {/* Submit CTA */}
             <View style={styles.buttonContainer}>
               <Button
-                title="Apply to Volunteer"
+                title="Apply to be a Coordinator"
                 onPress={handleSubmit}
                 loading={submitting}
               />

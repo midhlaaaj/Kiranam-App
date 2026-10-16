@@ -74,8 +74,8 @@ export default function PendingScreen() {
         <Text style={styles.title}>Your application is under review</Text>
         <Text style={styles.subtitle}>
           {hasCommitment
-            ? "Your interest in becoming a volunteer has been noted — you can check back once approved."
-            : "We'll notify you once an admin approves your volunteer account — this usually takes a few days."}
+            ? "Your interest in becoming a coordinator has been noted — you can check back once approved."
+            : "We'll notify you once an admin approves your coordinator account — this usually takes a few days."}
         </Text>
 
         {notYetApproved && (

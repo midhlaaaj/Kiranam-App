@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { redirect } from 'next/navigation';
 import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
@@ -8,6 +9,7 @@ import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { uploadPublicImage } from '@/lib/storage';
 import { applyMediaFromForm, CAMPAIGN_MEDIA } from '@/lib/mediaSave';
+import { notifyNewCampaign } from '@/lib/kiranam-notify/campaign';
 
 export interface CreateCampaignState {
   message?: string;
@@ -52,7 +54,14 @@ export async function createCampaign(
 
   await logAction(admin.id, 'create_campaign', 'campaigns', campaign.id, { label: title });
   revalidatePath('/campaigns');
-  return { message: `"${title}" created.` };
+
+  // Push / WhatsApp / email to everyone, after the response so the admin
+  // isn't left waiting on hundreds of sends.
+  const notify = formData.get('notify_users') === 'on';
+  if (notify) {
+    after(() => notifyNewCampaign(campaign.id, admin.id).catch((err) => console.error('[createCampaign] notify failed', err)));
+  }
+  return { message: notify ? `"${title}" created — notifying users now.` : `"${title}" created.` };
 }
 
 export async function updateCampaign(id: string, formData: FormData) {

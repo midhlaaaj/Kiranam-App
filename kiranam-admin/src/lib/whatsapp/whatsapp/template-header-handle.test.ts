@@ -5,7 +5,7 @@ vi.mock('./meta-api', () => ({
   uploadResumableMedia: vi.fn(async () => ({ handle: 'HANDLE123' })),
 }));
 
-import { ensureImageHeaderHandle } from './template-header-handle';
+import { ensureMediaHeaderHandle } from './template-header-handle';
 import { uploadResumableMedia } from './meta-api';
 import type { TemplatePayload } from './template-validators';
 
@@ -30,7 +30,7 @@ function imgResponse(type = 'image/jpeg', size = 1024, ok = true, status = 200):
   } as unknown as Response;
 }
 
-describe('ensureImageHeaderHandle', () => {
+describe('ensureMediaHeaderHandle', () => {
   beforeEach(() => {
     vi.mocked(uploadResumableMedia).mockClear();
   });
@@ -41,28 +41,28 @@ describe('ensureImageHeaderHandle', () => {
 
   it('is a no-op for non-image headers', async () => {
     const p = payload({ header_type: 'text', header_content: 'Hi' });
-    await ensureImageHeaderHandle(p, 'tok');
+    await ensureMediaHeaderHandle(p, 'tok');
     expect(uploadResumableMedia).not.toHaveBeenCalled();
     expect(p.header_handle).toBeUndefined();
   });
 
   it('is a no-op when a handle already exists', async () => {
     const p = payload({ header_handle: 'existing' });
-    await ensureImageHeaderHandle(p, 'tok');
+    await ensureMediaHeaderHandle(p, 'tok');
     expect(uploadResumableMedia).not.toHaveBeenCalled();
     expect(p.header_handle).toBe('existing');
   });
 
   it('throws an actionable error when META_APP_ID is unset', async () => {
     const p = payload();
-    await expect(ensureImageHeaderHandle(p, 'tok')).rejects.toThrow(/META_APP_ID/);
+    await expect(ensureMediaHeaderHandle(p, 'tok')).rejects.toThrow(/META_APP_ID/);
   });
 
   it('derives + sets header_handle from a valid image URL', async () => {
     vi.stubEnv('META_APP_ID', 'app-1');
     vi.stubGlobal('fetch', vi.fn(async () => imgResponse('image/jpeg', 2048)));
     const p = payload();
-    await ensureImageHeaderHandle(p, 'tok');
+    await ensureMediaHeaderHandle(p, 'tok');
     expect(uploadResumableMedia).toHaveBeenCalledOnce();
     expect(p.header_handle).toBe('HANDLE123');
   });
@@ -70,12 +70,42 @@ describe('ensureImageHeaderHandle', () => {
   it('rejects a non-image content type', async () => {
     vi.stubEnv('META_APP_ID', 'app-1');
     vi.stubGlobal('fetch', vi.fn(async () => imgResponse('text/html')));
-    await expect(ensureImageHeaderHandle(payload(), 'tok')).rejects.toThrow(/JPEG or PNG/);
+    await expect(ensureMediaHeaderHandle(payload(), 'tok')).rejects.toThrow(/JPEG or PNG/);
   });
 
   it('rejects an image over 5 MB', async () => {
     vi.stubEnv('META_APP_ID', 'app-1');
     vi.stubGlobal('fetch', vi.fn(async () => imgResponse('image/png', 6 * 1024 * 1024)));
-    await expect(ensureImageHeaderHandle(payload(), 'tok')).rejects.toThrow(/5 MB/);
+    await expect(ensureMediaHeaderHandle(payload(), 'tok')).rejects.toThrow(/5 MB/);
+  });
+
+  // Google Drive "uc?export=download" links serve PDFs as octet-stream.
+  function bytesResponse(type: string, bytes: Uint8Array): Response {
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: (h: string) => (h.toLowerCase() === 'content-type' ? type : null) },
+      arrayBuffer: async () => bytes.buffer,
+    } as unknown as Response;
+  }
+
+  it('accepts a generic-typed download that is really a PDF', async () => {
+    vi.stubEnv('META_APP_ID', 'app-1');
+    const pdf = new TextEncoder().encode('%PDF-1.7\n...');
+    vi.stubGlobal('fetch', vi.fn(async () => bytesResponse('application/octet-stream', pdf)));
+    const p = payload({ header_type: 'document', header_media_url: 'https://drive.google.com/uc?id=x' });
+    await ensureMediaHeaderHandle(p, 'tok');
+    expect(uploadResumableMedia).toHaveBeenCalledWith(
+      expect.objectContaining({ mimeType: 'application/pdf', fileName: 'header.pdf' }),
+    );
+    expect(p.header_handle).toBe('HANDLE123');
+  });
+
+  it('rejects a generic-typed download that is not a PDF', async () => {
+    vi.stubEnv('META_APP_ID', 'app-1');
+    const html = new TextEncoder().encode('<!doctype html><html>');
+    vi.stubGlobal('fetch', vi.fn(async () => bytesResponse('application/octet-stream', html)));
+    const p = payload({ header_type: 'document', header_media_url: 'https://x.test/file' });
+    await expect(ensureMediaHeaderHandle(p, 'tok')).rejects.toThrow(/PDF/);
   });
 });

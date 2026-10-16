@@ -26,6 +26,7 @@ const ACTION_AREA: Record<string, AuditArea> = {
   reject_volunteer_application: 'people',
   add_offline_payment: 'money',
   create_campaign: 'campaigns',
+  notify_new_campaign: 'communications',
   update_campaign: 'campaigns',
   delete_campaign: 'campaigns',
   archive_campaign: 'campaigns',
@@ -40,6 +41,7 @@ const ACTION_AREA: Record<string, AuditArea> = {
   invite_admin: 'access',
   revoke_invite: 'access',
   revoke_admin: 'access',
+  restore_admin: 'access',
   set_auto_assign_kk_number: 'access',
 };
 
@@ -109,31 +111,31 @@ export function describeLogEntry(entry: LogEntryInput, names?: ResolvedNames): L
     case 'register_contributor':
       return ['Registered contributor ', person(id, d.label ?? d.fullName, 'a new contributor'), kk(d)];
     case 'register_volunteer':
-      return ['Registered volunteer ', person(id, d.label ?? d.fullName, 'a new volunteer', '/volunteers'), kk(d)];
+      return ['Registered coordinator ', person(id, d.label ?? d.fullName, 'a new coordinator', '/volunteers'), kk(d)];
     case 'assign_kk_number':
       return ['Gave ', person(id, d.label, 'someone'), ` KK number ${str(d.kkNumber) ?? ''}`.trimEnd()];
     case 'upgrade_contributor_to_volunteer':
-      return ['Made ', person(id, d.label, 'a contributor', '/volunteers'), ' a volunteer'];
+      return ['Made ', person(id, d.label, 'a contributor', '/volunteers'), ' a coordinator'];
     case 'demote_volunteer_to_contributor':
-      return ['Changed ', person(id, d.label, 'a volunteer'), ' back to a contributor'];
+      return ['Changed ', person(id, d.label, 'a coordinator'), ' back to a contributor'];
     case 'assign_contributor':
       return [
         'Assigned ',
         person(d.contributorId ?? id, d.label, 'a contributor'),
-        ' to volunteer ',
-        person(d.volunteerId ?? id, d.otherLabel, 'a volunteer', '/volunteers'),
+        ' to coordinator ',
+        person(d.volunteerId ?? id, d.otherLabel, 'a coordinator', '/volunteers'),
       ];
     case 'unassign_contributor':
       return [
         'Removed ',
         person(d.contributorId ?? id, d.label, 'a contributor'),
-        ' from volunteer ',
-        person(d.volunteerId ?? id, d.otherLabel, 'a volunteer', '/volunteers'),
+        ' from coordinator ',
+        person(d.volunteerId ?? id, d.otherLabel, 'a coordinator', '/volunteers'),
       ];
     case 'approve_volunteer_application':
-      return ['Approved ', person(d.profileId, d.label, 'a volunteer application', '/volunteers'), '’s volunteer application'];
+      return ['Approved ', person(d.profileId, d.label, 'a coordinator application', '/volunteers'), '’s coordinator application'];
     case 'reject_volunteer_application':
-      return ['Rejected ', person(d.profileId, d.label, 'a volunteer application', '/volunteers'), '’s volunteer application'];
+      return ['Rejected ', person(d.profileId, d.label, 'a coordinator application', '/volunteers'), '’s coordinator application'];
     case 'add_offline_payment': {
       const amount = typeof d.amount === 'number' ? formatMoney(d.amount) : 'an offline payment';
       const parts: LogPart[] = [`Recorded ${amount} offline payment from `, person(id, d.label, 'a contributor')];
@@ -165,10 +167,15 @@ export function describeLogEntry(entry: LogEntryInput, names?: ResolvedNames): L
     case 'send_announcement': {
       const title = str(d.title);
       const count = typeof d.count === 'number' ? d.count : undefined;
-      const audience = str(d.audience) ?? 'recipient';
+      const audience = str(d.audience) === 'volunteer' ? 'coordinator' : str(d.audience) ?? 'recipient';
       const plural = (n: number) => (audience === 'all' ? (n === 1 ? 'person' : 'people') : `${audience}${n === 1 ? '' : 's'}`);
       const who = count !== undefined ? `${count} ${plural(count)}` : audience === 'all' ? 'everyone' : `${audience}s`;
       return title ? ['Sent announcement ', { text: `“${title}”` }, ` to ${who}`] : [`Sent an announcement to ${who}`];
+    }
+    case 'notify_new_campaign': {
+      const n = (k: string) => (typeof d[k] === 'number' ? (d[k] as number) : 0);
+      const parts = [d.whatsapp_skipped ? 'WhatsApp skipped' : `${n('whatsapp_sent')} WhatsApp`, `${n('email_sent')} email`];
+      return ['Notified users about ', { text: str(d.label) ?? 'a campaign' }, ` (${parts.join(', ')})`];
     }
     case 'invite_admin':
       return ['Invited ', { text: str(d.label ?? d.email) ?? 'someone' }, ' to be an admin'];
@@ -176,6 +183,8 @@ export function describeLogEntry(entry: LogEntryInput, names?: ResolvedNames): L
       return str(d.label) ? ['Revoked the admin invite for ', { text: str(d.label)! }] : ['Revoked an admin invite'];
     case 'revoke_admin':
       return ['Removed admin access for ', person(id, d.label, 'an admin')];
+    case 'restore_admin':
+      return ['Restored admin access for ', person(id, d.label, 'an admin')];
     case 'set_auto_assign_kk_number':
       return [`Turned ${d.enabled ? 'on' : 'off'} automatic KK numbers for new contributors`];
     default:

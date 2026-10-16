@@ -376,7 +376,7 @@ export default function ContactsPage() {
   const selectedSynced = contacts.filter((c) => selected.has(c.id) && c.kiranam_profile_id).length;
   const syncedDeleteNote = [
     'Delete their conversation history in the inbox',
-    'If they’re a Kiranam contributor or volunteer, they’ll be re-added automatically the next time their profile changes — to stop messages, keep them and rely on their WhatsApp opt-out instead',
+    'If they’re a Kiranam contributor or coordinator, they’ll be re-added automatically the next time their profile changes — to stop messages, keep them and rely on their WhatsApp opt-out instead',
   ];
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);

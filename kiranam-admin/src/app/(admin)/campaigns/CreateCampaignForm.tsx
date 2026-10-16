@@ -54,6 +54,16 @@ export function CreateCampaignForm({ onDone }: { onDone?: () => void }) {
         <MediaManager />
       </div>
 
+      <label className="flex items-start gap-3 rounded-lg border border-kiranam-border p-3 sm:col-span-2">
+        <input type="checkbox" name="notify_users" defaultChecked className="mt-0.5 h-4 w-4 accent-kiranam-primary" />
+        <span className="text-sm">
+          <span className="block font-medium text-kiranam-ink">Also send WhatsApp &amp; email</span>
+          <span className="text-kiranam-muted">
+            Everyone already gets an app notification. This also sends a WhatsApp message with the cover photo, and an email to verified addresses.
+          </span>
+        </span>
+      </label>
+
       {state?.error && <p className="text-sm text-kiranam-danger sm:col-span-2" role="alert">{state.error}</p>}
 
       <button type="submit" disabled={pending} className={`${buttonPrimary} sm:col-span-2`}>

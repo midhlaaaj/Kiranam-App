@@ -29,7 +29,7 @@ export default function TermsPage() {
         <Section title="2. Who can use the app">
           You must be at least 18 years old and capable of entering into a
           legally binding contract under the Indian Contract Act, 1872, to
-          create a contributor or volunteer account. We may request proof of
+          create a contributor or coordinator account. We may request proof of
           age or identity and may suspend or terminate accounts that
           don&apos;t meet these requirements.
         </Section>
@@ -37,7 +37,7 @@ export default function TermsPage() {
         <Section title="3. What Kiranam is">
           Kiranam is a platform that lets contributors make voluntary
           financial contributions toward charitable causes and campaigns we
-          facilitate, and lets volunteers apply for and take part in volunteer
+          facilitate, and lets coordinators apply for and take part in coordinator
           activities we coordinate. Kiranam is not a bank, payment aggregator,
           or financial institution — all payment processing is carried out by
           our licensed payment partner, Razorpay.
@@ -78,13 +78,13 @@ export default function TermsPage() {
         </Section>
 
         <Section title="6. Volunteering">
-          If you apply to volunteer, we may review and verify your
+          If you apply to be a coordinator, we may review and verify your
           application and, at our discretion, assign you to support one or
           more contributors or campaigns. Volunteering is unpaid and entirely
           voluntary, and nothing in these Terms creates an employment, agency,
           or partnership relationship between you and Kiranam. You agree to
           treat contributors and other users you interact with respectfully
-          and in line with any volunteer conduct guidelines we communicate to
+          and in line with any coordinator conduct guidelines we communicate to
           you. Either you or Kiranam may end a volunteering arrangement, with
           or without cause, at any time.
         </Section>
@@ -106,7 +106,7 @@ export default function TermsPage() {
         <Section title="8. Acceptable use">
           You agree not to: impersonate any person or entity, or misrepresent
           your affiliation with one; submit false, misleading, or fraudulent
-          information, including in a contribution or volunteer application;
+          information, including in a contribution or coordinator application;
           use the Services for money laundering, terror financing, or any
           unlawful purpose; interfere with or attempt unauthorized access to
           the Services or other users&apos; accounts; reverse-engineer,
@@ -142,7 +142,7 @@ export default function TermsPage() {
           purpose, or that the Services will be uninterrupted, timely,
           secure, or error-free. We don&apos;t guarantee the accuracy or
           completeness of content within the Services, including campaign
-          information submitted by volunteers or administrators.
+          information submitted by coordinators or administrators.
         </Section>
 
         <Section title="12. Limitation of liability">
@@ -160,7 +160,7 @@ export default function TermsPage() {
 
         <Section title="13. Indemnification">
           You agree to indemnify and hold harmless Kiranam, its officers,
-          employees, volunteers, and agents from claims, liabilities,
+          employees, coordinators, and agents from claims, liabilities,
           damages, losses, and expenses (including reasonable legal fees)
           arising from (a) your access to or use of the Services, (b) your
           violation of these Terms, or (c) your violation of any third

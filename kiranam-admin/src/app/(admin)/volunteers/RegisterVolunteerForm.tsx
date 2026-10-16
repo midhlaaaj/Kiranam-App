@@ -116,10 +116,10 @@ export function RegisterVolunteerForm({
       className={bare ? undefined : `${cardClass} p-5`}
     >
       <div className="mb-4">
-        <h3 className={bare ? 'sr-only' : 'text-sm font-semibold text-kiranam-ink'}>Register volunteer</h3>
+        <h3 className={bare ? 'sr-only' : 'text-sm font-semibold text-kiranam-ink'}>Register coordinator</h3>
         <p className="mt-0.5 text-xs text-kiranam-muted">
           For someone recruited offline. They&apos;ll claim this by logging into the app with the same phone
-          number. Assign their contributors afterwards from their volunteer page.
+          number. Assign their contributors afterwards from their coordinator page.
         </p>
       </div>
 
@@ -197,12 +197,12 @@ export function RegisterVolunteerForm({
                   const kkNumberInput = String(new FormData(formRef.current ?? undefined).get('kk_number') || '');
                   await upgradeContributorToVolunteer(duplicate.id, kkNumberInput);
                 }}
-                label="Upgrade to volunteer"
-                title="Upgrade to volunteer?"
-                description={`${duplicate.fullName || 'This contributor'} will become a volunteer and keep their existing contributor history. This can be reversed later.`}
+                label="Upgrade to coordinator"
+                title="Upgrade to coordinator?"
+                description={`${duplicate.fullName || 'This contributor'} will become a coordinator and keep their existing contributor history. This can be reversed later.`}
                 confirmLabel="Upgrade"
                 pendingMessage="Upgrading…"
-                successMessage={`${duplicate.fullName || 'Contributor'} has been upgraded to volunteer.`}
+                successMessage={`${duplicate.fullName || 'Contributor'} has been upgraded to coordinator.`}
                 onSuccess={resetAfterUpgrade}
                 destructive={false}
                 className={`${buttonSecondary} shrink-0`}
@@ -255,7 +255,7 @@ export function RegisterVolunteerForm({
       {!duplicate && (
       <div className={bare ? 'sticky bottom-0 z-10 mt-5 border-t border-kiranam-border bg-kiranam-surface pb-1 pt-4' : 'mt-5'}>
         <button type="submit" disabled={pending} className={`${buttonPrimary} w-full`}>
-          {pending ? 'Registering…' : 'Register volunteer'}
+          {pending ? 'Registering…' : 'Register coordinator'}
         </button>
       </div>
       )}

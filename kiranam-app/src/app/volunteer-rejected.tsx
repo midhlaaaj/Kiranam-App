@@ -69,12 +69,12 @@ export default function VolunteerRejectedScreen() {
         </View>
 
         <Text style={styles.title}>
-          {hasCommitment ? "Your volunteer application wasn't approved" : "Your application wasn't approved this time"}
+          {hasCommitment ? "Your coordinator application wasn't approved" : "Your application wasn't approved this time"}
         </Text>
         <Text style={styles.subtitle}>
           {hasCommitment
-            ? "Your application to become a volunteer wasn't approved. You can keep contributing as normal — nothing about your account has changed."
-            : "Your volunteer application wasn't approved this time. You can still support Kiranam by contributing directly."}
+            ? "Your application to become a coordinator wasn't approved. You can keep contributing as normal — nothing about your account has changed."
+            : "Your coordinator application wasn't approved this time. You can still support Kiranam by contributing directly."}
         </Text>
 
         {!!reason && (

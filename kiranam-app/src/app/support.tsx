@@ -19,7 +19,7 @@ export default function SupportScreen() {
     { id: 0, q: 'Why did my payment fail?', a: 'Usually a bank decline or network issue. Try again, or use a different payment method.' },
     { id: 1, q: 'How do I change my monthly amount?', a: 'Go to Profile → Contribution Settings and tap Update next to your current amount.' },
     { id: 2, q: 'Can I pause my contributions?', a: 'Yes — tap "Pause my contributions" in your Profile. You can resume anytime.' },
-    { id: 3, q: 'How do I contact my volunteer?', a: 'Reach out via Support chat below and our team will connect you.' },
+    { id: 3, q: 'How do I contact my coordinator?', a: 'Reach out via Support chat below and our team will connect you.' },
     { id: 4, q: 'Is my payment information secure?', a: 'All payments are processed securely by Razorpay. We never store card details.' },
   ];
 

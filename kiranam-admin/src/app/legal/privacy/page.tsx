@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
               text), and an optional profile photo.
             </li>
             <li>
-              Volunteer application details: your motivation, availability,
+              Coordinator application details: your motivation, availability,
               skills, and anything else you submit in that application.
             </li>
             <li>
@@ -58,7 +58,7 @@ export default function PrivacyPolicyPage() {
               privacy and security policies.
             </li>
             <li>
-              Volunteer activity records: contributor assignments and status
+              Coordinator activity records: contributor assignments and status
               updates recorded within the Services.
             </li>
             <li>
@@ -83,7 +83,7 @@ export default function PrivacyPolicyPage() {
         <Section title="3. How we use your information">
           We use your information to: create and manage your account; process
           and record contributions and issue receipts/acknowledgements; match
-          and coordinate volunteers with contributors; send transactional
+          and match coordinators with contributors; send transactional
           messages needed to run the Services — including your one-time login
           code, which we deliver over WhatsApp, and payment confirmations; send
           contribution reminders and programme updates via WhatsApp or
@@ -102,7 +102,7 @@ export default function PrivacyPolicyPage() {
             <li>Razorpay Software Private Limited — payment processing for contributions.</li>
             <li>Meta Platforms, Inc. (WhatsApp Business Platform) — delivery of your login code (always, since it&apos;s how you sign in) and contribution reminders (only if you&apos;ve opted in).</li>
             <li>Google LLC (Firebase Cloud Messaging) and Expo — delivery of push notifications.</li>
-            <li>Volunteers and administrators, on a need-to-know basis, where necessary to coordinate a volunteer-contributor relationship.</li>
+            <li>Coordinators and administrators, on a need-to-know basis, where necessary to manage a coordinator-contributor relationship.</li>
           </ul>
           <p className="mt-4">
             We may also disclose information where required by law, court
@@ -126,7 +126,7 @@ export default function PrivacyPolicyPage() {
           resolve disputes. Contribution and financial records are retained for
           the period required under applicable accounting and tax regulations
           (typically up to 8 years), even after account deletion, because
-          we&apos;re legally required to keep them. Volunteer application data
+          we&apos;re legally required to keep them. Coordinator application data
           is kept for the duration of your volunteering relationship and a
           reasonable period after. When data is no longer needed, we securely
           delete, anonymize, or aggregate it.

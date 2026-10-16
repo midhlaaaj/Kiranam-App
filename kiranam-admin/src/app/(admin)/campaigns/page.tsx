@@ -22,6 +22,10 @@ import {
   tableWrapClass,
 } from '@/lib/ui';
 
+// Creating a campaign notifies every user in the background (after()),
+// which runs within this route's time limit.
+export const maxDuration = 300;
+
 export default async function CampaignsPage({
   searchParams,
 }: {

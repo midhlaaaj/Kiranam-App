@@ -262,14 +262,14 @@ export function RegisterContributorForm({
 
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <label className={fieldLabelClass}>
-                Assign volunteer <span className="font-normal text-kiranam-muted-2">— optional</span>
+                Assign coordinator <span className="font-normal text-kiranam-muted-2">— optional</span>
               </label>
               <PersonCombobox
                 key={comboboxResetKey}
                 people={volunteers}
                 name="volunteerId"
-                placeholder="Search volunteers by name or phone…"
-                emptyLabel="No volunteers match."
+                placeholder="Search coordinators by name or phone…"
+                emptyLabel="No coordinators match."
                 className="max-w-none"
               />
             </div>

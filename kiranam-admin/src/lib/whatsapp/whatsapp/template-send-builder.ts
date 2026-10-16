@@ -42,6 +42,8 @@ export interface SendTimeParams {
   headerMediaUrl?: string;
   /** Alternative: send the media by Meta media id (from prior upload). */
   headerMediaId?: string;
+  /** File name WhatsApp shows for a DOCUMENT header (e.g. "Receipt.pdf"). */
+  headerDocumentFilename?: string;
   /**
    * Per-button overrides keyed by the button's index in the
    * template's `buttons` array. Used for URL buttons with a {{1}}
@@ -65,7 +67,7 @@ type MetaSendParameter =
   | { type: 'text'; text: string }
   | { type: 'image'; image: { link?: string; id?: string } }
   | { type: 'video'; video: { link?: string; id?: string } }
-  | { type: 'document'; document: { link?: string; id?: string } }
+  | { type: 'document'; document: { link?: string; id?: string; filename?: string } }
   | { type: 'coupon_code'; coupon_code: string }
   | { type: 'payload'; payload: string };
 
@@ -118,7 +120,12 @@ function buildHeaderComponent(
         ? { type: 'image', image: mediaPayload }
         : headerType === 'video'
           ? { type: 'video', video: mediaPayload }
-          : { type: 'document', document: mediaPayload },
+          : {
+              type: 'document',
+              document: params.headerDocumentFilename
+                ? { ...mediaPayload, filename: params.headerDocumentFilename }
+                : mediaPayload,
+            },
     ],
   };
 }

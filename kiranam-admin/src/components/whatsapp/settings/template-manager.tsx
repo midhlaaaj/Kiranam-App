@@ -590,14 +590,34 @@ export function TemplateManager() {
   const headerNeedsMedia =
     form.header_format !== 'none' && form.header_format !== 'text';
 
-  async function handleHeaderImageFile(file: File) {
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      toast.error(t('toastInvalidImage'));
+  // Accepted header samples per format — must match the server-side rules
+  // in template-header-handle.ts.
+  const HEADER_UPLOAD_RULES = {
+    image: { accept: 'image/jpeg,image/png', maxBytes: MEDIA_MAX_BYTES_BY_KIND.image },
+    video: { accept: 'video/mp4,video/3gpp', maxBytes: MEDIA_MAX_BYTES_BY_KIND.video },
+    document: { accept: 'application/pdf', maxBytes: MEDIA_MAX_BYTES_BY_KIND.document },
+  } as const;
+  const headerUploadRule =
+    form.header_format === 'image' || form.header_format === 'video' || form.header_format === 'document'
+      ? HEADER_UPLOAD_RULES[form.header_format]
+      : null;
+
+  async function handleHeaderFile(file: File) {
+    if (!headerUploadRule) return;
+    if (!headerUploadRule.accept.split(',').includes(file.type)) {
+      toast.error(
+        form.header_format === 'image'
+          ? t('toastInvalidImage')
+          : t('toastInvalidFile', { format: form.header_format }),
+      );
       return;
     }
-    if (file.size > MEDIA_MAX_BYTES_BY_KIND.image) {
+    if (file.size > headerUploadRule.maxBytes) {
+      const size = (file.size / 1024 / 1024).toFixed(1);
       toast.error(
-        t('toastImageTooLarge', { size: (file.size / 1024 / 1024).toFixed(1) }),
+        form.header_format === 'image'
+          ? t('toastImageTooLarge', { size })
+          : t('toastFileTooLarge', { size, limit: headerUploadRule.maxBytes / 1024 / 1024 }),
       );
       return;
     }
@@ -968,16 +988,16 @@ export function TemplateManager() {
 
               {headerNeedsMedia && (
                 <div className="space-y-2 mt-2">
-                  {form.header_format === 'image' && (
+                  {headerUploadRule && (
                     <div className="flex items-center gap-2">
                       <input
                         ref={headerFileRef}
                         type="file"
-                        accept="image/jpeg,image/png"
+                        accept={headerUploadRule.accept}
                         className="hidden"
                         onChange={(e) => {
                           const f = e.target.files?.[0];
-                          if (f) void handleHeaderImageFile(f);
+                          if (f) void handleHeaderFile(f);
                           e.target.value = '';
                         }}
                       />
@@ -993,10 +1013,14 @@ export function TemplateManager() {
                         ) : (
                           <Upload className="h-3.5 w-3.5" />
                         )}
-                        {t('uploadImage')}
+                        {form.header_format === 'image' ? t('uploadImage') : t('uploadFile')}
                       </Button>
                       <span className="text-xs sm:text-[11px] text-muted-foreground">
-                        {t('uploadHint')}
+                        {form.header_format === 'image'
+                          ? t('uploadHint')
+                          : form.header_format === 'video'
+                            ? t('uploadHintVideo')
+                            : t('uploadHintDocument')}
                       </span>
                     </div>
                   )}

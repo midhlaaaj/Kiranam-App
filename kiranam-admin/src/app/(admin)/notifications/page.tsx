@@ -114,7 +114,7 @@ export default async function AnnouncementsPage({
     <div>
       <PageHeading
         title="Announcements"
-        description="Send a push notification to contributors, volunteers, or everyone in the Kiranam app. Announcements clear from people's in-app inbox after 30 days."
+        description="Send a push notification to contributors, coordinators, or everyone in the Kiranam app. Announcements clear from people's in-app inbox after 30 days."
       />
 
       <Suspense fallback={<Skeleton className={cn(cardClass, 'h-96 max-w-3xl')} />}>
@@ -136,7 +136,7 @@ export default async function AnnouncementsPage({
             },
             {
               key: 'volunteer',
-              label: 'To volunteers',
+              label: 'To coordinators',
               href: '/notifications?audience=volunteer',
               active: audience === 'volunteer',
               scroll: false,

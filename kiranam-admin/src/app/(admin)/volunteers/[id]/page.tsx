@@ -36,7 +36,7 @@ export default async function VolunteerDetailPage({
     return (
       <div>
         <Link href="/volunteers?tab=pending" className="inline-flex items-center gap-1.5 text-sm font-medium text-kiranam-muted transition hover:text-kiranam-ink hover:underline">
-          <ArrowLeft size={15} /> Back to Volunteers
+          <ArrowLeft size={15} /> Back to Coordinators
         </Link>
 
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-balance text-kiranam-ink">{profile.full_name || 'Unnamed'}</h1>
@@ -51,7 +51,7 @@ export default async function VolunteerDetailPage({
               action={approveApplication.bind(null, application!.id, profile.id)}
               label="Approve"
               title="Approve this application?"
-              description={`${profile.full_name || 'This applicant'} will be promoted to a volunteer and can start being assigned contributors.`}
+              description={`${profile.full_name || 'This applicant'} will be promoted to a coordinator and can start being assigned contributors.`}
               confirmLabel="Approve"
               successMessage="Application approved."
               pendingMessage="Approving…"
@@ -98,7 +98,7 @@ export default async function VolunteerDetailPage({
   return (
     <div>
       <Link href="/volunteers?tab=approved" className="inline-flex items-center gap-1.5 text-sm font-medium text-kiranam-muted transition hover:text-kiranam-ink hover:underline">
-        <ArrowLeft size={15} /> Back to Volunteers
+        <ArrowLeft size={15} /> Back to Coordinators
       </Link>
 
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-balance text-kiranam-ink">{profile.full_name || 'Unnamed'}</h1>
@@ -151,7 +151,7 @@ export default async function VolunteerDetailPage({
                     action={unassignContributor.bind(null, id, c.id)}
                     label={<Trash2 size={16} strokeWidth={2} />}
                     title="Unassign this contributor?"
-                    description={`${c.full_name || 'This contributor'} will no longer be assigned to this volunteer.`}
+                    description={`${c.full_name || 'This contributor'} will no longer be assigned to this coordinator.`}
                     confirmLabel="Unassign"
                     destructive
                     successMessage="Contributor unassigned."

@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AppProvider } from '@/context/AppContext';
+import { UpdateRequiredGate } from '@/components/UpdateRequiredGate';
 // Font imports from Google Fonts packages
 import {
   Inter_400Regular,
@@ -68,32 +69,34 @@ export default function RootLayout() {
 
   return (
     <KeyboardProvider>
-      <AppProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="join" />
-            <Stack.Screen name="login" />
-            <Stack.Screen name="password" />
-            <Stack.Screen name="forgot-password" />
-            <Stack.Screen name="reset-password" />
-            <Stack.Screen name="register" />
-            <Stack.Screen name="pending" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(volunteer-tabs)" />
-            <Stack.Screen name="campaign-detail" options={{ presentation: 'card' }} />
-            <Stack.Screen name="event-detail" options={{ presentation: 'card' }} />
-            <Stack.Screen name="choose-amount" />
-            <Stack.Screen name="secure-payment" />
-            <Stack.Screen name="receipt" />
-            <Stack.Screen name="notifications" />
-            <Stack.Screen name="support" />
-            <Stack.Screen name="volunteer-application" options={{ presentation: 'card' }} />
-            <Stack.Screen name="volunteer-contributor-detail" options={{ presentation: 'card' }} />
-          </Stack>
-        </ThemeProvider>
-      </AppProvider>
+      <UpdateRequiredGate>
+        <AppProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="join" />
+              <Stack.Screen name="login" />
+              <Stack.Screen name="password" />
+              <Stack.Screen name="forgot-password" />
+              <Stack.Screen name="reset-password" />
+              <Stack.Screen name="register" />
+              <Stack.Screen name="pending" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(volunteer-tabs)" />
+              <Stack.Screen name="campaign-detail" options={{ presentation: 'card' }} />
+              <Stack.Screen name="event-detail" options={{ presentation: 'card' }} />
+              <Stack.Screen name="choose-amount" />
+              <Stack.Screen name="secure-payment" />
+              <Stack.Screen name="receipt" />
+              <Stack.Screen name="notifications" />
+              <Stack.Screen name="support" />
+              <Stack.Screen name="volunteer-application" options={{ presentation: 'card' }} />
+              <Stack.Screen name="volunteer-contributor-detail" options={{ presentation: 'card' }} />
+            </Stack>
+          </ThemeProvider>
+        </AppProvider>
+      </UpdateRequiredGate>
     </KeyboardProvider>
   );
 }

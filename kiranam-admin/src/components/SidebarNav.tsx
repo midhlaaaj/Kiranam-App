@@ -20,7 +20,7 @@ type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/contributors', label: 'Contributors', icon: Users },
-  { href: '/volunteers', label: 'Volunteers', icon: HeartHandshake },
+  { href: '/volunteers', label: 'Coordinators', icon: HeartHandshake },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/events', label: 'Events', icon: Calendar },
   { href: '/contributions', label: 'Contributions', icon: Wallet },

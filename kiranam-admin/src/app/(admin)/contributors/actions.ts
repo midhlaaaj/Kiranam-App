@@ -195,7 +195,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
       .from('contributor_assignments')
       .insert({ volunteer_id: volunteerId, contributor_id: contributorId, source: 'admin' });
     if (assignError) {
-      return { error: 'Contributor was created, but assigning their volunteer failed. Please assign it manually.' };
+      return { error: 'Contributor was created, but assigning their coordinator failed. Please assign it manually.' };
     }
   }
 

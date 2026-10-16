@@ -200,7 +200,7 @@ export default function ProfileScreen() {
                 )}
               </View>
               <View>
-                <Text style={styles.actionRowText}>Become a Volunteer</Text>
+                <Text style={styles.actionRowText}>Become a Coordinator</Text>
                 {isVolunteer && <Text style={styles.volunteerPendingText}>Application pending review</Text>}
               </View>
             </View>

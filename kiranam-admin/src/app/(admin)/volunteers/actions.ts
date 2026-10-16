@@ -84,10 +84,10 @@ export async function registerVolunteer(
         };
       }
 
-      return { error: 'A volunteer with this phone number already exists.' };
+      return { error: 'A coordinator with this phone number already exists.' };
     }
 
-    return { error: 'Could not register this volunteer. Please try again.' };
+    return { error: 'Could not register this coordinator. Please try again.' };
   }
 
   const volunteerId = created.user.id;
@@ -98,14 +98,14 @@ export async function registerVolunteer(
     .eq('id', volunteerId);
   if (profileError) {
     const message = /duplicate key|unique/i.test(profileError.message)
-      ? `Volunteer was created, but ${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
+      ? `Coordinator was created, but ${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
       : friendlyErrorMessage(profileError.message);
     return { error: message };
   }
 
   await logAction(admin.id, 'register_volunteer', 'profiles', volunteerId, { fullName, label: fullName, kkNumber });
   revalidatePath('/volunteers');
-  return { message: `${fullName} has been registered as a volunteer. They can log in with this phone number.` };
+  return { message: `${fullName} has been registered as a coordinator. They can log in with this phone number.` };
 }
 
 // Promotes an existing contributor to volunteer in place, rather than
@@ -196,7 +196,7 @@ export async function getVolunteerQuickView(volunteerId: string) {
     .select('id, full_name, phone, kk_number')
     .eq('id', volunteerId)
     .single();
-  if (error || !profile) throw new Error('Volunteer not found.');
+  if (error || !profile) throw new Error('Coordinator not found.');
 
   const { count } = await supabase
     .from('contributor_assignments')

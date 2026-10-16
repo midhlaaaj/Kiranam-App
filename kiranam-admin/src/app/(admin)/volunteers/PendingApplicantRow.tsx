@@ -55,7 +55,7 @@ export function PendingApplicantRow({
     startTransition(() => {
       toast.promise(approveApplication(applicant.id, profileId), {
         loading: 'Approving…',
-        success: `${name} is now a volunteer.`,
+        success: `${name} is now a coordinator.`,
         error: (err) => (err instanceof Error ? friendlyErrorMessage(err.message) : 'Something went wrong.'),
       });
     });
@@ -115,7 +115,7 @@ export function PendingApplicantRow({
           </DialogHeader>
 
           <div>
-            <p className="text-sm font-medium text-kiranam-ink">Why they want to volunteer</p>
+            <p className="text-sm font-medium text-kiranam-ink">Why they want to be a coordinator</p>
             <p className="mt-1.5 whitespace-pre-line text-sm text-kiranam-ink">{applicant.motivation || '—'}</p>
           </div>
 
@@ -129,7 +129,7 @@ export function PendingApplicantRow({
               Reject…
             </button>
             <button type="button" onClick={handleApprove} disabled={isPending} className={buttonPrimary}>
-              Approve as volunteer
+              Approve as coordinator
             </button>
           </DialogFooter>
         </DialogContent>
@@ -139,7 +139,7 @@ export function PendingApplicantRow({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reject {name}’s application?</AlertDialogTitle>
-            <AlertDialogDescription>They won’t become a volunteer, but they can apply again later.</AlertDialogDescription>
+            <AlertDialogDescription>They won’t become a coordinator, but they can apply again later.</AlertDialogDescription>
           </AlertDialogHeader>
           <label className="grid gap-1.5 text-sm font-medium text-kiranam-ink">
             Reason <span className="font-normal text-kiranam-muted">(optional — shown to the applicant)</span>

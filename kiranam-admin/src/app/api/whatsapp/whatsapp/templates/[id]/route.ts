@@ -10,7 +10,7 @@ import {
   type TemplatePayload,
 } from '@/lib/whatsapp/whatsapp/template-validators'
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/whatsapp/template-components'
-import { ensureImageHeaderHandle } from '@/lib/whatsapp/whatsapp/template-header-handle'
+import { ensureMediaHeaderHandle } from '@/lib/whatsapp/whatsapp/template-header-handle'
 import { hasMinRole, isAccountRole } from '@/lib/whatsapp/auth/roles'
 
 /**
@@ -166,7 +166,7 @@ export async function PATCH(
       // Image headers need a fresh Resumable-Upload handle on every edit
       // (Meta replaces components wholesale). Derive from header_media_url.
       try {
-        await ensureImageHeaderHandle(payload, accessToken)
+        await ensureMediaHeaderHandle(payload, accessToken)
       } catch (e) {
         return NextResponse.json(
           { error: e instanceof Error ? e.message : 'Header image upload failed.' },

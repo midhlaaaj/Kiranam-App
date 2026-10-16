@@ -33,7 +33,14 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
     password,
     email_confirm: true,
   });
-  if (error) return { error: error.message };
+  if (error) {
+    // An account already exists for this email (e.g. a former admin) — the
+    // inviting admin restores access from the Team page instead.
+    if ((error as { code?: string }).code === 'email_exists' || /already (been )?registered/i.test(error.message)) {
+      return { error: 'An account with this email already exists. Sign in instead, or use "Forgot password" if you don’t remember it.' };
+    }
+    return { error: error.message };
+  }
 
   if (data.user && fullName) {
     await admin.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
