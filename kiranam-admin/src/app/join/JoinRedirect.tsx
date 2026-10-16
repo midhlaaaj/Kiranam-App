@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-// TODO: replace with the real listings once Kiranam is published on both
-// stores — every campaign/event/referral share link in the app points here
-// so this is the only place that needs to change.
-const IOS_STORE_URL = "https://kiranam.online";
-const ANDROID_PACKAGE = "com.kiranam.app";
-const ANDROID_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
+import { ANDROID_STORE_URL, IOS_STORE_URL } from "@/lib/store-links";
 
 function detectPlatform(): "ios" | "android" | "other" {
   if (typeof navigator === "undefined") return "other";
@@ -66,7 +60,9 @@ export function JoinRedirect() {
     if (platform === "android") {
       window.location.href = androidStoreUrl(ref);
     } else {
-      window.location.href = IOS_STORE_URL;
+      // No App Store listing yet → the landing page (on the main domain,
+      // which is where /join is served).
+      window.location.href = IOS_STORE_URL ?? "/";
     }
   };
 

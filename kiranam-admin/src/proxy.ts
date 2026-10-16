@@ -13,11 +13,66 @@ import { updateSession } from '@/lib/supabase/proxy';
 // before touching session cookies, since a redirect away doesn't need them.
 const AUTH_SUBDOMAIN = 'auth.kiranam.online';
 
+// kiranam.online is the public site (landing page, /join share links,
+// /legal pages) and admin.kiranam.online is the admin panel — both served by
+// this one deployment. /api/* stays reachable on both: the admin UI calls it
+// same-origin from the admin host, while Razorpay, Meta, the Supabase
+// send-SMS hook and the cron pinger were all configured against the main
+// domain and keep working there untouched. Any other host (localhost,
+// *.vercel.app previews) gets no host routing — the admin app at /, with
+// the landing page viewable at /landing.
+const ADMIN_HOST = 'admin.kiranam.online';
+const ADMIN_ORIGIN = `https://${ADMIN_HOST}`;
+const MAIN_HOSTS = ['kiranam.online', 'www.kiranam.online'];
+const MAIN_ORIGIN = 'https://www.kiranam.online';
+const LANDING_PATH = '/landing';
+
+function isPublicSitePath(pathname: string) {
+  return (
+    pathname === '/' ||
+    pathname === '/join' ||
+    pathname.startsWith('/legal/') ||
+    pathname.startsWith('/auth/')
+  );
+}
+
+function hostname(host: string) {
+  return host.split(':')[0].toLowerCase();
+}
+
 export async function proxy(request: NextRequest) {
   const host = request.headers.get('host') || '';
   const isAuthSubdomain = host === AUTH_SUBDOMAIN || host.startsWith(`${AUTH_SUBDOMAIN}:`);
   if (isAuthSubdomain && !request.nextUrl.pathname.startsWith('/auth/')) {
     return NextResponse.redirect(new URL('/auth/error', request.url));
+  }
+
+  const { pathname, search } = request.nextUrl;
+  const isApi = pathname.startsWith('/api/');
+
+  if (MAIN_HOSTS.includes(hostname(host)) && !isApi) {
+    if (pathname === LANDING_PATH) {
+      return NextResponse.redirect(new URL(`/${search}`, request.url), 308);
+    }
+    if (!isPublicSitePath(pathname)) {
+      // Old admin bookmarks (kiranam.online/contributors etc.) land on the
+      // same page on the admin host.
+      return NextResponse.redirect(`${ADMIN_ORIGIN}${pathname}${search}`, 308);
+    }
+    if (pathname === '/') {
+      return NextResponse.rewrite(new URL(`${LANDING_PATH}${search}`, request.url));
+    }
+    // Public pages don't read the admin session — no need to refresh it.
+    return NextResponse.next();
+  }
+
+  if (hostname(host) === ADMIN_HOST && !isApi) {
+    if (pathname === LANDING_PATH) {
+      return NextResponse.redirect(`${MAIN_ORIGIN}/${search}`, 308);
+    }
+    if (pathname === '/join' || pathname.startsWith('/legal/')) {
+      return NextResponse.redirect(`${MAIN_ORIGIN}${pathname}${search}`, 308);
+    }
   }
 
   const response = await updateSession(request);
@@ -36,7 +91,6 @@ export async function proxy(request: NextRequest) {
   // reads cookies via `next/headers` — not valid in this Edge/middleware
   // context). `updateSession` above already refreshed the session and
   // wrote any rotated cookies onto `response`, so this only needs to read.
-  const { pathname } = request.nextUrl;
   if (pathname.startsWith('/api/whatsapp/whatsapp/') && !pathname.includes('/webhook')) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
