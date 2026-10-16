@@ -504,14 +504,30 @@ export async function sendTemplateMessage(
     if (components.length > 0) {
       templatePayload.components = components
     }
-  } else if (params && params.length > 0) {
-    // Legacy body-only path — no template row available.
-    templatePayload.components = [
-      {
+  } else {
+    // No template row available — build components straight from the
+    // values given. URL-button values matter for authentication templates:
+    // their "Copy code" button carries the code as {{1}}, and Meta rejects
+    // the send with #131008 "Required parameter is missing" without it.
+    const bodyValues = messageParams?.body ?? params
+    const components: Record<string, unknown>[] = []
+    if (bodyValues && bodyValues.length > 0) {
+      components.push({
         type: 'body',
-        parameters: params.map((p) => ({ type: 'text', text: String(p) })),
-      },
-    ]
+        parameters: bodyValues.map((p) => ({ type: 'text', text: String(p) })),
+      })
+    }
+    for (const [index, value] of Object.entries(messageParams?.buttonParams ?? {})) {
+      components.push({
+        type: 'button',
+        sub_type: 'url',
+        index: String(index),
+        parameters: [{ type: 'text', text: String(value) }],
+      })
+    }
+    if (components.length > 0) {
+      templatePayload.components = components
+    }
   }
 
   const body: Record<string, unknown> = {

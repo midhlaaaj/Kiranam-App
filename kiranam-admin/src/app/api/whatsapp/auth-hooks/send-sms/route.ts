@@ -105,7 +105,11 @@ export async function POST(request: NextRequest) {
       to: phone.replace(/\D/g, ''),
       templateName,
       language: process.env.OTP_TEMPLATE_LANGUAGE || 'en_US',
-      params: [otp],
+      // Authentication templates need the code twice: in the body and in the
+      // "Copy code" URL button (index 0). Body-only sends fail with Meta
+      // #131008, which reached users as "Unexpected status code returned
+      // from hook: 502".
+      messageParams: { body: [otp], buttonParams: { 0: otp } },
     })
   } catch (err) {
     console.error('[send-sms-hook] failed to send OTP via WhatsApp', err)
