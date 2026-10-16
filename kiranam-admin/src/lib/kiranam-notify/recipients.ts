@@ -79,7 +79,7 @@ export async function listCommunityRecipients(): Promise<Recipient[]> {
     const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, phone, email')
-      .in('role', ['contributor', 'volunteer'])
+      .in('role', ['contributor', 'coordinator'])
       // Email-only accounts (revoked admins) aren't community members.
       .not('phone', 'is', null)
       .order('id')

@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { PersonCombobox } from '@/components/PersonCombobox';
 import { OfflinePaymentForm } from '../OfflinePaymentForm';
-import { assignVolunteer, unassignVolunteer } from '../actions';
+import { assignCoordinator, unassignCoordinator } from '../actions';
 import {
   badgeClass,
   buttonPrimary,
@@ -36,7 +36,7 @@ export default async function ContributorDetailPage({
     { data: contributions },
     { data: assignment },
     { data: activeCampaigns },
-    { data: allVolunteers },
+    { data: allCoordinators },
   ] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', id).maybeSingle(),
     supabase.from('commitments').select('*').eq('contributor_id', id).maybeSingle(),
@@ -48,11 +48,11 @@ export default async function ContributorDetailPage({
       .order('created_at', { ascending: false }),
     supabase
       .from('contributor_assignments')
-      .select('volunteer_id')
+      .select('coordinator_id')
       .eq('contributor_id', id)
       .maybeSingle(),
     supabase.from('campaigns').select('id, title').eq('status', 'active').order('title', { ascending: true }),
-    supabase.from('profiles').select('id, full_name, phone').eq('role', 'volunteer').order('full_name'),
+    supabase.from('profiles').select('id, full_name, phone').eq('role', 'coordinator').order('full_name'),
   ]);
   if (!profile) notFound();
 
@@ -63,8 +63,8 @@ export default async function ContributorDetailPage({
   );
 
   // The assigned coordinator is always in the coordinator list loaded above.
-  const assigned = assignment?.volunteer_id ? (allVolunteers || []).find((v) => v.id === assignment.volunteer_id) : undefined;
-  const volunteer: { id: string; full_name: string } | null = assigned
+  const assigned = assignment?.coordinator_id ? (allCoordinators || []).find((v) => v.id === assignment.coordinator_id) : undefined;
+  const coordinator: { id: string; full_name: string } | null = assigned
     ? { id: assigned.id, full_name: assigned.full_name || '' }
     : null;
 
@@ -151,16 +151,16 @@ export default async function ContributorDetailPage({
 
           <section className={`${cardClass} p-4`}>
             <h2 className="text-sm font-semibold text-kiranam-ink">Coordinator</h2>
-            {volunteer ? (
+            {coordinator ? (
               <div className="mt-2 flex items-center justify-between gap-3">
-                <Link href={`/volunteers/${volunteer.id}`} className="min-w-0 truncate text-sm font-medium text-kiranam-ink hover:underline">
-                  {volunteer.full_name || 'Unnamed'}
+                <Link href={`/coordinators/${coordinator.id}`} className="min-w-0 truncate text-sm font-medium text-kiranam-ink hover:underline">
+                  {coordinator.full_name || 'Unnamed'}
                 </Link>
                 <ConfirmSubmitButton
-                  action={unassignVolunteer.bind(null, id, volunteer.id)}
+                  action={unassignCoordinator.bind(null, id, coordinator.id)}
                   label={<Trash2 size={16} strokeWidth={2} />}
                   title="Unassign this coordinator?"
-                  description={`${volunteer.full_name || 'This coordinator'} will no longer be assigned to ${profile.full_name || 'this contributor'}.`}
+                  description={`${coordinator.full_name || 'This coordinator'} will no longer be assigned to ${profile.full_name || 'this contributor'}.`}
                   confirmLabel="Unassign"
                   destructive
                   successMessage="Coordinator unassigned."
@@ -172,16 +172,16 @@ export default async function ContributorDetailPage({
             ) : (
               <p className="mt-2 text-sm text-kiranam-muted">Not assigned yet.</p>
             )}
-            <form action={assignVolunteer.bind(null, id)} className="mt-3 grid gap-2">
+            <form action={assignCoordinator.bind(null, id)} className="mt-3 grid gap-2">
               <PersonCombobox
-                people={(allVolunteers || []).filter((v) => v.id !== volunteer?.id)}
-                name="volunteerId"
-                placeholder={volunteer ? 'Change coordinator…' : 'Search coordinators…'}
+                people={(allCoordinators || []).filter((v) => v.id !== coordinator?.id)}
+                name="coordinatorId"
+                placeholder={coordinator ? 'Change coordinator…' : 'Search coordinators…'}
                 emptyLabel="No coordinators match."
                 className="max-w-none"
               />
               <button type="submit" className={buttonPrimary}>
-                {volunteer ? 'Reassign' : 'Assign'}
+                {coordinator ? 'Reassign' : 'Assign'}
               </button>
             </form>
           </section>

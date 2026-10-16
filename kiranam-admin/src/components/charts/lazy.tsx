@@ -21,8 +21,8 @@ export const ContributorGrowthChart = dynamic(
   () => import('./ContributorGrowthChart').then((m) => m.ContributorGrowthChart),
   { ssr: false, loading: fallback(303) },
 );
-export const VolunteerGrowthChart = dynamic(
-  () => import('./VolunteerGrowthChart').then((m) => m.VolunteerGrowthChart),
+export const CoordinatorGrowthChart = dynamic(
+  () => import('./CoordinatorGrowthChart').then((m) => m.CoordinatorGrowthChart),
   { ssr: false, loading: fallback(303) },
 );
 export const StatusBreakdownChart = dynamic(

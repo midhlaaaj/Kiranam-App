@@ -7,6 +7,7 @@ import { useFonts } from 'expo-font';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { UpdateRequiredGate } from '@/components/UpdateRequiredGate';
+import { upgradeLegacyDeepLink } from '@/utils/links';
 // Font imports from Google Fonts packages
 import {
   Inter_400Regular,
@@ -38,15 +39,17 @@ SplashScreen.preventAutoHideAsync();
 // index.tsx's own routing decides where the user lands.
 function NotificationLinkHandler() {
   const router = useRouter();
-  const { isLoggedIn, isVolunteer } = useApp();
+  const { isLoggedIn, isCoordinator } = useApp();
   const pendingLink = React.useRef<string | null>(null);
 
   const follow = React.useCallback(
     (link: string) => {
-      const target = isVolunteer && link.startsWith('/(tabs)/profile') ? '/(volunteer-tabs)/profile' : link;
+      // Pushes sent before the Volunteer → Coordinator rename carry the old screen names.
+      const upgraded = upgradeLegacyDeepLink(link);
+      const target = isCoordinator && upgraded.startsWith('/(tabs)/profile') ? '/(coordinator-tabs)/profile' : upgraded;
       router.push(target as any);
     },
-    [router, isVolunteer]
+    [router, isCoordinator]
   );
 
   useEffect(() => {
@@ -103,7 +106,7 @@ export default function RootLayout() {
               <Stack.Screen name="register" />
               <Stack.Screen name="pending" />
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(volunteer-tabs)" />
+              <Stack.Screen name="(coordinator-tabs)" />
               <Stack.Screen name="campaign-detail" options={{ presentation: 'card' }} />
               <Stack.Screen name="event-detail" options={{ presentation: 'card' }} />
               <Stack.Screen name="choose-amount" />
@@ -111,8 +114,8 @@ export default function RootLayout() {
               <Stack.Screen name="receipt" />
               <Stack.Screen name="notifications" />
               <Stack.Screen name="support" />
-              <Stack.Screen name="volunteer-application" options={{ presentation: 'card' }} />
-              <Stack.Screen name="volunteer-contributor-detail" options={{ presentation: 'card' }} />
+              <Stack.Screen name="coordinator-application" options={{ presentation: 'card' }} />
+              <Stack.Screen name="coordinator-contributor-detail" options={{ presentation: 'card' }} />
             </Stack>
           </ThemeProvider>
         </AppProvider>

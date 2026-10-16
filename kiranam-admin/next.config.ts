@@ -54,6 +54,18 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
+      // Volunteers were renamed Coordinators — keep old bookmarks and
+      // notification links working.
+      {
+        source: "/volunteers/:path*",
+        destination: "/coordinators/:path*",
+        permanent: true,
+      },
+      {
+        source: "/volunteers",
+        destination: "/coordinators",
+        permanent: true,
+      },
     ];
   },
 

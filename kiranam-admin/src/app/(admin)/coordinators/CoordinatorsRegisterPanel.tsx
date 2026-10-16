@@ -2,18 +2,18 @@
 
 import { useState } from 'react';
 import { AddNewPanel } from '@/components/AddNewPanel';
-import { RegisterVolunteerForm } from './RegisterVolunteerForm';
-import { VolunteerQuickViewModal } from './VolunteerQuickViewModal';
+import { RegisterCoordinatorForm } from './RegisterCoordinatorForm';
+import { CoordinatorQuickViewModal } from './CoordinatorQuickViewModal';
 import type { PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
 
-/** Wraps AddNewPanel + RegisterVolunteerForm with an externally-controlled
+/** Wraps AddNewPanel + RegisterCoordinatorForm with an externally-controlled
  * open state, so a duplicate-phone match's "Edit profile" action can close
- * this registration panel and open the matched volunteer's quick view in its
+ * this registration panel and open the matched coordinator's quick view in its
  * place — the quick view is rendered here, as a sibling of AddNewPanel, so
  * it survives that close instead of unmounting with it. (A contributor
- * match is handled inline via "Upgrade to volunteer" instead, so it needs
+ * match is handled inline via "Upgrade to coordinator" instead, so it needs
  * no modal here.) */
-export function VolunteersRegisterPanel({
+export function CoordinatorsRegisterPanel({
   filters,
   search,
 }: {
@@ -34,7 +34,7 @@ export function VolunteersRegisterPanel({
         open={open}
         onOpenChange={setOpen}
       >
-        <RegisterVolunteerForm
+        <RegisterCoordinatorForm
           bare
           onDone={() => setOpen(false)}
           onEditExisting={(match) => {
@@ -45,7 +45,7 @@ export function VolunteersRegisterPanel({
       </AddNewPanel>
 
       {editMatch && (
-        <VolunteerQuickViewModal volunteerId={editMatch.id} onClose={() => setEditMatch(null)} initialEditing />
+        <CoordinatorQuickViewModal coordinatorId={editMatch.id} onClose={() => setEditMatch(null)} initialEditing />
       )}
     </>
   );

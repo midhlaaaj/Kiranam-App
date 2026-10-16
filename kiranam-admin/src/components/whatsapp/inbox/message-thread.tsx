@@ -212,7 +212,7 @@ export function MessageThread({
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
 
   // Assignable people = members of this WhatsApp account only. Admins can
-  // read *every* profile under RLS (contributors and volunteers included),
+  // read *every* profile under RLS (contributors and coordinators included),
   // so this must filter explicitly — otherwise the assign menu lists donors.
   useEffect(() => {
     if (!accountId) return;

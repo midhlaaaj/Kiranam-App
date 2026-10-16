@@ -4,7 +4,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp, ContributorNote } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
-import { statusMeta } from '@/utils/volunteerStatus';
+import { statusMeta } from '@/utils/coordinatorStatus';
 import { RecordContributionModal } from '@/components/RecordContributionModal';
 import { ArrowLeft, Phone, MessageCircle, Send, Plus, IndianRupee } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,10 +17,10 @@ interface HistoryRow {
   ok: boolean;
 }
 
-export default function VolunteerContributorDetailScreen() {
+export default function CoordinatorContributorDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
-  const { volunteerMembers, campaigns, recordOfflineContribution, fetchContributorNotes, addContributorNote } = useApp();
+  const { coordinatorMembers, campaigns, recordOfflineContribution, fetchContributorNotes, addContributorNote } = useApp();
   const [noteDraft, setNoteDraft] = useState('');
   const [notes, setNotes] = useState<ContributorNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(true);
@@ -31,7 +31,7 @@ export default function VolunteerContributorDetailScreen() {
   const [isRecordModalVisible, setIsRecordModalVisible] = useState(false);
   const [notesRefreshKey, setNotesRefreshKey] = useState(0);
 
-  const member = volunteerMembers.find((m) => m.id === params.id);
+  const member = coordinatorMembers.find((m) => m.id === params.id);
 
   useEffect(() => {
     if (!member) return;
@@ -111,7 +111,7 @@ export default function VolunteerContributorDetailScreen() {
   };
   const handleCall = () => openLink(`tel:${digitsOnly}`, "Couldn't start the call");
   const handleWhatsApp = () => openLink(`https://wa.me/${digitsOnly.replace('+', '')}`, "Couldn't open WhatsApp");
-  // Opens WhatsApp with a pre-filled reminder so the volunteer sends it
+  // Opens WhatsApp with a pre-filled reminder so the coordinator sends it
   // themselves — the app has no server-side WhatsApp sending capability
   // of its own (that lives in the comm center's admin tooling).
   const handleRemind = () => {

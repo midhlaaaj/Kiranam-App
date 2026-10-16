@@ -2,9 +2,9 @@ import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert, Linking, StatusBar, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useApp, VolunteerMember } from '@/context/AppContext';
+import { useApp, CoordinatorMember } from '@/context/AppContext';
 import { Input } from '@/components/Input';
-import { statusMeta } from '@/utils/volunteerStatus';
+import { statusMeta } from '@/utils/coordinatorStatus';
 import { Search, Send } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,7 +14,7 @@ export default function ContributorsScreen() {
   const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { volunteerMembers, refreshUserData } = useApp();
+  const { coordinatorMembers, refreshUserData } = useApp();
   const initialFilter = (params.filter as FilterTab) || 'all';
   const [selectedTab, setSelectedTab] = useState<FilterTab>(
     ['all', 'active', 'due', 'overdue', 'inactive'].includes(initialFilter) ? initialFilter : 'all'
@@ -28,7 +28,7 @@ export default function ContributorsScreen() {
     setRefreshing(false);
   }, [refreshUserData]);
 
-  const filteredMembers = volunteerMembers.filter((m) => {
+  const filteredMembers = coordinatorMembers.filter((m) => {
     const matchesTab = selectedTab === 'all' ? true : m.status === selectedTab;
     const q = query.trim().toLowerCase();
     const matchesQuery = q === '' || m.name.toLowerCase().includes(q) || m.phone.replace(/\s+/g, '').includes(q.replace(/\s+/g, ''));
@@ -37,11 +37,11 @@ export default function ContributorsScreen() {
 
   const getInitials = (name: string) => name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2);
 
-  // Opens WhatsApp with a pre-filled reminder so the volunteer sends it
+  // Opens WhatsApp with a pre-filled reminder so the coordinator sends it
   // themselves — the app has no server-side WhatsApp sending capability
   // of its own (that lives in the comm center's admin tooling), so this
   // is the only honest way to offer a "remind" action here.
-  const handleRemind = async (member: VolunteerMember) => {
+  const handleRemind = async (member: CoordinatorMember) => {
     const digits = member.phone.replace(/\D/g, '');
     if (digits.length < 8) {
       Alert.alert('No phone number', 'This contributor has no valid phone number on file.');
@@ -122,7 +122,7 @@ export default function ContributorsScreen() {
             <TouchableOpacity
               style={styles.memberCard}
               activeOpacity={0.8}
-              onPress={() => router.push({ pathname: '/volunteer-contributor-detail', params: { id: item.id } })}
+              onPress={() => router.push({ pathname: '/coordinator-contributor-detail', params: { id: item.id } })}
             >
               <View style={styles.memberTop}>
                 <View style={styles.memberAvatar}>

@@ -4,26 +4,26 @@ import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { registerVolunteer, upgradeContributorToVolunteer, type RegisterVolunteerState } from './actions';
+import { registerCoordinator, upgradeContributorToCoordinator, type RegisterCoordinatorState } from './actions';
 import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
 import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 
-const initialState: RegisterVolunteerState = {};
+const initialState: RegisterCoordinatorState = {};
 
 const fieldLabelClass = 'text-xs font-semibold text-kiranam-muted';
 
 const nativeControlClass =
   'w-full bg-transparent text-sm text-kiranam-ink placeholder:text-kiranam-muted focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
-// For a volunteer recruited offline (before this system existed, or outside
+// For a coordinator recruited offline (before this system existed, or outside
 // the in-app application flow) but who has never opened the app. Pre-creates
 // their login by phone number — they claim it just by logging into
 // kiranam-app with this same number. Any contributors already assigned to
-// them offline are added afterwards from this volunteer's detail page.
-export function RegisterVolunteerForm({
+// them offline are added afterwards from this coordinator's detail page.
+export function RegisterCoordinatorForm({
   onDone,
   onEditExisting,
   bare = false,
@@ -36,8 +36,8 @@ export function RegisterVolunteerForm({
    * with any modal it rendered itself, since it's the AddNewPanel's content). */
   onEditExisting: (match: PhoneDuplicateMatch) => void;
 }) {
-  const [state, formAction, pending] = useActionState(registerVolunteer, initialState);
-  const lastState = useRef<RegisterVolunteerState>(initialState);
+  const [state, formAction, pending] = useActionState(registerCoordinator, initialState);
+  const lastState = useRef<RegisterCoordinatorState>(initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
   const [dialCode, setDialCode] = useState('91');
@@ -53,7 +53,7 @@ export function RegisterVolunteerForm({
   // Checked on phone-field blur — before the rest of the form is filled in,
   // rather than only on submit. A single request rather than one per
   // keystroke, since the backend runs on a free tier. A contributor match
-  // offers "upgrade to volunteer"; a volunteer match offers a quick view/edit
+  // offers "upgrade to coordinator"; a coordinator match offers a quick view/edit
   // — same as on the Contributors registration form.
   const [duplicate, setDuplicate] = useState<PhoneDuplicateMatch | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
@@ -199,7 +199,7 @@ export function RegisterVolunteerForm({
               <ConfirmSubmitButton
                 action={async () => {
                   const kkNumberInput = String(new FormData(formRef.current ?? undefined).get('kk_number') || '');
-                  await upgradeContributorToVolunteer(duplicate.id, kkNumberInput);
+                  await upgradeContributorToCoordinator(duplicate.id, kkNumberInput);
                 }}
                 label="Upgrade to coordinator"
                 title="Upgrade to coordinator?"
@@ -212,7 +212,7 @@ export function RegisterVolunteerForm({
                 className={`${buttonSecondary} shrink-0`}
               />
             )}
-            {duplicate.role === 'volunteer' && (
+            {duplicate.role === 'coordinator' && (
               <button type="button" onClick={() => onEditExisting(duplicate)} className={`${buttonSecondary} shrink-0`}>
                 Edit profile
               </button>

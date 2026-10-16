@@ -11,7 +11,7 @@ import { formatMoney } from '@/utils/format';
 import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
-export default function VolunteerExploreScreen() {
+export default function CoordinatorExploreScreen() {
   const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const { campaigns, events, notifications, refreshCampaigns, refreshEvents } = useApp();

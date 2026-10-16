@@ -7,3 +7,10 @@ export const APP_JOIN_URL = 'https://kiranam.online/join';
 export function referralJoinUrl(code: string): string {
   return `${APP_JOIN_URL}?ref=${encodeURIComponent(code)}`;
 }
+
+/** Notifications sent before the Volunteer → Coordinator rename link to the
+ * old screen names (e.g. "/(volunteer-tabs)/dashboard"); map them onto the
+ * renamed routes so tapping an old push still opens the right screen. */
+export function upgradeLegacyDeepLink(link: string): string {
+  return link.replace(/volunteer/g, 'coordinator');
+}

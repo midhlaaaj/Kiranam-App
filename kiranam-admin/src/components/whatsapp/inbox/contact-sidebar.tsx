@@ -176,8 +176,8 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const displayName = contact.name || contact.phone;
   const optedOut = contact.whatsapp_consent === false;
   const addableTags = allTags.filter((tg) => !tags.some((x) => x.id === tg.id));
-  const roleLabel = kiranam?.role === "volunteer" ? t("volunteer") : kiranam?.role === "admin" ? t("admin") : t("contributor");
-  const adminHref = kiranam ? `/${kiranam.role === "volunteer" ? "volunteers" : "contributors"}/${kiranam.profileId}` : null;
+  const roleLabel = kiranam?.role === "coordinator" ? t("coordinator") : kiranam?.role === "admin" ? t("admin") : t("contributor");
+  const adminHref = kiranam ? `/${kiranam.role === "coordinator" ? "coordinators" : "contributors"}/${kiranam.profileId}` : null;
 
   return (
     <div className="flex h-full w-full flex-col border-l border-border bg-card lg:w-70">

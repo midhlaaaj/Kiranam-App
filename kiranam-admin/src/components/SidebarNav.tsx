@@ -20,11 +20,11 @@ type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/contributors', label: 'Contributors', icon: Users },
-  { href: '/volunteers', label: 'Coordinators', icon: HeartHandshake },
+  { href: '/coordinators', label: 'Coordinators', icon: HeartHandshake },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
   { href: '/events', label: 'Events', icon: Calendar },
   { href: '/contributions', label: 'Contributions', icon: Wallet },
-  // Sends push messages to contributors/volunteers. Kept distinct from the
+  // Sends push messages to contributors/coordinators. Kept distinct from the
   // header bell (the admin's own notification inbox, /my-notifications).
   { href: '/notifications', label: 'Announcements', icon: Send },
   // WhatsApp comm center — merged in as a normal internal route (used to

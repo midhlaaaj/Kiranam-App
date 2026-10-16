@@ -35,7 +35,7 @@ export function EditReferralCodeModal({ visible, onClose, currentCode, onSave }:
 
   const handleChange = (text: string) => {
     // Keep it constrained to what the backend will normalize to, so the
-    // preview the volunteer sees while typing matches what actually saves.
+    // preview the coordinator sees while typing matches what actually saves.
     setCode(text.toUpperCase().replace(/[^A-Z0-9]/g, ''));
     if (error) setError('');
   };

@@ -16,14 +16,14 @@ export const AUDIT_AREAS: { value: AuditArea; label: string }[] = [
 
 const ACTION_AREA: Record<string, AuditArea> = {
   register_contributor: 'people',
-  register_volunteer: 'people',
+  register_coordinator: 'people',
   assign_kk_number: 'people',
-  upgrade_contributor_to_volunteer: 'people',
-  demote_volunteer_to_contributor: 'people',
+  upgrade_contributor_to_coordinator: 'people',
+  demote_coordinator_to_contributor: 'people',
   assign_contributor: 'people',
   unassign_contributor: 'people',
-  approve_volunteer_application: 'people',
-  reject_volunteer_application: 'people',
+  approve_coordinator_application: 'people',
+  reject_coordinator_application: 'people',
   add_offline_payment: 'money',
   create_campaign: 'campaigns',
   notify_new_campaign: 'communications',
@@ -105,37 +105,37 @@ export function describeLogEntry(entry: LogEntryInput, names?: ResolvedNames): L
     return { text: name, href: !deleted && eid ? `/events/${eid}/edit` : undefined };
   };
 
-  // Older rows predate details.contributorId/volunteerId — whichever one is
+  // Older rows predate details.contributorId/coordinatorId — whichever one is
   // missing is the row's own entity_id.
   switch (entry.action) {
     case 'register_contributor':
       return ['Registered contributor ', person(id, d.label ?? d.fullName, 'a new contributor'), kk(d)];
-    case 'register_volunteer':
-      return ['Registered coordinator ', person(id, d.label ?? d.fullName, 'a new coordinator', '/volunteers'), kk(d)];
+    case 'register_coordinator':
+      return ['Registered coordinator ', person(id, d.label ?? d.fullName, 'a new coordinator', '/coordinators'), kk(d)];
     case 'assign_kk_number':
       return ['Gave ', person(id, d.label, 'someone'), ` KK number ${str(d.kkNumber) ?? ''}`.trimEnd()];
-    case 'upgrade_contributor_to_volunteer':
-      return ['Made ', person(id, d.label, 'a contributor', '/volunteers'), ' a coordinator'];
-    case 'demote_volunteer_to_contributor':
+    case 'upgrade_contributor_to_coordinator':
+      return ['Made ', person(id, d.label, 'a contributor', '/coordinators'), ' a coordinator'];
+    case 'demote_coordinator_to_contributor':
       return ['Changed ', person(id, d.label, 'a coordinator'), ' back to a contributor'];
     case 'assign_contributor':
       return [
         'Assigned ',
         person(d.contributorId ?? id, d.label, 'a contributor'),
         ' to coordinator ',
-        person(d.volunteerId ?? id, d.otherLabel, 'a coordinator', '/volunteers'),
+        person(d.coordinatorId ?? id, d.otherLabel, 'a coordinator', '/coordinators'),
       ];
     case 'unassign_contributor':
       return [
         'Removed ',
         person(d.contributorId ?? id, d.label, 'a contributor'),
         ' from coordinator ',
-        person(d.volunteerId ?? id, d.otherLabel, 'a coordinator', '/volunteers'),
+        person(d.coordinatorId ?? id, d.otherLabel, 'a coordinator', '/coordinators'),
       ];
-    case 'approve_volunteer_application':
-      return ['Approved ', person(d.profileId, d.label, 'a coordinator application', '/volunteers'), '’s coordinator application'];
-    case 'reject_volunteer_application':
-      return ['Rejected ', person(d.profileId, d.label, 'a coordinator application', '/volunteers'), '’s coordinator application'];
+    case 'approve_coordinator_application':
+      return ['Approved ', person(d.profileId, d.label, 'a coordinator application', '/coordinators'), '’s coordinator application'];
+    case 'reject_coordinator_application':
+      return ['Rejected ', person(d.profileId, d.label, 'a coordinator application', '/coordinators'), '’s coordinator application'];
     case 'add_offline_payment': {
       const amount = typeof d.amount === 'number' ? formatMoney(d.amount) : 'an offline payment';
       const parts: LogPart[] = [`Recorded ${amount} offline payment from `, person(id, d.label, 'a contributor')];
@@ -167,7 +167,7 @@ export function describeLogEntry(entry: LogEntryInput, names?: ResolvedNames): L
     case 'send_announcement': {
       const title = str(d.title);
       const count = typeof d.count === 'number' ? d.count : undefined;
-      const audience = str(d.audience) === 'volunteer' ? 'coordinator' : str(d.audience) ?? 'recipient';
+      const audience = str(d.audience) ?? 'recipient';
       const plural = (n: number) => (audience === 'all' ? (n === 1 ? 'person' : 'people') : `${audience}${n === 1 ? '' : 's'}`);
       const who = count !== undefined ? `${count} ${plural(count)}` : audience === 'all' ? 'everyone' : `${audience}s`;
       return title ? ['Sent announcement ', { text: `“${title}”` }, ` to ${who}`] : [`Sent an announcement to ${who}`];

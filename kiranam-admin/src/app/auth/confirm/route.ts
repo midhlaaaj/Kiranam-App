@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get('token_hash');
   const type = searchParams.get('type') as EmailOtpType | null;
   // Falling back to '/' would land non-admin users (contributors,
-  // volunteers) on the admin dashboard root, which verifyAdmin() then
+  // coordinators) on the admin dashboard root, which verifyAdmin() then
   // bounces to /login — looking exactly like a broken "redirects to admin
   // login" bug. /auth/success is the neutral, unbranded-to-admin landing.
   const next = searchParams.get('next') || '/auth/success';
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
   }
 
   // A neutral, unbranded-to-admin page — not /login. A contributor or
-  // volunteer whose link expired should never land on the admin sign-in
+  // coordinator whose link expired should never land on the admin sign-in
   // screen; this route is shared across all three Kiranam apps, and most
   // of the people clicking these links aren't admins at all.
   return NextResponse.redirect(new URL('/auth/error', request.url));

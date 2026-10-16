@@ -20,7 +20,7 @@ import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { COUNTRIES, getCountryByIso2 } from '@/utils/countries';
 import { validatePhoneNumber } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
-import { resolveEntryRoute } from '@/utils/volunteerRouting';
+import { resolveEntryRoute } from '@/utils/coordinatorRouting';
 import { ArrowLeft, Pencil, Check, X, ChevronDown } from 'lucide-react-native';
 
 // Longest dial codes first, so e.g. "971" matches before "97" would.
@@ -39,7 +39,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function OtpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string }>();
-  const role = params.role === 'volunteer' ? 'volunteer' : 'contributor';
+  const role = params.role === 'coordinator' ? 'coordinator' : 'contributor';
   const { phone, setPhone, signInWithPhone, verifyOtpCode } = useApp();
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [resendSeconds, setResendSeconds] = useState(30);

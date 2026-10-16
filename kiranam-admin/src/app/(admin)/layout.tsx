@@ -5,11 +5,11 @@ import { Suspense } from 'react';
 import { AdminShell, LogoutIcon } from '@/components/AdminShell';
 import { NotificationBell } from '@/components/NotificationBell';
 
-// Pending volunteer applications, shown beside Volunteers in the sidebar.
+// Pending coordinator applications, shown beside Coordinators in the sidebar.
 async function PendingApplicationsBadge() {
   const supabase = await createClient();
   const { count } = await supabase
-    .from('volunteer_applications')
+    .from('coordinator_applications')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending');
   if (!count) return null;
@@ -51,7 +51,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       logoutButton={logoutButton}
       // Both render at once; only the numbers stream in afterwards.
       navBadges={{
-        '/volunteers': (
+        '/coordinators': (
           <Suspense fallback={null}>
             <PendingApplicationsBadge />
           </Suspense>

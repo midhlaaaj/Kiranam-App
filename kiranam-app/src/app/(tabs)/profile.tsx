@@ -27,7 +27,7 @@ export default function ProfileScreen() {
     disableAutopay,
     contributionPaused,
     setContributionPaused,
-    isVolunteer,
+    isCoordinator,
     signOut,
     deleteAccount,
     updateProfilePhoto,
@@ -166,13 +166,13 @@ export default function ProfileScreen() {
         <View style={styles.sectionCard}>
           <TouchableOpacity
             style={[styles.actionRow, styles.noBorder]}
-            activeOpacity={isVolunteer ? 1 : 0.7}
-            disabled={isVolunteer}
-            onPress={() => router.push('/volunteer-application')}
+            activeOpacity={isCoordinator ? 1 : 0.7}
+            disabled={isCoordinator}
+            onPress={() => router.push('/coordinator-application')}
           >
-            <View style={styles.volunteerRowLeft}>
-              <View style={styles.volunteerIconBg}>
-                {isVolunteer ? (
+            <View style={styles.coordinatorRowLeft}>
+              <View style={styles.coordinatorIconBg}>
+                {isCoordinator ? (
                   <Clock3 size={18} color="#EC2028" strokeWidth={2} />
                 ) : (
                   <HeartHandshake size={18} color="#EC2028" strokeWidth={2} />
@@ -180,10 +180,10 @@ export default function ProfileScreen() {
               </View>
               <View>
                 <Text style={styles.actionRowText}>Become a Coordinator</Text>
-                {isVolunteer && <Text style={styles.volunteerPendingText}>Application pending review</Text>}
+                {isCoordinator && <Text style={styles.coordinatorPendingText}>Application pending review</Text>}
               </View>
             </View>
-            {!isVolunteer && <ChevronRight size={16} color="#D8D5D0" />}
+            {!isCoordinator && <ChevronRight size={16} color="#D8D5D0" />}
           </TouchableOpacity>
         </View>
 
@@ -375,12 +375,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#EC2028',
   },
-  volunteerRowLeft: {
+  coordinatorRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  volunteerIconBg: {
+  coordinatorIconBg: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  volunteerPendingText: {
+  coordinatorPendingText: {
     fontFamily: 'Inter',
     fontSize: 12,
     color: '#7A756E',

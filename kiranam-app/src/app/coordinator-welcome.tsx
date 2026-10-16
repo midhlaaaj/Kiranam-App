@@ -5,17 +5,17 @@ import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/Button';
-import { markVolunteerWelcomeSeen, resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
+import { markCoordinatorWelcomeSeen, resolveApprovedCoordinatorRoute } from '@/utils/coordinatorRouting';
 import { PartyPopper } from 'lucide-react-native';
 
-// Shown exactly once per volunteer, right after their application is
-// approved — for both a fresh volunteer-only signup and an existing
+// Shown exactly once per coordinator, right after their application is
+// approved — for both a fresh coordinator-only signup and an existing
 // contributor who applied from their profile. Reached only via
-// resolveApprovedVolunteerRoute(), which gates on markVolunteerWelcomeSeen
+// resolveApprovedCoordinatorRoute(), which gates on markCoordinatorWelcomeSeen
 // having never been called for this uid; "Get Started" marks it seen and
 // resolves the real next destination (that same function, called again,
 // now returns the amount picker or the dashboard instead of this page).
-export default function VolunteerWelcomeScreen() {
+export default function CoordinatorWelcomeScreen() {
   const router = useRouter();
   const { userName } = useApp();
   const insets = useSafeAreaInsets();
@@ -30,8 +30,8 @@ export default function VolunteerWelcomeScreen() {
         router.replace('/');
         return;
       }
-      await markVolunteerWelcomeSeen(uid);
-      const dest = await resolveApprovedVolunteerRoute(uid);
+      await markCoordinatorWelcomeSeen(uid);
+      const dest = await resolveApprovedCoordinatorRoute(uid);
       router.replace(dest);
     } catch {
       Alert.alert('Something went wrong', 'Please check your connection and try again.');

@@ -14,7 +14,7 @@ import { KIRANAM_LOGO_DATA_URI, HCF_LOGO_DATA_URI, HCF_SEAL_DATA_URI } from '@/c
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { userName, userEmail, phone, isVolunteer, payments } = useApp();
+  const { userName, userEmail, phone, isCoordinator, payments } = useApp();
 
   // The post-payment flow passes every field; a push-notification deep link
   // only carries the id, so the rest is filled in from the payment history.
@@ -24,7 +24,7 @@ export default function ReceiptScreen() {
   const amount = Number.isFinite(amountParam) ? amountParam : record?.amount;
   const dateStr = (params.date as string) || record?.date;
   const label = (params.label as string) || record?.label;
-  const homeRoute = isVolunteer ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home';
+  const homeRoute = isCoordinator ? '/(coordinator-tabs)/dashboard' : '/(tabs)/home';
   const receiptMissing = !txnId || amount === undefined || !dateStr || !label;
 
   const [copied, setCopied] = useState(false);

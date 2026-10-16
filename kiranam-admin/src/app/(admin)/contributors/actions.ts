@@ -26,15 +26,15 @@ export async function getAutoAssignKkNumberSetting(): Promise<boolean> {
 }
 
 // Fetched client-side by RegisterContributorForm on mount, same reasoning as
-// getAutoAssignKkNumberSetting above — lets the volunteer-assignment combobox
+// getAutoAssignKkNumberSetting above — lets the coordinator-assignment combobox
 // populate without the Contributors page itself waiting on this query.
-export async function getVolunteersForAssignment() {
+export async function getCoordinatorsForAssignment() {
   await verifyAdmin();
   const supabase = await createClient();
   const { data } = await supabase
     .from('profiles')
     .select('id, full_name, phone')
-    .eq('role', 'volunteer')
+    .eq('role', 'coordinator')
     .order('full_name', { ascending: true });
   return data || [];
 }
@@ -55,21 +55,21 @@ export async function getContributorQuickView(contributorId: string) {
 
   const { data: assignment } = await supabase
     .from('contributor_assignments')
-    .select('volunteer_id')
+    .select('coordinator_id')
     .eq('contributor_id', contributorId)
     .maybeSingle();
 
-  let volunteer: { id: string; full_name: string | null; phone: string | null } | null = null;
-  if (assignment?.volunteer_id) {
+  let coordinator: { id: string; full_name: string | null; phone: string | null } | null = null;
+  if (assignment?.coordinator_id) {
     const { data: vol } = await supabase
       .from('profiles')
       .select('id, full_name, phone')
-      .eq('id', assignment.volunteer_id)
+      .eq('id', assignment.coordinator_id)
       .maybeSingle();
-    volunteer = vol;
+    coordinator = vol;
   }
 
-  return { ...profile, volunteer };
+  return { ...profile, coordinator };
 }
 
 // Backfills a KK number for a contributor who was registered (in this system
@@ -103,7 +103,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const monthlyAmountRaw = String(formData.get('monthly_amount') || '').trim();
   const monthlyAmount = monthlyAmountRaw ? Number(monthlyAmountRaw) : null;
   const kkNumberInput = String(formData.get('kk_number') || '').trim();
-  const volunteerId = String(formData.get('volunteerId') || '').trim();
+  const coordinatorId = String(formData.get('coordinatorId') || '').trim();
 
   if (!fullName) return { error: 'Full name is required.' };
 
@@ -198,10 +198,10 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     }
   }
 
-  if (volunteerId) {
+  if (coordinatorId) {
     const { error: assignError } = await supabaseAdmin
       .from('contributor_assignments')
-      .insert({ volunteer_id: volunteerId, contributor_id: contributorId, source: 'admin' });
+      .insert({ coordinator_id: coordinatorId, contributor_id: contributorId, source: 'admin' });
     if (assignError) {
       return { error: 'Contributor was created, but assigning their coordinator failed. Please assign it manually.' };
     }
@@ -212,7 +212,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     label: fullName,
     monthlyAmount,
     kkNumber,
-    volunteerId: volunteerId || null,
+    coordinatorId: coordinatorId || null,
   });
   revalidatePath('/contributors');
   return { message: `${fullName} has been registered as a contributor. They can log in with this phone number.` };
@@ -237,15 +237,15 @@ async function nextKkNumber(supabaseAdmin: ReturnType<typeof createAdminClient>)
   return `KK${max + 1}`;
 }
 
-export async function assignVolunteer(contributorId: string, formData: FormData) {
+export async function assignCoordinator(contributorId: string, formData: FormData) {
   const admin = await verifyAdmin();
-  const volunteerId = String(formData.get('volunteerId') || '');
-  if (!volunteerId) return;
+  const coordinatorId = String(formData.get('coordinatorId') || '');
+  if (!coordinatorId) return;
 
   const supabase = await createClient();
 
-  // A contributor has at most one volunteer at a time (mirrors the
-  // volunteer-side assignment UI), so picking a new one replaces the old
+  // A contributor has at most one coordinator at a time (mirrors the
+  // coordinator-side assignment UI), so picking a new one replaces the old
   // assignment rather than adding a second row.
   const { error: deleteError } = await supabase
     .from('contributor_assignments')
@@ -258,37 +258,37 @@ export async function assignVolunteer(contributorId: string, formData: FormData)
     // Explicit 'admin' even though it's also the column default — this is
     // the one non-referral path that writes this table, so it should say
     // so rather than rely on a default that could change later.
-    .insert({ volunteer_id: volunteerId, contributor_id: contributorId, source: 'admin' });
+    .insert({ coordinator_id: coordinatorId, contributor_id: contributorId, source: 'admin' });
   if (error) throw new Error(error.message);
 
   await logAction(admin.id, 'assign_contributor', 'contributor_assignments', contributorId, {
-    volunteerId: volunteerId,
+    coordinatorId: coordinatorId,
     contributorId: contributorId,
     label: await lookupLabel('profiles', contributorId),
-    otherLabel: await lookupLabel('profiles', volunteerId),
+    otherLabel: await lookupLabel('profiles', coordinatorId),
   });
   revalidatePath(`/contributors/${contributorId}`);
-  revalidatePath(`/volunteers/${volunteerId}`);
+  revalidatePath(`/coordinators/${coordinatorId}`);
 }
 
-export async function unassignVolunteer(contributorId: string, volunteerId: string) {
+export async function unassignCoordinator(contributorId: string, coordinatorId: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
   const { error } = await supabase
     .from('contributor_assignments')
     .delete()
     .eq('contributor_id', contributorId)
-    .eq('volunteer_id', volunteerId);
+    .eq('coordinator_id', coordinatorId);
   if (error) throw new Error(error.message);
 
   await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', contributorId, {
-    volunteerId: volunteerId,
+    coordinatorId: coordinatorId,
     contributorId: contributorId,
     label: await lookupLabel('profiles', contributorId),
-    otherLabel: await lookupLabel('profiles', volunteerId),
+    otherLabel: await lookupLabel('profiles', coordinatorId),
   });
   revalidatePath(`/contributors/${contributorId}`);
-  revalidatePath(`/volunteers/${volunteerId}`);
+  revalidatePath(`/coordinators/${coordinatorId}`);
 }
 
 export interface OfflinePaymentState {

@@ -9,10 +9,10 @@ import {
   ContributionsChart,
   ContributorGrowthChart,
   StatusBreakdownChart,
-  VolunteerGrowthChart,
+  CoordinatorGrowthChart,
 } from '@/components/charts/lazy';
 import { ContributorGrowthFilter } from '@/components/ContributorGrowthFilter';
-import { deriveContributorStatus } from '@/lib/volunteerStats';
+import { deriveContributorStatus } from '@/lib/coordinatorStats';
 import { bucketKey, bucketLabel, getBucketsForPage, type Granularity } from '@/lib/timeBuckets';
 import { cardClass, formatMoney } from '@/lib/ui';
 import { PillTabs } from '@/components/PillTabs';
@@ -86,12 +86,12 @@ async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?
 type Aggregates = {
   pendingApplications: number;
   contributors: number;
-  volunteers: number;
+  coordinators: number;
   activeCampaigns: number;
   totalRaised: number;
   contribBuckets: Map<string, number>;
   campaigns: { title: string; raised: number | string; goal: number | string }[];
-  volunteerMonthly: Map<string, number>;
+  coordinatorMonthly: Map<string, number>;
   statusCounts: { Active: number; Due: number; Overdue: number; Inactive: number };
 };
 
@@ -101,22 +101,22 @@ async function loadLegacyAggregates(granularity: Granularity): Promise<Aggregate
   const [
     pendingApplications,
     contributors,
-    volunteersCount,
+    coordinatorsCount,
     activeCampaigns,
     contributions,
     campaigns,
-    volunteers,
+    coordinators,
     assignments,
     allCommitments,
   ] = await Promise.all([
-    supabase.from('volunteer_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('coordinator_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor').not('phone', 'is', null),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'volunteer'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'coordinator'),
     supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('contributions').select('amount, created_at').eq('status', 'success'),
     // Newest first, matching the campaign lists; the SQL path returns the same order (see below).
     supabase.from('campaigns').select('title, raised, goal').order('created_at', { ascending: false }),
-    supabase.from('profiles').select('created_at').eq('role', 'volunteer').order('created_at', { ascending: true }),
+    supabase.from('profiles').select('created_at').eq('role', 'coordinator').order('created_at', { ascending: true }),
     supabase.from('contributor_assignments').select('contributor_id'),
     // Fetched alongside everything else (and filtered below) rather than as
     // a second round trip keyed on the assignment ids.
@@ -132,7 +132,7 @@ async function loadLegacyAggregates(granularity: Granularity): Promise<Aggregate
   });
 
   const monthlyCounts = new Map<string, number>();
-  (volunteers.data || []).forEach((v) => {
+  (coordinators.data || []).forEach((v) => {
     const key = bucketKey(new Date(v.created_at), 'monthly');
     monthlyCounts.set(key, (monthlyCounts.get(key) || 0) + 1);
   });
@@ -153,12 +153,12 @@ async function loadLegacyAggregates(granularity: Granularity): Promise<Aggregate
   return {
     pendingApplications: pendingApplications.count ?? 0,
     contributors: contributors.count ?? 0,
-    volunteers: volunteersCount.count ?? 0,
+    coordinators: coordinatorsCount.count ?? 0,
     activeCampaigns: activeCampaigns.count ?? 0,
     totalRaised,
     contribBuckets,
     campaigns: campaigns.data || [],
-    volunteerMonthly: monthlyCounts,
+    coordinatorMonthly: monthlyCounts,
     statusCounts,
   };
 }
@@ -176,13 +176,15 @@ async function loadSqlAggregates(granularity: Granularity): Promise<Aggregates |
   return {
     pendingApplications: Number(data.pending_applications),
     contributors: Number(data.contributors),
-    volunteers: Number(data.volunteers),
+    // Migration 040 names these keys 'coordinators' / 'coordinator_monthly'; the older 039
+    // function used 'volunteers' / 'volunteer_monthly', so accept either during the switch-over.
+    coordinators: Number(data.coordinators ?? data.volunteers),
     activeCampaigns: Number(data.active_campaigns),
     totalRaised: Number(data.total_raised),
     contribBuckets: new Map((data.contribution_buckets as { key: string; total: number }[]).map((b) => [b.key, Number(b.total)])),
     // dashboard_overview returns campaigns oldest first; the chart lists newest first.
     campaigns: [...data.campaigns].reverse(),
-    volunteerMonthly: toCountMap(data.volunteer_monthly as KeyCount[]),
+    coordinatorMonthly: toCountMap((data.coordinator_monthly ?? data.volunteer_monthly) as KeyCount[]),
     statusCounts: {
       Active: Number(data.status_counts.Active),
       Due: Number(data.status_counts.Due),
@@ -243,7 +245,7 @@ async function getDashboard(granularity: Granularity, page: number) {
   }));
 
   let cumulative = 0;
-  const volunteerGrowth = Array.from(agg.volunteerMonthly.entries())
+  const coordinatorGrowth = Array.from(agg.coordinatorMonthly.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, count]) => {
       cumulative += count;
@@ -253,7 +255,7 @@ async function getDashboard(granularity: Granularity, page: number) {
   return {
     pendingApplications: agg.pendingApplications,
     contributors: agg.contributors,
-    volunteers: agg.volunteers,
+    coordinators: agg.coordinators,
     activeCampaigns: agg.activeCampaigns,
 
     totalRaised,
@@ -261,7 +263,7 @@ async function getDashboard(granularity: Granularity, page: number) {
     totalInPeriod,
     activeRangeLabel,
     campaignProgress,
-    volunteerGrowth,
+    coordinatorGrowth,
     statusBreakdown: Object.entries(statusCounts).map(([name, value]) => ({ name, value })),
   };
 }
@@ -327,9 +329,9 @@ async function DashboardBody({
   ]);
 
   const cards = [
-    { label: 'Pending Applications', value: data.pendingApplications.toString(), icon: Clock3, href: '/volunteers?tab=pending' },
+    { label: 'Pending Applications', value: data.pendingApplications.toString(), icon: Clock3, href: '/coordinators?tab=pending' },
     { label: 'Contributors', value: data.contributors.toString(), icon: Users, href: '/contributors' },
-    { label: 'Coordinators', value: data.volunteers.toString(), icon: HeartHandshake, href: '/volunteers' },
+    { label: 'Coordinators', value: data.coordinators.toString(), icon: HeartHandshake, href: '/coordinators' },
     { label: 'Active Campaigns', value: data.activeCampaigns.toString(), icon: Megaphone, href: '/campaigns?status=active' },
     { label: 'Total Contributed', value: formatMoney(data.totalRaised), icon: Wallet, href: '/contributions' },
   ];
@@ -441,7 +443,7 @@ async function DashboardBody({
       <div className={`mt-6 ${cardClass} p-5`}>
         <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Coordinator Growth</h2>
         <div className="mt-4">
-          <VolunteerGrowthChart data={data.volunteerGrowth} />
+          <CoordinatorGrowthChart data={data.coordinatorGrowth} />
         </div>
       </div>
     </>

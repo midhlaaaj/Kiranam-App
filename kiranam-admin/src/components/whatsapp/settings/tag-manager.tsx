@@ -31,7 +31,7 @@ import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 // pause) and relied on by broadcasts — "Paused" in particular keeps paused
 // donors out of every broadcast. Deleting one silently breaks that, so they
 // are locked here.
-const SYSTEM_TAGS = new Set(['Contributor', 'Volunteer', 'Paused']);
+const SYSTEM_TAGS = new Set(['Contributor', 'Coordinator', 'Paused']);
 
 const PRESET_COLORS = [
   { name: 'red', value: '#ef4444' },

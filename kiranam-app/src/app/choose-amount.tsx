@@ -23,7 +23,7 @@ export default function ChooseAmountScreen() {
   const campaignTitle = params.campaignTitle as string | undefined;
   const isCommitmentMode = !campaignId;
   const isOnboarding = params.onboarding === '1';
-  const onboardingRole = params.role === 'volunteer' ? 'volunteer' : 'contributor';
+  const onboardingRole = params.role === 'coordinator' ? 'coordinator' : 'contributor';
 
   const campaign = campaignId ? campaigns.find((c) => c.id === campaignId) : undefined;
   // Cap donations at what's actually left to fill the campaign, so a person
@@ -144,10 +144,10 @@ export default function ChooseAmountScreen() {
     setSaveState('saved');
     setTimeout(() => {
       if (isOnboarding) {
-        // Volunteers only ever land here post-approval (see
+        // Coordinators only ever land here post-approval (see
         // otp.tsx/index.tsx), so this is their dashboard, not the
         // application form they already submitted and cleared.
-        router.replace(onboardingRole === 'volunteer' ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home');
+        router.replace(onboardingRole === 'coordinator' ? '/(coordinator-tabs)/dashboard' : '/(tabs)/home');
       } else {
         router.back();
       }
@@ -155,7 +155,7 @@ export default function ChooseAmountScreen() {
   };
 
   const handleSkip = () => {
-    router.replace(onboardingRole === 'volunteer' ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home');
+    router.replace(onboardingRole === 'coordinator' ? '/(coordinator-tabs)/dashboard' : '/(tabs)/home');
   };
 
   return (

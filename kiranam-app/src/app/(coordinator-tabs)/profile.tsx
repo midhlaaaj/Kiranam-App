@@ -12,7 +12,7 @@ import { formatMoney } from '@/utils/format';
 import { friendlyError } from '@/utils/errors';
 import { getInitials } from '@/utils/initials';
 
-export default function VolunteerProfileScreen() {
+export default function CoordinatorProfileScreen() {
   const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const {
@@ -109,8 +109,8 @@ export default function VolunteerProfileScreen() {
           )}
           <Text style={styles.userName}>{userName}</Text>
           <Text style={styles.userPhone}>{phone || 'Phone not set'}</Text>
-          <View style={styles.volunteerBadge}>
-            <Text style={styles.volunteerBadgeText}>Coordinator · {myReferralCode}</Text>
+          <View style={styles.coordinatorBadge}>
+            <Text style={styles.coordinatorBadgeText}>Coordinator · {myReferralCode}</Text>
           </View>
         </View>
 
@@ -157,7 +157,7 @@ export default function VolunteerProfileScreen() {
           <TouchableOpacity
             style={[styles.actionRow, styles.noBorder]}
             activeOpacity={0.7}
-            onPress={() => router.push('/volunteer-payment-history')}
+            onPress={() => router.push('/coordinator-payment-history')}
           >
             <Text style={styles.actionRowText}>My Contribution History</Text>
             <ChevronRight size={16} color="#D8D5D0" />
@@ -295,13 +295,13 @@ const styles = StyleSheet.create({
     color: '#7A756E',
     marginBottom: 10,
   },
-  volunteerBadge: {
+  coordinatorBadge: {
     backgroundColor: '#FBEAEA',
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
-  volunteerBadgeText: {
+  coordinatorBadgeText: {
     fontFamily: 'Inter-Bold',
     fontSize: 12,
     color: '#EC2028',

@@ -27,8 +27,8 @@ const TITLE_MAX = 80;
 const BODY_SOFT = 150;
 const BODY_MAX = 500;
 
-const AUDIENCE_LABEL: Record<Audience, string> = { contributor: 'contributors', volunteer: 'coordinators', all: 'people' };
-const AUDIENCE_OPTION: Record<Audience, string> = { contributor: 'Contributors', volunteer: 'Coordinators', all: 'All users' };
+const AUDIENCE_LABEL: Record<Audience, string> = { contributor: 'contributors', coordinator: 'coordinators', all: 'people' };
+const AUDIENCE_OPTION: Record<Audience, string> = { contributor: 'Contributors', coordinator: 'Coordinators', all: 'All users' };
 
 function Counter({ value, soft, max, id }: { value: string; soft: number; max: number; id: string }) {
   const over = value.length > soft;
@@ -115,7 +115,7 @@ export function NotificationsForm({ counts }: { counts: Record<Audience, number>
               }}
               className={cn(inputClass, 'cursor-pointer appearance-none pr-10')}
             >
-              {(['contributor', 'volunteer', 'all'] as const).map((a) => (
+              {(['contributor', 'coordinator', 'all'] as const).map((a) => (
                 <option key={a} value={a}>
                   {AUDIENCE_OPTION[a]} ({counts[a].toLocaleString('en-IN')})
                 </option>
