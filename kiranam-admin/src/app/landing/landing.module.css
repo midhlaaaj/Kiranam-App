@@ -1,0 +1,216 @@
+/* Kiranam public landing page — the mobile app's splash screen, on the web.
+   Same dual-tone ember gradient (#FF3B3B → #EC2028 → #7A0D12 → #3D0709),
+   same white-on-ember type, same pill buttons. */
+
+.page {
+  --ember-1: #ff3b3b;
+  --ember-2: #ec2028;
+  --ember-3: #7a0d12;
+  --ember-4: #3d0709;
+  --ink: #0c0c0d;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #fff;
+  font-family: var(--font-landing), system-ui, sans-serif;
+  background:
+    radial-gradient(55% 45% at 30% 0%, rgb(255 140 140 / 0.45), transparent 70%),
+    linear-gradient(
+      160deg,
+      var(--ember-1) 0%,
+      var(--ember-2) 30%,
+      var(--ember-3) 66%,
+      var(--ember-4) 100%
+    );
+  background-color: var(--ember-4);
+}
+
+/* Fine grain so a full-screen gradient doesn't band. */
+.page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Concentric rings radiating from the logo — "kiranam" is a ray of light. */
+.rings {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: min(1400px, 260vw);
+  aspect-ratio: 1;
+  translate: -50% -58%;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(
+    circle,
+    transparent 0 88px,
+    rgb(255 255 255 / 0.055) 88px 89.5px
+  );
+  mask-image: radial-gradient(circle, #000 0%, transparent 62%);
+}
+
+.logo {
+  border-radius: 30px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.18),
+    0 24px 60px -18px rgb(0 0 0 / 0.55),
+    0 0 90px -10px rgb(255 59 59 / 0.7);
+}
+
+.title {
+  /* globals.css gives h1/h2 the admin's Urbanist heading face. */
+  font-family: inherit;
+  font-size: clamp(2.6rem, 7vw, 4.75rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 800;
+  text-wrap: balance;
+}
+
+.divider {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: #fff;
+  opacity: 0.85;
+}
+
+/* Full white: translucent white over the brighter reds drops below 4.5:1. */
+.tagline {
+  color: #fff;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+.store {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 14px 34px -14px rgb(0 0 0 / 0.6);
+  transition:
+    transform 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out);
+}
+.store:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 40px -16px rgb(0 0 0 / 0.65);
+}
+.store:active {
+  transform: translateY(0) scale(0.98);
+}
+.store:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
+.storeSoon {
+  border: 1.5px solid rgb(255 255 255 / 0.35);
+  background: rgb(255 255 255 / 0.06);
+  color: #fff;
+}
+
+.meta {
+  color: rgb(255 255 255 / 0.72);
+}
+
+.footLink {
+  color: rgb(255 255 255 / 0.72);
+  transition: color 150ms var(--ease-out);
+}
+.footLink:hover {
+  color: #fff;
+}
+.footLink:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ---------- Load choreography ----------
+   Keyframes with fill-mode `both` (not class-toggled transitions), so the
+   page still renders fully where JS never runs. */
+
+@keyframes logoIn {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ringsIn {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.logo {
+  animation: logoIn 900ms var(--ease-out) both;
+}
+.rings {
+  animation: ringsIn 1800ms var(--ease-out) both;
+}
+.divider {
+  animation: grow 700ms var(--ease-out) 420ms both;
+}
+.rise {
+  animation: rise 800ms var(--ease-out) both;
+}
+.d1 { animation-delay: 220ms; }
+.d2 { animation-delay: 480ms; }
+.d3 { animation-delay: 620ms; }
+.d4 { animation-delay: 760ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .logo,
+  .rings,
+  .divider,
+  .rise {
+    animation: none;
+  }
+  .store {
+    transition: none;
+  }
+  .store:hover,
+  .store:active {
+    transform: none;
+  }
+}
