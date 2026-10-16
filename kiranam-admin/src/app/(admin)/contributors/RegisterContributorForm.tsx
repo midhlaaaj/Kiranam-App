@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { getAutoAssignKkNumberSetting, getVolunteersForAssignment, registerContributor, type RegisterState } from './actions';
+import { getAutoAssignKkNumberSetting, getCoordinatorsForAssignment, registerContributor, type RegisterState } from './actions';
 import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
 import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
@@ -55,9 +55,9 @@ export function RegisterContributorForm({
     getAutoAssignKkNumberSetting().then(setAutoAssignKkNumber).catch(() => {});
   }, []);
 
-  const [volunteers, setVolunteers] = useState<{ id: string; full_name: string | null; phone: string | null }[]>([]);
+  const [coordinators, setCoordinators] = useState<{ id: string; full_name: string | null; phone: string | null }[]>([]);
   useEffect(() => {
-    getVolunteersForAssignment().then(setVolunteers).catch(() => {});
+    getCoordinatorsForAssignment().then(setCoordinators).catch(() => {});
   }, []);
 
   // PersonCombobox tracks its own selection internally rather than through
@@ -266,8 +266,8 @@ export function RegisterContributorForm({
               </label>
               <PersonCombobox
                 key={comboboxResetKey}
-                people={volunteers}
-                name="volunteerId"
+                people={coordinators}
+                name="coordinatorId"
                 placeholder="Search coordinators by name or phone…"
                 emptyLabel="No coordinators match."
                 className="max-w-none"

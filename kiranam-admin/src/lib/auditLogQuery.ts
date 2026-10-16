@@ -87,7 +87,7 @@ export async function resolveLogNames(rows: AuditLogRow[]): Promise<ResolvedName
     if (r.entity_type === 'contributor_assignments') {
       add(people, r.entity_id);
       add(people, d.contributorId);
-      add(people, d.volunteerId);
+      add(people, d.coordinatorId);
     }
     add(people, d.profileId);
     if (r.entity_type === 'campaigns') add(campaigns, r.entity_id);

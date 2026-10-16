@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { LayoutDashboard, Users, Compass, Gift, User } from 'lucide-react-native';
 import { AnimatedTabBar } from '@/components/AnimatedTabBar';
 
-export default function VolunteerTabsLayout() {
+export default function CoordinatorTabsLayout() {
   return (
     <Tabs
       tabBar={(props) => <AnimatedTabBar {...props} />}

@@ -9,11 +9,11 @@ import { validateRequired } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { ArrowLeft, HeartHandshake, Check, Users, Clock3, HandCoins } from 'lucide-react-native';
 
-export default function VolunteerApplicationScreen() {
+export default function CoordinatorApplicationScreen() {
   const router = useRouter();
-  const { applyForVolunteer, hasCommitment } = useApp();
-  // Reached from two places: a fresh signup choosing "volunteer" (register.tsx)
-  // and an existing contributor tapping "Become a Volunteer" on their profile.
+  const { applyForCoordinator, hasCommitment } = useApp();
+  // Reached from two places: a fresh signup choosing "coordinator" (register.tsx)
+  // and an existing contributor tapping "Become a Coordinator" on their profile.
   // Both see the same warning step first — applying is a real commitment,
   // not a form to breeze through.
   const [step, setStep] = useState<'warning' | 'form'>('warning');
@@ -34,7 +34,7 @@ export default function VolunteerApplicationScreen() {
     }
     setError('');
     setSubmitting(true);
-    const { error: applyError } = await applyForVolunteer(motivation);
+    const { error: applyError } = await applyForCoordinator(motivation);
     setSubmitting(false);
     if (applyError) {
       setError(friendlyError(applyError));

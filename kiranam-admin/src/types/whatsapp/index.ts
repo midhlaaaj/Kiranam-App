@@ -113,7 +113,7 @@ export interface Contact {
    *  consent later (migration 027). Not meaningful for CSV/manually
    *  added CRM contacts, which were never gated by that checkbox. */
   whatsapp_consent?: boolean;
-  /** Linked Kiranam profile (contributor/volunteer) when this contact was
+  /** Linked Kiranam profile (contributor/coordinator) when this contact was
    *  synced from the app (migration 004). Null for CRM-only contacts. */
   kiranam_profile_id?: string | null;
   created_at: string;

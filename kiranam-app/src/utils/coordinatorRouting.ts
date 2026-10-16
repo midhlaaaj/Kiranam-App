@@ -5,12 +5,12 @@ import { supabase } from '@/lib/supabase';
 const welcomeSeenKey = (uid: string) => `kiranam.volunteerWelcomeSeen.${uid}`;
 const rejectionSeenKey = (uid: string) => `kiranam.rejectionAckedApplicationId.${uid}`;
 
-export async function hasSeenVolunteerWelcome(uid: string): Promise<boolean> {
+export async function hasSeenCoordinatorWelcome(uid: string): Promise<boolean> {
   const seen = await AsyncStorage.getItem(welcomeSeenKey(uid));
   return seen === '1';
 }
 
-export async function markVolunteerWelcomeSeen(uid: string): Promise<void> {
+export async function markCoordinatorWelcomeSeen(uid: string): Promise<void> {
   await AsyncStorage.setItem(welcomeSeenKey(uid), '1');
 }
 
@@ -23,7 +23,7 @@ export async function markRejectionAcknowledged(uid: string, applicationId: stri
 
 async function getLatestApplication(uid: string) {
   const { data } = await supabase
-    .from('volunteer_applications')
+    .from('coordinator_applications')
     .select('id, status')
     .eq('profile_id', uid)
     .order('created_at', { ascending: false })
@@ -32,7 +32,7 @@ async function getLatestApplication(uid: string) {
   return data;
 }
 
-// Returns '/volunteer-rejected' if the latest application was rejected and
+// Returns '/coordinator-rejected' if the latest application was rejected and
 // hasn't been acknowledged yet for this uid, else null. Split out from
 // resolvePostAuthRoute so pending.tsx's already-active-contributor fast
 // path (which must never get blocked waiting on '/pending') can still
@@ -42,12 +42,12 @@ export async function checkFreshRejection(uid: string): Promise<Href | null> {
   if (application?.status !== 'rejected') return null;
   const ackedId = await AsyncStorage.getItem(rejectionSeenKey(uid));
   if (ackedId === application.id) return null;
-  return '/volunteer-rejected';
+  return '/coordinator-rejected';
 }
 
-// Single source of truth for "where does an approved volunteer go next" —
+// Single source of truth for "where does an approved coordinator go next" —
 // called from otp.tsx (fresh login), index.tsx (session already active),
-// pending.tsx (manual recheck), and volunteer-welcome.tsx (after the
+// pending.tsx (manual recheck), and coordinator-welcome.tsx (after the
 // welcome page itself). Duplicating this decision across call sites is
 // exactly the kind of drift that caused two earlier bugs this session
 // (a stray router.push in otp.tsx and register.tsx where every other
@@ -55,14 +55,14 @@ export async function checkFreshRejection(uid: string): Promise<Href | null> {
 // function, everyone calls it. Return type is expo-router's own `Href`
 // (not a loose custom shape) so it satisfies typed-routes' literal
 // pathname union directly at every call site.
-export async function resolveApprovedVolunteerRoute(uid: string): Promise<Href> {
-  const seenWelcome = await hasSeenVolunteerWelcome(uid);
+export async function resolveApprovedCoordinatorRoute(uid: string): Promise<Href> {
+  const seenWelcome = await hasSeenCoordinatorWelcome(uid);
   if (!seenWelcome) {
-    return '/volunteer-welcome';
+    return '/coordinator-welcome';
   }
 
-  // Same "does this volunteer already have a commitment" gate used at
-  // signup for contributors — deferred to approval time for volunteers
+  // Same "does this coordinator already have a commitment" gate used at
+  // signup for contributors — deferred to approval time for coordinators
   // since asking before an admin has actually approved them doesn't make
   // sense. Gated on real data (not a one-time flag) so it naturally stops
   // appearing the moment they've actually set one.
@@ -73,14 +73,14 @@ export async function resolveApprovedVolunteerRoute(uid: string): Promise<Href> 
     .maybeSingle();
 
   if (!commitment) {
-    return { pathname: '/choose-amount', params: { onboarding: '1', role: 'volunteer' } };
+    return { pathname: '/choose-amount', params: { onboarding: '1', role: 'coordinator' } };
   }
-  return '/(volunteer-tabs)/dashboard';
+  return '/(coordinator-tabs)/dashboard';
 }
 
 // Single source of truth for "where does a just-authenticated user land" —
 // called from otp.tsx (post-verify) and index.tsx (session already
-// active). Same duplication-avoidance rationale as resolveApprovedVolunteerRoute
+// active). Same duplication-avoidance rationale as resolveApprovedCoordinatorRoute
 // above: this exact profile-role/application-status branch used to be
 // copy-pasted across both call sites.
 export async function resolvePostAuthRoute(uid: string): Promise<Href> {
@@ -89,8 +89,8 @@ export async function resolvePostAuthRoute(uid: string): Promise<Href> {
 
   // The role is what grants access, not the application row: coordinators
   // registered directly by an admin never filed an application.
-  if (profile?.role === 'volunteer') {
-    return resolveApprovedVolunteerRoute(uid);
+  if (profile?.role === 'coordinator') {
+    return resolveApprovedCoordinatorRoute(uid);
   }
 
   const rejectedRoute = await checkFreshRejection(uid);
@@ -122,7 +122,7 @@ export async function resolveEntryRoute(uid: string): Promise<Href> {
     const claiming = !!profile?.full_name;
     return {
       pathname: '/register',
-      params: { role: profile?.role === 'volunteer' ? 'volunteer' : 'contributor', ...(claiming ? { claim: '1' } : {}) },
+      params: { role: profile?.role === 'coordinator' ? 'coordinator' : 'contributor', ...(claiming ? { claim: '1' } : {}) },
     };
   }
   return resolvePostAuthRoute(uid);

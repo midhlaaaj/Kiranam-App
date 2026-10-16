@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useApp, NotificationRecord } from '@/context/AppContext';
 import { ArrowLeft, CreditCard, Flag, Info, Check, MoreVertical, Trash2, CheckCheck, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { upgradeLegacyDeepLink } from '@/utils/links';
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function NotificationsScreen() {
   const handleRowClick = (item: NotificationRecord) => {
     markNotificationAsRead(item.id);
     if (item.deepLink) {
-      router.push(item.deepLink as never);
+      router.push(upgradeLegacyDeepLink(item.deepLink) as never);
     }
   };
 

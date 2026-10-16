@@ -67,7 +67,7 @@ export interface ContributorNote {
   createdAt: string;
 }
 
-export interface VolunteerMember {
+export interface CoordinatorMember {
   id: string;
   name: string;
   phone: string;
@@ -88,14 +88,14 @@ interface AppContextType {
   emailReceipt: (receipt: { txnId: string; amount: number; label: string; dateStr: string; pdfBase64: string }) => Promise<{ error: string | null }>;
   userAvatarUrl: string;
   isLoggedIn: boolean;
-  isVolunteer: boolean;
+  isCoordinator: boolean;
   myReferralCode: string;
-  // True until the volunteer has deliberately changed their code away from
-  // the auto-generated FIRSTNAME+YEAR default — drives the volunteer
+  // True until the coordinator has deliberately changed their code away from
+  // the auto-generated FIRSTNAME+YEAR default — drives the coordinator
   // dashboard's "set up your referral code" checklist item.
   isReferralCodeDefault: boolean;
   // True once at least one contributor has signed up using this
-  // volunteer's referral code — distinct from volunteerMembers.length,
+  // coordinator's referral code — distinct from coordinatorMembers.length,
   // which also includes admin-assigned contributors.
   hasReferredContributor: boolean;
   updateReferralCode: (code: string) => Promise<{ error: string | null }>;
@@ -108,14 +108,14 @@ interface AppContextType {
   saveProfile: (fields: {
     fullName: string;
     phone: string;
-    role: 'contributor' | 'volunteer';
+    role: 'contributor' | 'coordinator';
     whatsappConsent?: boolean;
     referralCode?: string;
   }) => Promise<{ error: string | null }>;
   updateName: (fullName: string) => Promise<{ error: string | null }>;
   updateEmail: (email: string) => Promise<{ error: string | null }>;
   updateProfilePhoto: (localUri: string) => Promise<{ error: string | null; url?: string }>;
-  applyForVolunteer: (motivation: string) => Promise<{ error: string | null }>;
+  applyForCoordinator: (motivation: string) => Promise<{ error: string | null }>;
 
   // App settings & configuration
   profileLoading: boolean;
@@ -137,7 +137,7 @@ interface AppContextType {
   payments: PaymentRecord[];
   notifications: NotificationRecord[];
   events: EventRecord[];
-  volunteerMembers: VolunteerMember[];
+  coordinatorMembers: CoordinatorMember[];
   totalContributed: number;
   campaignGiving: number;
 
@@ -186,7 +186,7 @@ const deriveMemberStatus = (commitment?: {
   monthly_amount: number;
   autopay_enabled: boolean;
   next_due_date: string | null;
-} | null): VolunteerMember['status'] => {
+} | null): CoordinatorMember['status'] => {
   if (!commitment || !commitment.autopay_enabled) return 'inactive';
   if (!commitment.next_due_date) return 'active';
   const diffDays = (new Date(commitment.next_due_date).getTime() - Date.now()) / 86400000;
@@ -244,11 +244,11 @@ const ensureReferralCode = async (
   const { data: existing } = await supabase
     .from('referrals')
     .select('referral_code, created_at')
-    .eq('volunteer_id', uid)
+    .eq('coordinator_id', uid)
     .maybeSingle();
   if (existing?.referral_code) {
     // Compare against what the default WOULD have been using the row's own
-    // creation year, not the current year — a volunteer who signed up last
+    // creation year, not the current year — a coordinator who signed up last
     // year and never touched their code must not look "customized" just
     // because the calendar moved on.
     const createdYear = new Date(existing.created_at).getFullYear();
@@ -258,7 +258,7 @@ const ensureReferralCode = async (
   const year = new Date().getFullYear();
   const baseCode = `${firstName}${year}`;
 
-  // referrals.referral_code has a UNIQUE constraint, so two volunteers with
+  // referrals.referral_code has a UNIQUE constraint, so two coordinators with
   // the same first name colliding on the base code is expected — retry with
   // a random suffix until an insert succeeds (or we give up after a few
   // tries, which would mean extraordinarily bad luck on the random space).
@@ -266,7 +266,7 @@ const ensureReferralCode = async (
     const candidate = attempt === 0 ? baseCode : `${baseCode}${Math.floor(10 + Math.random() * 90)}`;
     const { data: inserted, error } = await supabase
       .from('referrals')
-      .insert({ volunteer_id: uid, referral_code: candidate })
+      .insert({ coordinator_id: uid, referral_code: candidate })
       .select('referral_code')
       .single();
     if (!error && inserted) return { code: inserted.referral_code, isDefault: inserted.referral_code === baseCode };
@@ -282,7 +282,7 @@ const ensureReferralCode = async (
   const desperateCode = `${baseCode}${Math.floor(1000 + Math.random() * 9000)}`;
   const { data: last } = await supabase
     .from('referrals')
-    .insert({ volunteer_id: uid, referral_code: desperateCode })
+    .insert({ coordinator_id: uid, referral_code: desperateCode })
     .select('referral_code')
     .single();
   return { code: last?.referral_code ?? desperateCode, isDefault: false };
@@ -295,7 +295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userAvatarUrl, setUserAvatarUrl] = useState('');
-  const [isVolunteer, setIsVolunteer] = useState(false);
+  const [isCoordinator, setIsCoordinator] = useState(false);
   const [myReferralCode, setMyReferralCode] = useState('');
   const [isReferralCodeDefault, setIsReferralCodeDefault] = useState(true);
   const [hasReferredContributor, setHasReferredContributor] = useState(false);
@@ -315,7 +315,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [events, setEvents] = useState<EventRecord[]>([]);
-  const [volunteerMembers, setVolunteerMembers] = useState<VolunteerMember[]>([]);
+  const [coordinatorMembers, setCoordinatorMembers] = useState<CoordinatorMember[]>([]);
 
   const [totalContributed, setTotalContributed] = useState(0);
   const [campaignGiving, setCampaignGiving] = useState(0);
@@ -456,7 +456,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     refreshCampaigns();
     refreshEvents();
 
-    // Any contribution (in-app payment, or a volunteer/admin recording one
+    // Any contribution (in-app payment, or a coordinator/admin recording one
     // offline) bumps campaigns.raised via a DB trigger. Subscribing to that
     // table's changes pushes the new progress to every viewer instantly,
     // instead of waiting on the poll/foreground refresh below. Events change
@@ -494,7 +494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [refreshCampaigns, refreshEvents]);
 
-  // Fetches every table scoped to one signed-in user (profile, volunteer
+  // Fetches every table scoped to one signed-in user (profile, coordinator
   // status/network, contributions, notifications, commitment) and writes it
   // straight into state. Shared by the initial load-on-session-change effect
   // below, manual pull-to-refresh, and the realtime/foreground refresh effect
@@ -509,17 +509,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const { data: application } = await supabase
-      .from('volunteer_applications')
+      .from('coordinator_applications')
       .select('status')
       .eq('profile_id', uid)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    const volunteerEligible = profile?.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved';
-    setIsVolunteer(!!volunteerEligible);
+    const coordinatorEligible = profile?.role === 'coordinator' || application?.status === 'pending' || application?.status === 'approved';
+    setIsCoordinator(!!coordinatorEligible);
 
-    if (volunteerEligible) {
+    if (coordinatorEligible) {
       const { code, isDefault } = await ensureReferralCode(uid, profile?.full_name || userNameRef.current);
       setMyReferralCode(code);
       setIsReferralCodeDefault(isDefault);
@@ -527,11 +527,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data: assignments } = await supabase
         .from('contributor_assignments')
         .select('contributor_id, source')
-        .eq('volunteer_id', uid);
+        .eq('coordinator_id', uid);
       const contributorIds = (assignments || []).map((a) => a.contributor_id);
       // Distinct from "assigned contributors" (which includes admin-driven
       // assignments too) — this specifically means someone signed up using
-      // this volunteer's own referral code, for the "invite your first
+      // this coordinator's own referral code, for the "invite your first
       // contributor" checklist item.
       setHasReferredContributor((assignments || []).some((a) => a.source === 'referral'));
 
@@ -541,7 +541,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           supabase.from('commitments').select('contributor_id, monthly_amount, autopay_enabled, next_due_date').in('contributor_id', contributorIds),
         ]);
         const commitmentByContributor = new Map((memberCommitments || []).map((c) => [c.contributor_id, c]));
-        setVolunteerMembers((memberProfiles || []).map((p) => {
+        setCoordinatorMembers((memberProfiles || []).map((p) => {
           const commitment = commitmentByContributor.get(p.id);
           return {
             id: p.id,
@@ -553,13 +553,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
         }));
       } else {
-        setVolunteerMembers([]);
+        setCoordinatorMembers([]);
       }
     } else {
       setMyReferralCode('');
       setIsReferralCodeDefault(true);
       setHasReferredContributor(false);
-      setVolunteerMembers([]);
+      setCoordinatorMembers([]);
     }
 
     const { data: contributions } = await supabase
@@ -638,13 +638,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUserEmail('');
       setUserAvatarUrl('');
       setPhone('');
-      setIsVolunteer(false);
+      setIsCoordinator(false);
       setMyReferralCode('');
       setIsReferralCodeDefault(true);
       setHasReferredContributor(false);
       setPayments([]);
       setNotifications([]);
-      setVolunteerMembers([]);
+      setCoordinatorMembers([]);
       setHasCommitment(false);
       setCommitmentAmountState(500);
       setAutopayEnabledState(false);
@@ -674,7 +674,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [session?.user?.id, loadUserData]);
 
   // Any contribution, notification, or commitment change for this user (an
-  // admin/volunteer recording an offline payment, autopay toggling, a new
+  // admin/coordinator recording an offline payment, autopay toggling, a new
   // notification landing) pushes instantly via realtime, with the same
   // foreground/poll fallback pattern as the public campaigns/events channel.
   useEffect(() => {
@@ -759,7 +759,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const saveProfile = async (fields: {
     fullName: string;
     phone: string;
-    role: 'contributor' | 'volunteer';
+    role: 'contributor' | 'coordinator';
     whatsappConsent?: boolean;
     referralCode?: string;
   }) => {
@@ -783,7 +783,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUserName(fields.fullName);
     setPhone(fields.phone);
 
-    // The only place a contributor gets linked to a volunteer: a valid
+    // The only place a contributor gets linked to a coordinator: a valid
     // referral code typed (or auto-read from a referral link) at signup.
     // redeem_referral_code is SECURITY DEFINER because contributors have no
     // RLS access to read referrals or write contributor_assignments directly.
@@ -815,7 +815,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { error: null };
   };
 
-  // Lets a volunteer pick their own referral code instead of the
+  // Lets a coordinator pick their own referral code instead of the
   // auto-generated FIRSTNAME+YEAR one. referrals.referral_code has a UNIQUE
   // constraint, so a collision surfaces as a Postgres 23505 error — that's
   // translated into a friendly "already in use" message rather than a raw
@@ -829,7 +829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase
       .from('referrals')
       .update({ referral_code: normalized })
-      .eq('volunteer_id', session.user.id);
+      .eq('coordinator_id', session.user.id);
     if (error) {
       if (error.code === '23505') return { error: 'That referral code is already in use — try a different one.' };
       return { error: error.message };
@@ -892,18 +892,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const applyForVolunteer = async (motivation: string) => {
+  const applyForCoordinator = async (motivation: string) => {
     if (!session) return { error: 'Not signed in' };
     const uid = session.user.id;
     try {
-      const { error: insertError } = await supabase.from('volunteer_applications').insert({
+      const { error: insertError } = await supabase.from('coordinator_applications').insert({
         profile_id: uid,
         motivation,
         status: 'pending',
       });
       if (insertError) throw insertError;
 
-      setIsVolunteer(true);
+      setIsCoordinator(true);
       const { code, isDefault } = await ensureReferralCode(uid, userNameRef.current);
       setMyReferralCode(code);
       setIsReferralCodeDefault(isDefault);
@@ -1172,11 +1172,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return applySuccessfulPayment(verifyData.record, amount, label, campaignId);
   };
 
-  // Action: a volunteer records a monthly/campaign payment collected offline
+  // Action: a coordinator records a monthly/campaign payment collected offline
   // (cash, UPI outside the app, etc.) for a contributor assigned to them.
   // Mirrors the admin's manual offline payment flow — inserted as is_offline
   // so it's distinguishable from real gateway payments, with collected_by
-  // set to the volunteer for accountability (RLS enforces both).
+  // set to the coordinator for accountability (RLS enforces both).
   const recordOfflineContribution = async (
     contributorId: string,
     amount: number,
@@ -1234,7 +1234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!trimmed) return { error: 'Note cannot be empty.' };
     const { error } = await supabase.from('contributor_notes').insert({
       contributor_id: contributorId,
-      volunteer_id: session.user.id,
+      coordinator_id: session.user.id,
       body: trimmed,
     });
     if (error) return { error: error.message };
@@ -1309,7 +1309,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       emailReceipt,
       userAvatarUrl,
       isLoggedIn: !!session,
-      isVolunteer,
+      isCoordinator,
       myReferralCode,
       isReferralCodeDefault,
       hasReferredContributor,
@@ -1322,7 +1322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateName,
       updateEmail,
       updateProfilePhoto,
-      applyForVolunteer,
+      applyForCoordinator,
       profileLoading,
       hasCommitment,
       commitmentAmount, setCommitmentAmount,
@@ -1334,7 +1334,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       payments,
       notifications,
       events,
-      volunteerMembers,
+      coordinatorMembers,
       totalContributed,
       campaignGiving,
       makeRazorpayPayment,

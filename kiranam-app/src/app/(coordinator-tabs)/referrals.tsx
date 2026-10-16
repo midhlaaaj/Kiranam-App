@@ -4,14 +4,14 @@ import * as Clipboard from 'expo-clipboard';
 import { useApp } from '@/context/AppContext';
 import { Card } from '@/components/Card';
 import { EditReferralCodeModal } from '@/components/EditReferralCodeModal';
-import { statusMeta } from '@/utils/volunteerStatus';
+import { statusMeta } from '@/utils/coordinatorStatus';
 import { Copy, Share2, Pencil, Users, UserCheck, Wallet } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
 import { referralJoinUrl } from '@/utils/links';
 
 export default function ReferralsScreen() {
-  const { myReferralCode, updateReferralCode, volunteerMembers, refreshUserData } = useApp();
+  const { myReferralCode, updateReferralCode, coordinatorMembers, refreshUserData } = useApp();
   const [copied, setCopied] = useState(false);
   const [editCodeVisible, setEditCodeVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -22,7 +22,7 @@ export default function ReferralsScreen() {
     setRefreshing(false);
   }, [refreshUserData]);
 
-  const activeMembers = volunteerMembers.filter((m) => m.status === 'active');
+  const activeMembers = coordinatorMembers.filter((m) => m.status === 'active');
   const monthlyTotal = activeMembers.reduce((acc, m) => acc + m.monthlyAmount, 0);
 
   const handleCopy = async () => {
@@ -83,7 +83,7 @@ export default function ReferralsScreen() {
             <View style={styles.kpiIconBg}>
               <Users size={18} color="#EC2028" />
             </View>
-            <Text style={styles.kpiValue}>{volunteerMembers.length}</Text>
+            <Text style={styles.kpiValue}>{coordinatorMembers.length}</Text>
             <Text style={styles.kpiLabel}>Total Referred</Text>
           </View>
           <View style={styles.kpiCard}>
@@ -105,10 +105,10 @@ export default function ReferralsScreen() {
         {/* Full referred members list */}
         <Text style={styles.sectionTitle}>Your Network</Text>
         <View style={styles.membersContainer}>
-          {volunteerMembers.map((item, index) => {
+          {coordinatorMembers.map((item, index) => {
             const meta = statusMeta(item.status);
             return (
-              <View key={item.id} style={[styles.memberRow, index === volunteerMembers.length - 1 ? styles.noBorder : null]}>
+              <View key={item.id} style={[styles.memberRow, index === coordinatorMembers.length - 1 ? styles.noBorder : null]}>
                 <View style={styles.memberAvatar}>
                   <Text style={styles.memberAvatarText}>
                     {item.name.split(' ').map((p) => p[0]).join('').toUpperCase().slice(0, 2)}

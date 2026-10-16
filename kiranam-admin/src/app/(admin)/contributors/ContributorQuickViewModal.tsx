@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { PersonCombobox } from '@/components/PersonCombobox';
-import { assignKkNumber, assignVolunteer, getContributorQuickView, getVolunteersForAssignment, unassignVolunteer } from './actions';
+import { assignKkNumber, assignCoordinator, getContributorQuickView, getCoordinatorsForAssignment, unassignCoordinator } from './actions';
 import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
 
 const fieldLabelClass = 'text-xs font-semibold text-kiranam-muted';
@@ -16,13 +16,13 @@ type QuickView = {
   full_name: string | null;
   phone: string | null;
   kk_number: string | null;
-  volunteer: { id: string; full_name: string | null; phone: string | null } | null;
+  coordinator: { id: string; full_name: string | null; phone: string | null } | null;
 };
 
 /** Compact view/edit popup for a single contributor — opened from a
  * Contributors table row, or from a duplicate-phone match surfaced while
- * registering a new contributor or volunteer. Editing here is deliberately
- * limited to KK number + volunteer assignment; anything else (contributions,
+ * registering a new contributor or coordinator. Editing here is deliberately
+ * limited to KK number + coordinator assignment; anything else (contributions,
  * commitment, etc.) still lives on the full detail page, linked from here. */
 export function ContributorQuickViewModal({
   contributorId,
@@ -40,19 +40,19 @@ export function ContributorQuickViewModal({
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(initialEditing);
   const [saving, setSaving] = useState(false);
-  const [volunteers, setVolunteers] = useState<{ id: string; full_name: string | null; phone: string | null }[]>([]);
+  const [coordinators, setCoordinators] = useState<{ id: string; full_name: string | null; phone: string | null }[]>([]);
   const [kkNumber, setKkNumber] = useState('');
-  const [selectedVolunteerId, setSelectedVolunteerId] = useState<string | null>(null);
+  const [selectedCoordinatorId, setSelectedCoordinatorId] = useState<string | null>(null);
 
   async function load(id: string) {
     setLoading(true);
     setEditing(initialEditing);
     try {
-      const [view, allVolunteers] = await Promise.all([getContributorQuickView(id), getVolunteersForAssignment()]);
+      const [view, allCoordinators] = await Promise.all([getContributorQuickView(id), getCoordinatorsForAssignment()]);
       setData(view);
-      setVolunteers(allVolunteers);
+      setCoordinators(allCoordinators);
       setKkNumber(view.kk_number || '');
-      setSelectedVolunteerId(view.volunteer?.id ?? null);
+      setSelectedCoordinatorId(view.coordinator?.id ?? null);
     } catch {
       toast.error('Could not load this contributor.');
     } finally {
@@ -78,13 +78,13 @@ export function ContributorQuickViewModal({
         await assignKkNumber(data.id, trimmedKk);
       }
 
-      if (selectedVolunteerId !== (data.volunteer?.id ?? null)) {
-        if (selectedVolunteerId) {
+      if (selectedCoordinatorId !== (data.coordinator?.id ?? null)) {
+        if (selectedCoordinatorId) {
           const fd = new FormData();
-          fd.set('volunteerId', selectedVolunteerId);
-          await assignVolunteer(data.id, fd);
-        } else if (data.volunteer) {
-          await unassignVolunteer(data.id, data.volunteer.id);
+          fd.set('coordinatorId', selectedCoordinatorId);
+          await assignCoordinator(data.id, fd);
+        } else if (data.coordinator) {
+          await unassignCoordinator(data.id, data.coordinator.id);
         }
       }
 
@@ -127,10 +127,10 @@ export function ContributorQuickViewModal({
             <label className={fieldLabelClass}>Coordinator</label>
             <PersonCombobox
               key={data.id}
-              people={volunteers}
-              name="volunteerId"
-              initial={data.volunteer}
-              onSelect={(p) => setSelectedVolunteerId(p?.id ?? null)}
+              people={coordinators}
+              name="coordinatorId"
+              initial={data.coordinator}
+              onSelect={(p) => setSelectedCoordinatorId(p?.id ?? null)}
               className="max-w-none"
               placeholder="Search coordinators by name or phone…"
               emptyLabel="No coordinators match."
@@ -170,7 +170,7 @@ export function ContributorQuickViewModal({
             </div>
             <div>
               <p className={fieldLabelClass}>Coordinator</p>
-              <p className="mt-1 text-kiranam-ink">{data.volunteer?.full_name || 'Not assigned'}</p>
+              <p className="mt-1 text-kiranam-ink">{data.coordinator?.full_name || 'Not assigned'}</p>
             </div>
           </div>
 

@@ -8,6 +8,7 @@ import { useFonts } from 'expo-font';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { AppProvider } from '@/context/AppContext';
 import { UpdateRequiredGate } from '@/components/UpdateRequiredGate';
+import { upgradeLegacyDeepLink } from '@/utils/links';
 // Font imports from Google Fonts packages
 import {
   Inter_400Regular,
@@ -57,7 +58,7 @@ export default function RootLayout() {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
       const deepLink = response.notification.request.content.data?.deep_link;
       if (typeof deepLink === 'string' && deepLink) {
-        router.push(deepLink as any);
+        router.push(upgradeLegacyDeepLink(deepLink) as any);
       }
     });
     return () => subscription.remove();
@@ -83,7 +84,7 @@ export default function RootLayout() {
               <Stack.Screen name="register" />
               <Stack.Screen name="pending" />
               <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(volunteer-tabs)" />
+              <Stack.Screen name="(coordinator-tabs)" />
               <Stack.Screen name="campaign-detail" options={{ presentation: 'card' }} />
               <Stack.Screen name="event-detail" options={{ presentation: 'card' }} />
               <Stack.Screen name="choose-amount" />
@@ -91,8 +92,8 @@ export default function RootLayout() {
               <Stack.Screen name="receipt" />
               <Stack.Screen name="notifications" />
               <Stack.Screen name="support" />
-              <Stack.Screen name="volunteer-application" options={{ presentation: 'card' }} />
-              <Stack.Screen name="volunteer-contributor-detail" options={{ presentation: 'card' }} />
+              <Stack.Screen name="coordinator-application" options={{ presentation: 'card' }} />
+              <Stack.Screen name="coordinator-contributor-detail" options={{ presentation: 'card' }} />
             </Stack>
           </ThemeProvider>
         </AppProvider>

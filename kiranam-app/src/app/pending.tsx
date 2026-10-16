@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
-import { checkFreshRejection, resolvePostAuthRoute } from '@/utils/volunteerRouting';
+import { checkFreshRejection, resolvePostAuthRoute } from '@/utils/coordinatorRouting';
 
 export default function PendingScreen() {
   const router = useRouter();
@@ -28,9 +28,9 @@ export default function PendingScreen() {
   // approval gets picked up automatically the next time they open the app
   // (see otp.tsx/index.tsx, both routed through resolvePostAuthRoute). They
   // still get one check first, though: a fresh rejection they haven't seen
-  // yet must show /volunteer-rejected rather than silently dropping them
+  // yet must show /coordinator-rejected rather than silently dropping them
   // straight into Home with no explanation.
-  // A fresh volunteer-only applicant has nowhere else to go yet, so for
+  // A fresh coordinator-only applicant has nowhere else to go yet, so for
   // them this button doing a full inline recheck is the only useful action.
   const handleContinue = async () => {
     setChecking(true);

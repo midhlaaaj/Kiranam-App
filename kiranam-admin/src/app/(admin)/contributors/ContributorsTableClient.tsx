@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Users } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { ContributorQuickViewModal } from './ContributorQuickViewModal';
-import type { ContributorStatus } from '@/lib/volunteerStats';
+import type { ContributorStatus } from '@/lib/coordinatorStats';
 import {
   badgeClass,
   formatMoney,
@@ -41,7 +41,7 @@ interface ContributorRow {
 
 /** Renders the Contributors table and owns the single ContributorQuickViewModal
  * instance shared across rows — a row opens it instead of navigating away, so
- * KK number / volunteer can be checked or fixed without leaving the list. */
+ * KK number / coordinator can be checked or fixed without leaving the list. */
 export function ContributorsTableClient({ contributors, emptyTitle, emptyDescription }: {
   contributors: ContributorRow[];
   emptyTitle: string;

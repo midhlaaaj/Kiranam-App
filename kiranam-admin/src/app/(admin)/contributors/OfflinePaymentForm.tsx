@@ -15,7 +15,7 @@ interface CampaignOption {
   title: string;
 }
 
-// Records a cash/offline payment a volunteer collected in person — for when
+// Records a cash/offline payment a coordinator collected in person — for when
 // a contributor paid outside Razorpay and the payment still needs to count
 // toward their history and any linked campaign total. Renders the history
 // heading with a "Record payment" button; the form opens in a modal.

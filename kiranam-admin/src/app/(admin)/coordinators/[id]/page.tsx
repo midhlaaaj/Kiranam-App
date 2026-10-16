@@ -4,14 +4,14 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { approveApplication, assignContributor, unassignContributor } from '../actions';
 import { RejectApplicationButton } from '../RejectApplicationButton';
-import { deriveContributorStatus } from '@/lib/volunteerStats';
+import { deriveContributorStatus } from '@/lib/coordinatorStats';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 import { PersonCombobox } from '@/components/PersonCombobox';
 import { badgeClass, buttonPrimary, cardClass, formatMoney } from '@/lib/ui';
 
-export default async function VolunteerDetailPage({
+export default async function CoordinatorDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -23,19 +23,19 @@ export default async function VolunteerDetailPage({
   if (!profile) notFound();
 
   const { data: application } = await supabase
-    .from('volunteer_applications')
+    .from('coordinator_applications')
     .select('*')
     .eq('profile_id', id)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const isPending = profile.role !== 'volunteer' && application?.status === 'pending';
+  const isPending = profile.role !== 'coordinator' && application?.status === 'pending';
 
   if (isPending) {
     return (
       <div>
-        <Link href="/volunteers?tab=pending" className="inline-flex items-center gap-1.5 text-sm font-medium text-kiranam-muted transition hover:text-kiranam-ink hover:underline">
+        <Link href="/coordinators?tab=pending" className="inline-flex items-center gap-1.5 text-sm font-medium text-kiranam-muted transition hover:text-kiranam-ink hover:underline">
           <ArrowLeft size={15} /> Back to Coordinators
         </Link>
 
@@ -68,10 +68,10 @@ export default async function VolunteerDetailPage({
     );
   }
 
-  // Approved volunteer view (also covers a rejected/no-application volunteer profile).
+  // Approved coordinator view (also covers a rejected/no-application coordinator profile).
   const [{ data: referral }, { data: assignments }, { data: allContributors }] = await Promise.all([
-    supabase.from('referrals').select('referral_code').eq('volunteer_id', id).maybeSingle(),
-    supabase.from('contributor_assignments').select('contributor_id').eq('volunteer_id', id),
+    supabase.from('referrals').select('referral_code').eq('coordinator_id', id).maybeSingle(),
+    supabase.from('contributor_assignments').select('contributor_id').eq('coordinator_id', id),
     supabase.from('profiles').select('id, full_name, phone').eq('role', 'contributor').not('phone', 'is', null).order('full_name'),
   ]);
 
@@ -97,7 +97,7 @@ export default async function VolunteerDetailPage({
 
   return (
     <div>
-      <Link href="/volunteers?tab=approved" className="inline-flex items-center gap-1.5 text-sm font-medium text-kiranam-muted transition hover:text-kiranam-ink hover:underline">
+      <Link href="/coordinators?tab=approved" className="inline-flex items-center gap-1.5 text-sm font-medium text-kiranam-muted transition hover:text-kiranam-ink hover:underline">
         <ArrowLeft size={15} /> Back to Coordinators
       </Link>
 

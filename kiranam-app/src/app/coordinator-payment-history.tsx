@@ -6,7 +6,7 @@ import { ArrowLeft, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
 
-export default function VolunteerPaymentHistoryScreen() {
+export default function CoordinatorPaymentHistoryScreen() {
   const router = useRouter();
   const { payments } = useApp();
 

@@ -5,7 +5,7 @@ import { verifyAdmin } from '@/lib/dal';
 import { createClient } from '@/lib/supabase/server';
 import { logAction } from '@/lib/audit';
 
-export type Audience = 'contributor' | 'volunteer' | 'all';
+export type Audience = 'contributor' | 'coordinator' | 'all';
 
 export interface SendState {
   message?: string;
@@ -24,7 +24,7 @@ export async function sendAnnouncement(_prevState: SendState, formData: FormData
   const title = String(formData.get('title') || '').trim();
   const body = String(formData.get('body') || '').trim();
   const rawAudience = formData.get('audience');
-  const audience: Audience = rawAudience === 'volunteer' || rawAudience === 'all' ? rawAudience : 'contributor';
+  const audience: Audience = rawAudience === 'coordinator' || rawAudience === 'all' ? rawAudience : 'contributor';
   const retryIds = String(formData.get('retryIds') || '')
     .split(',')
     .filter(Boolean);
@@ -35,7 +35,7 @@ export async function sendAnnouncement(_prevState: SendState, formData: FormData
   const supabase = await createClient();
   let ids = retryIds;
   if (ids.length === 0) {
-    const roles = audience === 'all' ? ['contributor', 'volunteer'] : [audience];
+    const roles = audience === 'all' ? ['contributor', 'coordinator'] : [audience];
     const { data: recipients, error } = await supabase.from('profiles').select('id').in('role', roles).not('phone', 'is', null);
     if (error) return { error: 'Couldn’t load the recipient list. Nothing was sent.', values };
     ids = (recipients || []).map((r) => r.id);
@@ -60,9 +60,7 @@ export async function sendAnnouncement(_prevState: SendState, formData: FormData
   }
 
   const sent = ids.length - failedIds.length;
-  // The role value is still 'volunteer'; the people are called coordinators.
-  const roleNoun = audience === 'volunteer' ? 'coordinator' : audience;
-  const noun = (n: number) => (audience === 'all' ? (n === 1 ? 'person' : 'people') : `${roleNoun}${n === 1 ? '' : 's'}`);
+  const noun = (n: number) => (audience === 'all' ? (n === 1 ? 'person' : 'people') : `${audience}${n === 1 ? '' : 's'}`);
 
   if (sent > 0) {
     await logAction(admin.id, 'send_announcement', 'notifications', undefined, {

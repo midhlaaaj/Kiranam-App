@@ -23,7 +23,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string }>();
   const { setPhone, signInWithPhone } = useApp();
-  const [mode, setMode] = useState<'contributor' | 'volunteer'>(params.role === 'volunteer' ? 'volunteer' : 'contributor');
+  const [mode, setMode] = useState<'contributor' | 'coordinator'>(params.role === 'coordinator' ? 'coordinator' : 'contributor');
   const [country, setCountry] = useState(deviceDefaultCountry);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -57,7 +57,7 @@ export default function LoginScreen() {
 
   const handleToggleMode = () => {
     setError('');
-    setMode((prev) => (prev === 'contributor' ? 'volunteer' : 'contributor'));
+    setMode((prev) => (prev === 'contributor' ? 'coordinator' : 'contributor'));
   };
 
   return (
@@ -71,14 +71,14 @@ export default function LoginScreen() {
 
         {/* Headers */}
         <Text style={styles.title}>
-          {mode === 'volunteer' ? (
+          {mode === 'coordinator' ? (
             <>Let&apos;s get you{"\n"}<Text style={styles.titleAccent}>coordinating</Text></>
           ) : (
             <>Let&apos;s get you{"\n"}<Text style={styles.titleAccent}>contributing</Text></>
           )}
         </Text>
         <Text style={styles.subtitle}>
-          {mode === 'volunteer'
+          {mode === 'coordinator'
             ? 'Enter your phone number to continue as a coordinator.'
             : 'Enter your phone number to continue.'}
         </Text>
@@ -134,9 +134,9 @@ export default function LoginScreen() {
         />
 
         {/* Mode toggle */}
-        <TouchableOpacity onPress={handleToggleMode} activeOpacity={0.7} style={styles.volunteerLink}>
-          <Text style={styles.volunteerLinkText}>
-            {mode === 'volunteer' ? 'Start contributing instead?' : 'Want to be a coordinator instead?'}
+        <TouchableOpacity onPress={handleToggleMode} activeOpacity={0.7} style={styles.coordinatorLink}>
+          <Text style={styles.coordinatorLinkText}>
+            {mode === 'coordinator' ? 'Start contributing instead?' : 'Want to be a coordinator instead?'}
           </Text>
         </TouchableOpacity>
 
@@ -245,12 +245,12 @@ const styles = StyleSheet.create({
   continueButton: {
     marginBottom: 24,
   },
-  volunteerLink: {
+  coordinatorLink: {
     marginTop: 'auto',
     alignItems: 'center',
     paddingVertical: 8,
   },
-  volunteerLinkText: {
+  coordinatorLinkText: {
     fontFamily: 'Inter',
     fontSize: 13.5,
     fontWeight: '700',

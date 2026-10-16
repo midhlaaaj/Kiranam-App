@@ -10,25 +10,25 @@ import { validatePhoneNumber } from '@/lib/phone';
 import { COUNTRIES } from '@/lib/countries';
 import type { CountryCode } from 'libphonenumber-js/min';
 
-export interface RegisterVolunteerState {
+export interface RegisterCoordinatorState {
   message?: string;
   error?: string;
   /** Set when registration failed because this phone number already belongs
-   * to an existing contributor — lets the form offer "upgrade to volunteer"
+   * to an existing contributor — lets the form offer "upgrade to coordinator"
    * instead of a dead-end error. */
   existingContributor?: { id: string; fullName: string | null };
 }
 
-// For a volunteer who was recruited/working offline (before this system, or
+// For a coordinator who was recruited/working offline (before this system, or
 // outside the in-app application flow) but has never opened the app.
 // Pre-creates their login by phone number, same pattern as registering a
 // contributor — they claim it by logging into kiranam-app with this same
 // phone number. Any of their existing contributors are assigned afterwards
-// from this volunteer's detail page, not here.
-export async function registerVolunteer(
-  _prevState: RegisterVolunteerState,
+// from this coordinator's detail page, not here.
+export async function registerCoordinator(
+  _prevState: RegisterCoordinatorState,
   formData: FormData
-): Promise<RegisterVolunteerState> {
+): Promise<RegisterCoordinatorState> {
   const admin = await verifyAdmin();
 
   const fullName = String(formData.get('full_name') || '').trim();
@@ -66,7 +66,7 @@ export async function registerVolunteer(
       createError?.status === 422 ||
       /already exists|already been registered|already registered/i.test(createError?.message || '');
 
-    if (createError) console.error('registerVolunteer: createUser failed:', createError);
+    if (createError) console.error('registerCoordinator: createUser failed:', createError);
 
     if (isDuplicate) {
       // profiles.phone is stored without the leading "+" (Supabase Auth's
@@ -90,12 +90,12 @@ export async function registerVolunteer(
     return { error: 'Could not register this coordinator. Please try again.' };
   }
 
-  const volunteerId = created.user.id;
+  const coordinatorId = created.user.id;
 
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ full_name: fullName, role: 'volunteer', ...(kkNumber ? { kk_number: kkNumber } : {}) })
-    .eq('id', volunteerId);
+    .update({ full_name: fullName, role: 'coordinator', ...(kkNumber ? { kk_number: kkNumber } : {}) })
+    .eq('id', coordinatorId);
   if (profileError) {
     const message = /duplicate key|unique/i.test(profileError.message)
       ? `Coordinator was created, but ${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
@@ -103,16 +103,16 @@ export async function registerVolunteer(
     return { error: message };
   }
 
-  await logAction(admin.id, 'register_volunteer', 'profiles', volunteerId, { fullName, label: fullName, kkNumber });
-  revalidatePath('/volunteers');
+  await logAction(admin.id, 'register_coordinator', 'profiles', coordinatorId, { fullName, label: fullName, kkNumber });
+  revalidatePath('/coordinators');
   return { message: `${fullName} has been registered as a coordinator. They can log in with this phone number.` };
 }
 
-// Promotes an existing contributor to volunteer in place, rather than
+// Promotes an existing contributor to coordinator in place, rather than
 // failing registration outright when the phone number they'd register with
 // already belongs to a contributor account — offered from
-// RegisterVolunteerForm after that duplicate-phone error.
-export async function upgradeContributorToVolunteer(contributorId: string, kkNumberInput?: string) {
+// RegisterCoordinatorForm after that duplicate-phone error.
+export async function upgradeContributorToCoordinator(contributorId: string, kkNumberInput?: string) {
   const admin = await verifyAdmin();
 
   let kkNumber: string | null = null;
@@ -131,7 +131,7 @@ export async function upgradeContributorToVolunteer(contributorId: string, kkNum
 
   const { error } = await supabase
     .from('profiles')
-    .update({ role: 'volunteer', ...(kkNumber && !profile.kk_number ? { kk_number: kkNumber } : {}) })
+    .update({ role: 'coordinator', ...(kkNumber && !profile.kk_number ? { kk_number: kkNumber } : {}) })
     .eq('id', contributorId);
   if (error) {
     const message = /duplicate key|unique/i.test(error.message)
@@ -140,84 +140,84 @@ export async function upgradeContributorToVolunteer(contributorId: string, kkNum
     throw new Error(message);
   }
 
-  await logAction(admin.id, 'upgrade_contributor_to_volunteer', 'profiles', contributorId, {
+  await logAction(admin.id, 'upgrade_contributor_to_coordinator', 'profiles', contributorId, {
     kkNumber,
     label: profile.full_name,
   });
-  revalidatePath('/volunteers');
+  revalidatePath('/coordinators');
   revalidatePath('/contributors');
   revalidatePath(`/contributors/${contributorId}`);
   return { fullName: profile.full_name as string | null };
 }
 
-// Reverses upgradeContributorToVolunteer — puts a volunteer back to a plain
+// Reverses upgradeContributorToCoordinator — puts a coordinator back to a plain
 // contributor. Their assigned contributors are unassigned first: a
 // contributor role has no business still showing up as someone else's
-// volunteer. Their own commitment/contributions (if any survive from before
-// they were a volunteer) are untouched.
-export async function demoteVolunteerToContributor(volunteerId: string) {
+// coordinator. Their own commitment/contributions (if any survive from before
+// they were a coordinator) are untouched.
+export async function demoteCoordinatorToContributor(coordinatorId: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
 
   const { data: profile, error: fetchError } = await supabase
     .from('profiles')
     .select('full_name')
-    .eq('id', volunteerId)
+    .eq('id', coordinatorId)
     .single();
   if (fetchError) throw new Error(friendlyErrorMessage(fetchError.message));
 
   const { error: unassignError } = await supabase
     .from('contributor_assignments')
     .delete()
-    .eq('volunteer_id', volunteerId);
+    .eq('coordinator_id', coordinatorId);
   if (unassignError) throw new Error(friendlyErrorMessage(unassignError.message));
 
-  const { error } = await supabase.from('profiles').update({ role: 'contributor' }).eq('id', volunteerId);
+  const { error } = await supabase.from('profiles').update({ role: 'contributor' }).eq('id', coordinatorId);
   if (error) throw new Error(friendlyErrorMessage(error.message));
 
-  await logAction(admin.id, 'demote_volunteer_to_contributor', 'profiles', volunteerId, {
+  await logAction(admin.id, 'demote_coordinator_to_contributor', 'profiles', coordinatorId, {
     label: profile.full_name,
   });
-  revalidatePath('/volunteers');
+  revalidatePath('/coordinators');
   revalidatePath('/contributors');
-  revalidatePath(`/volunteers/${volunteerId}`);
+  revalidatePath(`/coordinators/${coordinatorId}`);
   return { fullName: profile.full_name as string | null };
 }
 
-// Fetched by VolunteerQuickViewModal — a compact view/edit popup opened from
-// a Volunteers table row or from a duplicate-phone match surfaced while
+// Fetched by CoordinatorQuickViewModal — a compact view/edit popup opened from
+// a Coordinators table row or from a duplicate-phone match surfaced while
 // registering, as an alternative to the full detail page.
-export async function getVolunteerQuickView(volunteerId: string) {
+export async function getCoordinatorQuickView(coordinatorId: string) {
   await verifyAdmin();
   const supabase = await createClient();
 
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('id, full_name, phone, kk_number')
-    .eq('id', volunteerId)
+    .eq('id', coordinatorId)
     .single();
   if (error || !profile) throw new Error('Coordinator not found.');
 
   const { count } = await supabase
     .from('contributor_assignments')
     .select('*', { count: 'exact', head: true })
-    .eq('volunteer_id', volunteerId);
+    .eq('coordinator_id', coordinatorId);
 
   return { ...profile, assignedCount: count || 0 };
 }
 
-// KK number is the only field VolunteerQuickViewModal lets an admin edit —
+// KK number is the only field CoordinatorQuickViewModal lets an admin edit —
 // same update as assignKkNumber in contributors/actions.ts (profiles.kk_number
 // isn't role-specific), duplicated here rather than imported so this file
 // doesn't reach into a sibling route's actions module.
-export async function updateVolunteerKkNumber(volunteerId: string, kkNumberInput: string) {
+export async function updateCoordinatorKkNumber(coordinatorId: string, kkNumberInput: string) {
   const admin = await verifyAdmin();
 
   const kkNumber = kkNumberInput.trim().toUpperCase();
   if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK1.');
 
   const supabase = await createClient();
-  const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', volunteerId);
+  const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', coordinatorId);
   if (error) {
     const message = /duplicate key|unique/i.test(error.message)
       ? `${kkNumber} is already assigned to someone else.`
@@ -225,14 +225,14 @@ export async function updateVolunteerKkNumber(volunteerId: string, kkNumberInput
     throw new Error(message);
   }
 
-  await logAction(admin.id, 'assign_kk_number', 'profiles', volunteerId, {
+  await logAction(admin.id, 'assign_kk_number', 'profiles', coordinatorId, {
     kkNumber,
-    label: await lookupLabel('profiles', volunteerId),
+    label: await lookupLabel('profiles', coordinatorId),
   });
-  revalidatePath('/volunteers');
+  revalidatePath('/coordinators');
 }
 
-export async function assignContributor(volunteerId: string, formData: FormData) {
+export async function assignContributor(coordinatorId: string, formData: FormData) {
   const admin = await verifyAdmin();
   const contributorId = String(formData.get('contributorId') || '');
   if (!contributorId) return;
@@ -240,35 +240,35 @@ export async function assignContributor(volunteerId: string, formData: FormData)
   const supabase = await createClient();
   const { error } = await supabase
     .from('contributor_assignments')
-    .insert({ volunteer_id: volunteerId, contributor_id: contributorId });
+    .insert({ coordinator_id: coordinatorId, contributor_id: contributorId });
   if (error && !error.message.includes('duplicate')) throw new Error(error.message);
 
-  await logAction(admin.id, 'assign_contributor', 'contributor_assignments', volunteerId, {
-    volunteerId: volunteerId,
+  await logAction(admin.id, 'assign_contributor', 'contributor_assignments', coordinatorId, {
+    coordinatorId: coordinatorId,
     contributorId: contributorId,
     label: await lookupLabel('profiles', contributorId),
-    otherLabel: await lookupLabel('profiles', volunteerId),
+    otherLabel: await lookupLabel('profiles', coordinatorId),
   });
-  revalidatePath(`/volunteers/${volunteerId}`);
+  revalidatePath(`/coordinators/${coordinatorId}`);
 }
 
-export async function unassignContributor(volunteerId: string, contributorId: string) {
+export async function unassignContributor(coordinatorId: string, contributorId: string) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
   const { error } = await supabase
     .from('contributor_assignments')
     .delete()
-    .eq('volunteer_id', volunteerId)
+    .eq('coordinator_id', coordinatorId)
     .eq('contributor_id', contributorId);
   if (error) throw new Error(error.message);
 
-  await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', volunteerId, {
-    volunteerId: volunteerId,
+  await logAction(admin.id, 'unassign_contributor', 'contributor_assignments', coordinatorId, {
+    coordinatorId: coordinatorId,
     contributorId: contributorId,
     label: await lookupLabel('profiles', contributorId),
-    otherLabel: await lookupLabel('profiles', volunteerId),
+    otherLabel: await lookupLabel('profiles', coordinatorId),
   });
-  revalidatePath(`/volunteers/${volunteerId}`);
+  revalidatePath(`/coordinators/${coordinatorId}`);
 }
 
 export async function approveApplication(applicationId: string, profileId: string) {
@@ -278,15 +278,15 @@ export async function approveApplication(applicationId: string, profileId: strin
   // Single RPC so the application-status update, the role promotion, and
   // the audit log insert all commit atomically — a partial failure here
   // previously left applications stuck "approved" with the profile's role
-  // never flipped to 'volunteer'.
-  const { error } = await supabase.rpc('approve_volunteer_application', {
+  // never flipped to 'coordinator'.
+  const { error } = await supabase.rpc('approve_coordinator_application', {
     p_application_id: applicationId,
     p_profile_id: profileId,
   });
   if (error) throw new Error(error.message);
 
-  revalidatePath(`/volunteers/${profileId}`);
-  revalidatePath('/volunteers');
+  revalidatePath(`/coordinators/${profileId}`);
+  revalidatePath('/coordinators');
 }
 
 export async function rejectApplication(applicationId: string, profileId: string, reason?: string) {
@@ -294,7 +294,7 @@ export async function rejectApplication(applicationId: string, profileId: string
   const supabase = await createClient();
 
   const { error } = await supabase
-    .from('volunteer_applications')
+    .from('coordinator_applications')
     .update({
       status: 'rejected',
       reviewed_by: admin.id,
@@ -304,10 +304,10 @@ export async function rejectApplication(applicationId: string, profileId: string
     .eq('id', applicationId);
   if (error) throw new Error(error.message);
 
-  await logAction(admin.id, 'reject_volunteer_application', 'volunteer_applications', applicationId, {
+  await logAction(admin.id, 'reject_coordinator_application', 'coordinator_applications', applicationId, {
     profileId,
     label: await lookupLabel('profiles', profileId),
   });
-  revalidatePath(`/volunteers/${profileId}`);
-  revalidatePath('/volunteers');
+  revalidatePath(`/coordinators/${profileId}`);
+  revalidatePath('/coordinators');
 }

@@ -9,7 +9,7 @@ const chartConfig = {
   total: { label: 'Coordinators', color: 'var(--color-chart-2)' },
 } satisfies ChartConfig;
 
-export function VolunteerGrowthChart({ data }: { data: { label: string; total: number }[] }) {
+export function CoordinatorGrowthChart({ data }: { data: { label: string; total: number }[] }) {
   const [kind, setKind] = useState<ChartKind>('line');
 
   return (
@@ -44,7 +44,7 @@ export function VolunteerGrowthChart({ data }: { data: { label: string; total: n
         ) : (
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
             <defs>
-              <linearGradient id="volunteerFill" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="coordinatorFill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--color-total)" stopOpacity={0.24} />
                 <stop offset="100%" stopColor="var(--color-total)" stopOpacity={0} />
               </linearGradient>
@@ -76,7 +76,7 @@ export function VolunteerGrowthChart({ data }: { data: { label: string; total: n
               dataKey="total"
               stroke="var(--color-total)"
               strokeWidth={2}
-              fill="url(#volunteerFill)"
+              fill="url(#coordinatorFill)"
               dot={{ r: 2.5, fill: 'var(--color-total)', strokeWidth: 0 }}
               activeDot={{ r: 4.5, strokeWidth: 2, stroke: 'var(--color-kiranam-surface)' }}
               animationDuration={400}

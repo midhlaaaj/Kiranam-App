@@ -6,11 +6,11 @@ import { PageHeading } from '@/components/PageHeading';
 import { StatCard } from '@/components/StatCard';
 import { ContributionsChart } from '@/components/charts/ContributionsChart';
 import { CampaignProgressChart } from '@/components/charts/CampaignProgressChart';
-import { VolunteerGrowthChart } from '@/components/charts/VolunteerGrowthChart';
+import { CoordinatorGrowthChart } from '@/components/charts/CoordinatorGrowthChart';
 import { ContributorGrowthChart } from '@/components/charts/ContributorGrowthChart';
 import { ContributorGrowthFilter } from '@/components/ContributorGrowthFilter';
 import { StatusBreakdownChart } from '@/components/charts/StatusBreakdownChart';
-import { deriveContributorStatus } from '@/lib/volunteerStats';
+import { deriveContributorStatus } from '@/lib/coordinatorStats';
 import { bucketKey, bucketLabel, getBucketsForPage, type Granularity } from '@/lib/timeBuckets';
 import { cardClass, formatMoney } from '@/lib/ui';
 import { PillTabs } from '@/components/PillTabs';
@@ -52,21 +52,21 @@ async function getDashboard(granularity: Granularity, page: number) {
   const [
     pendingApplications,
     contributors,
-    volunteersCount,
+    coordinatorsCount,
     activeCampaigns,
     contributions,
     campaigns,
-    volunteers,
+    coordinators,
     assignments,
     allCommitments,
   ] = await Promise.all([
-    supabase.from('volunteer_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('coordinator_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor').not('phone', 'is', null),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'volunteer'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'coordinator'),
     supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('contributions').select('amount, created_at').eq('status', 'success'),
     supabase.from('campaigns').select('title, raised, goal'),
-    supabase.from('profiles').select('created_at').eq('role', 'volunteer').order('created_at', { ascending: true }),
+    supabase.from('profiles').select('created_at').eq('role', 'coordinator').order('created_at', { ascending: true }),
     supabase.from('contributor_assignments').select('contributor_id'),
     // Fetched alongside everything else (and filtered below) rather than as
     // a second round trip keyed on the assignment ids.
@@ -127,12 +127,12 @@ async function getDashboard(granularity: Granularity, page: number) {
   }));
 
   const monthlyCounts = new Map<string, number>();
-  (volunteers.data || []).forEach((v) => {
+  (coordinators.data || []).forEach((v) => {
     const key = bucketKey(new Date(v.created_at), 'monthly');
     monthlyCounts.set(key, (monthlyCounts.get(key) || 0) + 1);
   });
   let cumulative = 0;
-  const volunteerGrowth = Array.from(monthlyCounts.entries())
+  const coordinatorGrowth = Array.from(monthlyCounts.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, count]) => {
       cumulative += count;
@@ -154,14 +154,14 @@ async function getDashboard(granularity: Granularity, page: number) {
   return {
     pendingApplications: pendingApplications.count ?? 0,
     contributors: contributors.count ?? 0,
-    volunteers: volunteersCount.count ?? 0,
+    coordinators: coordinatorsCount.count ?? 0,
     activeCampaigns: activeCampaigns.count ?? 0,
     totalRaised,
     contributionsOverTime,
     totalInPeriod,
     activeRangeLabel,
     campaignProgress,
-    volunteerGrowth,
+    coordinatorGrowth,
     statusBreakdown: Object.entries(statusCounts).map(([name, value]) => ({ name, value })),
   };
 }
@@ -227,9 +227,9 @@ async function DashboardBody({
   ]);
 
   const cards = [
-    { label: 'Pending Applications', value: data.pendingApplications.toString(), icon: Clock3, href: '/volunteers?tab=pending' },
+    { label: 'Pending Applications', value: data.pendingApplications.toString(), icon: Clock3, href: '/coordinators?tab=pending' },
     { label: 'Contributors', value: data.contributors.toString(), icon: Users, href: '/contributors' },
-    { label: 'Coordinators', value: data.volunteers.toString(), icon: HeartHandshake, href: '/volunteers' },
+    { label: 'Coordinators', value: data.coordinators.toString(), icon: HeartHandshake, href: '/coordinators' },
     { label: 'Active Campaigns', value: data.activeCampaigns.toString(), icon: Megaphone, href: '/campaigns?status=active' },
     { label: 'Total Contributed', value: formatMoney(data.totalRaised), icon: Wallet, href: '/contributions' },
   ];
@@ -341,7 +341,7 @@ async function DashboardBody({
       <div className={`mt-6 ${cardClass} p-5`}>
         <h2 className="text-lg font-bold tracking-tight text-kiranam-ink">Coordinator Growth</h2>
         <div className="mt-4">
-          <VolunteerGrowthChart data={data.volunteerGrowth} />
+          <CoordinatorGrowthChart data={data.coordinatorGrowth} />
         </div>
       </div>
     </>

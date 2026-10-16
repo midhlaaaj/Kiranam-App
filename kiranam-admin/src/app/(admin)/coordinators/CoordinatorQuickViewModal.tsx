@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
-import { demoteVolunteerToContributor, getVolunteerQuickView, updateVolunteerKkNumber } from './actions';
+import { demoteCoordinatorToContributor, getCoordinatorQuickView, updateCoordinatorKkNumber } from './actions';
 import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
 
 const fieldLabelClass = 'text-xs font-semibold text-kiranam-muted';
@@ -19,17 +19,17 @@ type QuickView = {
   assignedCount: number;
 };
 
-/** Compact view/edit popup for a single volunteer — opened from a Volunteers
+/** Compact view/edit popup for a single coordinator — opened from a Coordinators
  * table row, or from a duplicate-phone match surfaced while registering.
  * Editing here is deliberately limited to KK number; contributor
  * assignment and everything else still lives on the full detail page,
  * linked from here. */
-export function VolunteerQuickViewModal({
-  volunteerId,
+export function CoordinatorQuickViewModal({
+  coordinatorId,
   onClose,
   initialEditing = false,
 }: {
-  volunteerId: string | null;
+  coordinatorId: string | null;
   onClose: () => void;
   /** Opens straight into edit mode — used when this is reached from a
    * "user already exists, edit their profile" prompt rather than a plain
@@ -46,7 +46,7 @@ export function VolunteerQuickViewModal({
     setLoading(true);
     setEditing(initialEditing);
     try {
-      const view = await getVolunteerQuickView(id);
+      const view = await getCoordinatorQuickView(id);
       setData(view);
       setKkNumber(view.kk_number || '');
     } catch {
@@ -61,9 +61,9 @@ export function VolunteerQuickViewModal({
     // before an async fetch" pattern, not a correctness bug — same call this
     // codebase already made for the whatsapp/** rule override in eslint.config.mjs.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (volunteerId) load(volunteerId);
+    if (coordinatorId) load(coordinatorId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialEditing is a mount-time prop, not a reactive dependency to re-fetch on
-  }, [volunteerId]);
+  }, [coordinatorId]);
 
   async function handleSave() {
     if (!data) return;
@@ -74,7 +74,7 @@ export function VolunteerQuickViewModal({
     }
     setSaving(true);
     try {
-      await updateVolunteerKkNumber(data.id, trimmedKk);
+      await updateCoordinatorKkNumber(data.id, trimmedKk);
       toast.success('Coordinator updated.');
       setData({ ...data, kk_number: trimmedKk });
       setEditing(false);
@@ -86,7 +86,7 @@ export function VolunteerQuickViewModal({
   }
 
   return (
-    <Modal open={!!volunteerId} onClose={onClose} title="Coordinator">
+    <Modal open={!!coordinatorId} onClose={onClose} title="Coordinator">
       {loading || !data ? (
         <div className="py-6 text-center text-sm text-kiranam-muted">Loading…</div>
       ) : editing ? (
@@ -147,12 +147,12 @@ export function VolunteerQuickViewModal({
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <Link href={`/volunteers/${data.id}`} className="text-sm font-medium text-kiranam-primary hover:underline">
+            <Link href={`/coordinators/${data.id}`} className="text-sm font-medium text-kiranam-primary hover:underline">
               View full details →
             </Link>
             <ConfirmSubmitButton
               action={async () => {
-                await demoteVolunteerToContributor(data.id);
+                await demoteCoordinatorToContributor(data.id);
               }}
               label="Demote to contributor"
               title="Demote to contributor?"

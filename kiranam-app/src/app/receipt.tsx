@@ -13,7 +13,7 @@ import { KIRANAM_LOGO_DATA_URI, HCF_LOGO_DATA_URI, HCF_SEAL_DATA_URI } from '@/c
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { userName, userEmail, phone, isVolunteer } = useApp();
+  const { userName, userEmail, phone, isCoordinator } = useApp();
 
   const txnId = (params.id as string) || 'TXN9284KLM2';
   const amount = params.amount ? parseInt(params.amount as string, 10) : 500;
@@ -173,7 +173,7 @@ export default function ReceiptScreen() {
           />
           <Button
             title="Back to Home"
-            onPress={() => router.replace(isVolunteer ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home')}
+            onPress={() => router.replace(isCoordinator ? '/(coordinator-tabs)/dashboard' : '/(tabs)/home')}
             variant="outline"
           />
         </View>

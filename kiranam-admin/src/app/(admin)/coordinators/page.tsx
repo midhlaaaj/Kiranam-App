@@ -4,21 +4,21 @@ import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/EmptyState';
 import { SkeletonTable } from '@/components/Skeleton';
 import { PendingApplicantRow } from './PendingApplicantRow';
-import { VolunteersRegisterPanel } from './VolunteersRegisterPanel';
-import { VolunteersTableClient } from './VolunteersTableClient';
+import { CoordinatorsRegisterPanel } from './CoordinatorsRegisterPanel';
+import { CoordinatorsTableClient } from './CoordinatorsTableClient';
 import { PillTabs } from '@/components/PillTabs';
 import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
 import { tableCellClass, tableHeadRowClass, tableWrapClass } from '@/lib/ui';
 import { searchTerm } from '@/lib/search';
 import { cn } from '@/lib/utils';
 
-async function getApprovedVolunteers(query: string) {
+async function getApprovedCoordinators(query: string) {
   const supabase = await createClient();
 
   let request = supabase
     .from('profiles')
     .select('id, full_name, phone, created_at')
-    .eq('role', 'volunteer')
+    .eq('role', 'coordinator')
     .order('created_at', { ascending: false });
 
   const term = searchTerm(query);
@@ -26,28 +26,28 @@ async function getApprovedVolunteers(query: string) {
     request = request.or(`full_name.ilike.*${term}*,phone.ilike.*${term.replace(/\D/g, '') || term}*`);
   }
 
-  const { data: volunteers } = await request;
+  const { data: coordinators } = await request;
 
-  const ids = (volunteers || []).map((v) => v.id);
+  const ids = (coordinators || []).map((v) => v.id);
 
   const [{ data: referrals }, { data: assignments }] = await Promise.all([
     ids.length
-      ? supabase.from('referrals').select('volunteer_id, referral_code').in('volunteer_id', ids)
+      ? supabase.from('referrals').select('coordinator_id, referral_code').in('coordinator_id', ids)
       : Promise.resolve({ data: [] }),
     ids.length
-      ? supabase.from('contributor_assignments').select('volunteer_id').in('volunteer_id', ids)
+      ? supabase.from('contributor_assignments').select('coordinator_id').in('coordinator_id', ids)
       : Promise.resolve({ data: [] }),
   ]);
 
-  const referralByVolunteer = new Map((referrals || []).map((r) => [r.volunteer_id, r.referral_code]));
+  const referralByCoordinator = new Map((referrals || []).map((r) => [r.coordinator_id, r.referral_code]));
   const assignmentCounts = new Map<string, number>();
   (assignments || []).forEach((a) => {
-    assignmentCounts.set(a.volunteer_id, (assignmentCounts.get(a.volunteer_id) || 0) + 1);
+    assignmentCounts.set(a.coordinator_id, (assignmentCounts.get(a.coordinator_id) || 0) + 1);
   });
 
-  return (volunteers || []).map((v) => ({
+  return (coordinators || []).map((v) => ({
     ...v,
-    referralCode: referralByVolunteer.get(v.id) ?? '—',
+    referralCode: referralByCoordinator.get(v.id) ?? '—',
     assignedCount: assignmentCounts.get(v.id) ?? 0,
   }));
 }
@@ -55,8 +55,8 @@ async function getApprovedVolunteers(query: string) {
 async function getPendingApplicants(query: string) {
   const supabase = await createClient();
   const { data } = await supabase
-    .from('volunteer_applications')
-    .select('id, created_at, motivation, profiles!volunteer_applications_profile_id_fkey(id, full_name, phone)')
+    .from('coordinator_applications')
+    .select('id, created_at, motivation, profiles!coordinator_applications_profile_id_fkey(id, full_name, phone)')
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
 
@@ -74,20 +74,20 @@ async function getPendingApplicants(query: string) {
   );
 }
 
-async function VolunteerTabs({ render }: { render: (pendingCount: number) => React.ReactNode }) {
+async function CoordinatorTabs({ render }: { render: (pendingCount: number) => React.ReactNode }) {
   return render(await getPendingCount());
 }
 
 async function getPendingCount() {
   const supabase = await createClient();
   const { count } = await supabase
-    .from('volunteer_applications')
+    .from('coordinator_applications')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending');
   return count ?? 0;
 }
 
-export default async function VolunteersPage({
+export default async function CoordinatorsPage({
   searchParams,
 }: {
   searchParams: Promise<{ tab?: string; q?: string }>;
@@ -104,13 +104,13 @@ export default async function VolunteersPage({
         {
           key: 'approved',
           label: 'Approved',
-          href: `/volunteers?tab=approved${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+          href: `/coordinators?tab=approved${q ? `&q=${encodeURIComponent(q)}` : ''}`,
           active: activeTab === 'approved',
         },
         {
           key: 'pending',
           label: 'Pending applications',
-          href: `/volunteers?tab=pending${q ? `&q=${encodeURIComponent(q)}` : ''}`,
+          href: `/coordinators?tab=pending${q ? `&q=${encodeURIComponent(q)}` : ''}`,
           active: activeTab === 'pending',
           count: pendingCount,
         },
@@ -119,33 +119,33 @@ export default async function VolunteersPage({
   );
   const filterPills = (
     <Suspense fallback={tabs()}>
-      <VolunteerTabs render={tabs} />
+      <CoordinatorTabs render={tabs} />
     </Suspense>
   );
 
   return (
     <FilterRoot>
-      <VolunteersRegisterPanel
+      <CoordinatorsRegisterPanel
         filters={filterPills}
         search={<FilterSearch placeholder="Search by name or phone" label="Search coordinators" />}
       />
 
       <FilterResults>
         <Suspense key={`${activeTab}:${q ?? ''}`} fallback={<SkeletonTable rows={7} cols={4} />}>
-          <VolunteersTable activeTab={activeTab} q={q} />
+          <CoordinatorsTable activeTab={activeTab} q={q} />
         </Suspense>
       </FilterResults>
     </FilterRoot>
   );
 }
 
-async function VolunteersTable({ activeTab, q }: { activeTab: 'approved' | 'pending'; q?: string }) {
-  const [volunteers, applicants] = await Promise.all([getApprovedVolunteers(q || ''), getPendingApplicants(q || '')]);
+async function CoordinatorsTable({ activeTab, q }: { activeTab: 'approved' | 'pending'; q?: string }) {
+  const [coordinators, applicants] = await Promise.all([getApprovedCoordinators(q || ''), getPendingApplicants(q || '')]);
 
   if (activeTab === 'approved') {
     return (
-      <VolunteersTableClient
-        volunteers={volunteers}
+      <CoordinatorsTableClient
+        coordinators={coordinators}
         emptyTitle={q ? 'No approved coordinators match your search' : 'No approved coordinators yet'}
         emptyDescription={q ? 'Try a different name or phone number.' : undefined}
       />

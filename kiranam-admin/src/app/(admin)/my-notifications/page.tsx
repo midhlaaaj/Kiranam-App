@@ -9,7 +9,7 @@ import { buttonSecondary, linkDanger, cardClass } from '@/lib/ui';
 import { markNotificationRead, markAllNotificationsRead, clearAllNotifications } from './actions';
 
 // Admins work from this website, not the mobile app — so system-generated
-// notifications directed at an admin (new volunteer applications, a
+// notifications directed at an admin (new coordinator applications, a
 // campaign hitting its goal, a large contribution) land here instead of as
 // a phone push. See notify() in the database: it skips the push fan-out
 // entirely for role = 'admin' recipients.

@@ -7,7 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Button } from '@/components/Button';
 import { supabase } from '@/lib/supabase';
 import { extractReferralCodeFromText, stashPendingReferralCode } from '@/utils/referral';
-import { resolveEntryRoute } from '@/utils/volunteerRouting';
+import { resolveEntryRoute } from '@/utils/coordinatorRouting';
 
 const CLIPBOARD_CHECKED_KEY = 'kiranam.referralClipboardChecked';
 
@@ -38,7 +38,7 @@ export default function SplashScreen() {
 
   // If a session is already saved on-device, skip the "Get Started" splash
   // entirely and land the user straight in — same destination logic as
-  // otp.tsx's post-verify routing (full_name presence, then volunteer
+  // otp.tsx's post-verify routing (full_name presence, then coordinator
   // approval status), since a returning user never goes through otp.tsx.
   useEffect(() => {
     let cancelled = false;

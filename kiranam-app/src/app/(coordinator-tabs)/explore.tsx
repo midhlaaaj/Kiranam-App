@@ -9,7 +9,7 @@ import { formatMoney } from '@/utils/format';
 import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
-export default function VolunteerExploreScreen() {
+export default function CoordinatorExploreScreen() {
   const router = useRouter();
   const { campaigns, events, notifications, refreshCampaigns, refreshEvents } = useApp();
   const [mode, setMode] = useState<'campaigns' | 'events'>('campaigns');

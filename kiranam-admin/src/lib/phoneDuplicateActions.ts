@@ -6,11 +6,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export interface PhoneDuplicateMatch {
   id: string;
   fullName: string | null;
-  role: 'contributor' | 'volunteer' | 'admin';
+  role: 'contributor' | 'coordinator' | 'admin';
 }
 
 // Checked while the phone field is being typed into (debounced) by
-// RegisterContributorForm and RegisterVolunteerForm, before the rest of the
+// RegisterContributorForm and RegisterCoordinatorForm, before the rest of the
 // form is even filled in — service-role client because ordinary admin RLS on
 // profiles doesn't expose arbitrary phone lookups across all roles.
 export async function checkPhoneDuplicate(dialCode: string, phoneDigits: string): Promise<PhoneDuplicateMatch | null> {

@@ -5,16 +5,16 @@ import { XCircle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
-import { markRejectionAcknowledged } from '@/utils/volunteerRouting';
+import { markRejectionAcknowledged } from '@/utils/coordinatorRouting';
 
 // Reached (once per rejected application) via resolvePostAuthRoute/
-// checkFreshRejection — for both a fresh volunteer-only signup and an
+// checkFreshRejection — for both a fresh coordinator-only signup and an
 // existing contributor whose transition application was rejected. The
 // CTA differs by which of those two this is: a fresh applicant has no
 // giving set up yet, so the natural next step is contributing instead;
 // an existing contributor already has full access and just needs to
 // know their access wasn't interrupted.
-export default function VolunteerRejectedScreen() {
+export default function CoordinatorRejectedScreen() {
   const router = useRouter();
   const { hasCommitment } = useApp();
   const [reason, setReason] = useState<string | null>(null);
@@ -27,7 +27,7 @@ export default function VolunteerRejectedScreen() {
       const uid = userData.user?.id;
       if (!uid) return;
       const { data: application } = await supabase
-        .from('volunteer_applications')
+        .from('coordinator_applications')
         .select('id, rejection_reason')
         .eq('profile_id', uid)
         .eq('status', 'rejected')
@@ -51,7 +51,7 @@ export default function VolunteerRejectedScreen() {
         ? '/(tabs)/home'
         // Without `onboarding: '1'`, choose-amount's Save button treats this
         // as "editing an existing commitment" and does router.back() — which
-        // lands back on whatever was still under volunteer-rejected in the
+        // lands back on whatever was still under coordinator-rejected in the
         // stack (the mobile-number screen), not home. Marking it onboarding
         // routes Save (and Skip) to home instead, same as a fresh signup.
         : { pathname: '/choose-amount', params: { onboarding: '1', role: 'contributor' } }

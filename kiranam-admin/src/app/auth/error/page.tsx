@@ -1,6 +1,6 @@
 // Landed on when a /auth/confirm link (password reset, signup confirmation)
 // is invalid or expired. Deliberately NOT the admin login page — most
-// people clicking these links historically were contributors or volunteers
+// people clicking these links historically were contributors or coordinators
 // using kiranam-app's email+password flow, not admins, and dumping them on
 // an admin sign-in screen would be both confusing and wrong. Still applies
 // today for kiranam-admin's own admin password-reset links.

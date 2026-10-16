@@ -96,9 +96,9 @@ async function getAudienceCounts() {
   const supabase = await createClient();
   const [c, v] = await Promise.all([
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor').not('phone', 'is', null),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'volunteer'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'coordinator'),
   ]);
-  return { contributor: c.count ?? 0, volunteer: v.count ?? 0, all: (c.count ?? 0) + (v.count ?? 0) };
+  return { contributor: c.count ?? 0, coordinator: v.count ?? 0, all: (c.count ?? 0) + (v.count ?? 0) };
 }
 
 export default async function AnnouncementsPage({
@@ -107,7 +107,7 @@ export default async function AnnouncementsPage({
   searchParams: Promise<{ audience?: string; page?: string }>;
 }) {
   const { audience: audienceParam, page: pageParam } = await searchParams;
-  const audience = audienceParam === 'contributor' || audienceParam === 'volunteer' ? audienceParam : undefined;
+  const audience = audienceParam === 'contributor' || audienceParam === 'coordinator' ? audienceParam : undefined;
   const page = Math.max(1, Number(pageParam) || 1);
 
   return (
@@ -135,10 +135,10 @@ export default async function AnnouncementsPage({
               scroll: false,
             },
             {
-              key: 'volunteer',
+              key: 'coordinator',
               label: 'To coordinators',
-              href: '/notifications?audience=volunteer',
-              active: audience === 'volunteer',
+              href: '/notifications?audience=coordinator',
+              active: audience === 'coordinator',
               scroll: false,
             },
           ]}

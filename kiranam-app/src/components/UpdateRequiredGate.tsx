@@ -19,7 +19,7 @@ export function isOlderVersion(current: string, minimum: string): boolean {
 
 /** Blocks the app with an "Update required" screen when this build is older
  * than app_config.min_app_version — how breaking backend changes (like the
- * volunteer → coordinator database rename) can ship without leaving old
+ * Volunteer → Coordinator database rename) can ship without leaving old
  * installs half-working. Fails open: if the check can't run (offline,
  * table missing), the app carries on as normal. */
 export function UpdateRequiredGate({ children }: { children: React.ReactNode }) {

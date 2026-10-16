@@ -6,7 +6,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { EditReferralCodeModal } from '@/components/EditReferralCodeModal';
-import { statusMeta } from '@/utils/volunteerStatus';
+import { statusMeta } from '@/utils/coordinatorStatus';
 import {
   Users,
   Clock3,
@@ -25,7 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney, getGreeting } from '@/utils/format';
 import { referralJoinUrl } from '@/utils/links';
 
-export default function VolunteerDashboardScreen() {
+export default function CoordinatorDashboardScreen() {
   const router = useRouter();
   const {
     userName,
@@ -33,7 +33,7 @@ export default function VolunteerDashboardScreen() {
     isReferralCodeDefault,
     hasReferredContributor,
     updateReferralCode,
-    volunteerMembers,
+    coordinatorMembers,
     notifications,
     profileLoading,
     hasCommitment,
@@ -56,10 +56,10 @@ export default function VolunteerDashboardScreen() {
 
   const firstName = userName.split(' ')[0];
   const autopayHealthy = isAutopayEnabled && (mandateStatus === 'authenticated' || mandateStatus === 'active');
-  const pendingCount = volunteerMembers.filter((m) => m.status === 'due').length;
-  const overdueCount = volunteerMembers.filter((m) => m.status === 'overdue').length;
+  const pendingCount = coordinatorMembers.filter((m) => m.status === 'due').length;
+  const overdueCount = coordinatorMembers.filter((m) => m.status === 'overdue').length;
   const unreadNotificationsCount = notifications.filter((n) => n.unread).length;
-  const topMembers = volunteerMembers.slice(0, 3);
+  const topMembers = coordinatorMembers.slice(0, 3);
 
   const handlePayAgain = () => {
     Alert.alert(
@@ -93,7 +93,7 @@ export default function VolunteerDashboardScreen() {
 
   // Getting Started checklist — same pattern as the contributor home screen's,
   // minus a "set your monthly amount" step: that's a dedicated screen shown
-  // during signup itself for volunteers now, not a checklist item here.
+  // during signup itself for coordinators now, not a checklist item here.
   const setupSteps = [
     { key: 'referral', label: 'Set up your referral code', done: !isReferralCodeDefault, onPress: () => setEditCodeVisible(true) },
     { key: 'invite', label: 'Invite your first contributor', done: hasReferredContributor, onPress: handleShare },
@@ -121,7 +121,7 @@ export default function VolunteerDashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* My Giving — a volunteer can also be a personal contributor.
+        {/* My Giving — a coordinator can also be a personal contributor.
             Moved here from the profile tab so it's the first thing seen. */}
         <LinearGradient
           colors={['#FF3B3B', '#EC2028', '#7A0D12', '#3D0709']}
@@ -220,7 +220,7 @@ export default function VolunteerDashboardScreen() {
         {/* Contribution stats — pending/overdue workload for assigned contributors */}
         <FlatList
           data={[
-            { key: 'assigned', label: 'Assigned Contributors', value: volunteerMembers.length.toString(), Icon: Users },
+            { key: 'assigned', label: 'Assigned Contributors', value: coordinatorMembers.length.toString(), Icon: Users },
             { key: 'pending', label: 'Pending Contributions', value: pendingCount.toString(), Icon: Clock3 },
             { key: 'overdue', label: 'Overdue Contributions', value: overdueCount.toString(), Icon: AlertCircle },
           ]}
@@ -276,7 +276,7 @@ export default function VolunteerDashboardScreen() {
           <TouchableOpacity
             style={styles.quickActionRow}
             activeOpacity={0.8}
-            onPress={() => router.push('/(volunteer-tabs)/contributors')}
+            onPress={() => router.push('/(coordinator-tabs)/contributors')}
           >
             <View style={styles.quickActionIconBox}>
               <Users size={20} color="#EC2028" />
@@ -291,7 +291,7 @@ export default function VolunteerDashboardScreen() {
           <TouchableOpacity
             style={styles.quickActionRow}
             activeOpacity={0.8}
-            onPress={() => router.push({ pathname: '/(volunteer-tabs)/contributors', params: { filter: 'due' } })}
+            onPress={() => router.push({ pathname: '/(coordinator-tabs)/contributors', params: { filter: 'due' } })}
           >
             <View style={styles.quickActionIconBox}>
               <BellRing size={20} color="#EC2028" />
@@ -308,7 +308,7 @@ export default function VolunteerDashboardScreen() {
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Assigned Contributors</Text>
           {topMembers.length > 0 && (
-            <TouchableOpacity onPress={() => router.push('/(volunteer-tabs)/contributors')} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push('/(coordinator-tabs)/contributors')} activeOpacity={0.7}>
               <Text style={styles.seeAllText}>See all</Text>
             </TouchableOpacity>
           )}
@@ -328,7 +328,7 @@ export default function VolunteerDashboardScreen() {
                 key={item.id}
                 style={[styles.memberRow, index === topMembers.length - 1 ? styles.noBorder : null]}
                 activeOpacity={0.7}
-                onPress={() => router.push({ pathname: '/volunteer-contributor-detail', params: { id: item.id } })}
+                onPress={() => router.push({ pathname: '/coordinator-contributor-detail', params: { id: item.id } })}
               >
                 <View style={styles.memberAvatar}>
                   <Text style={styles.memberAvatarText}>

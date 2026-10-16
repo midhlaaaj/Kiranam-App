@@ -1,6 +1,6 @@
-import { VolunteerMember } from '@/context/AppContext';
+import { CoordinatorMember } from '@/context/AppContext';
 
-export function statusMeta(status: VolunteerMember['status']) {
+export function statusMeta(status: CoordinatorMember['status']) {
   switch (status) {
     case 'active':
       return { label: 'Active', bg: '#EAF7EF', text: '#22A559' };

@@ -5,7 +5,7 @@ import { MobileToolbar } from '@/components/MobileToolbar';
 import { SkeletonTable } from '@/components/Skeleton';
 import { ContributorsRegisterPanel } from './ContributorsRegisterPanel';
 import { ContributorsTableClient } from './ContributorsTableClient';
-import { deriveContributorStatus, type ContributorStatus } from '@/lib/volunteerStats';
+import { deriveContributorStatus, type ContributorStatus } from '@/lib/coordinatorStats';
 import { PillTabs } from '@/components/PillTabs';
 import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
 import { searchTerm } from '@/lib/search';

@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { HeartHandshake } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
-import { VolunteerQuickViewModal } from './VolunteerQuickViewModal';
+import { CoordinatorQuickViewModal } from './CoordinatorQuickViewModal';
 import { staggerDelay, tableCellClass, tableHeadRowClass, tableRowClass, tableWrapClass } from '@/lib/ui';
 
-interface VolunteerRow {
+interface CoordinatorRow {
   id: string;
   full_name: string | null;
   phone: string | null;
@@ -14,12 +14,12 @@ interface VolunteerRow {
   assignedCount: number;
 }
 
-/** Renders the approved-volunteers table and owns the single
- * VolunteerQuickViewModal instance shared across rows — a row opens it
+/** Renders the approved-coordinators table and owns the single
+ * CoordinatorQuickViewModal instance shared across rows — a row opens it
  * instead of navigating away, so KK number can be checked or fixed without
  * leaving the list. */
-export function VolunteersTableClient({ volunteers, emptyTitle, emptyDescription }: {
-  volunteers: VolunteerRow[];
+export function CoordinatorsTableClient({ coordinators, emptyTitle, emptyDescription }: {
+  coordinators: CoordinatorRow[];
   emptyTitle: string;
   emptyDescription?: string;
 }) {
@@ -27,7 +27,7 @@ export function VolunteersTableClient({ volunteers, emptyTitle, emptyDescription
 
   return (
     <div className={tableWrapClass}>
-      {volunteers.length === 0 ? (
+      {coordinators.length === 0 ? (
         <EmptyState icon={HeartHandshake} title={emptyTitle} description={emptyDescription} />
       ) : (
         <table className="w-full text-sm">
@@ -40,7 +40,7 @@ export function VolunteersTableClient({ volunteers, emptyTitle, emptyDescription
             </tr>
           </thead>
           <tbody>
-            {volunteers.map((v, i) => (
+            {coordinators.map((v, i) => (
               <tr key={v.id} className={tableRowClass} style={staggerDelay(i)}>
                 <td className={tableCellClass}>
                   <button
@@ -60,7 +60,7 @@ export function VolunteersTableClient({ volunteers, emptyTitle, emptyDescription
         </table>
       )}
 
-      <VolunteerQuickViewModal volunteerId={selectedId} onClose={() => setSelectedId(null)} />
+      <CoordinatorQuickViewModal coordinatorId={selectedId} onClose={() => setSelectedId(null)} />
     </div>
   );
 }

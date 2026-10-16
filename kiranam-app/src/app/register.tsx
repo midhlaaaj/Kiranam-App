@@ -8,14 +8,14 @@ import { Toast } from '@/components/Toast';
 import { validateRequired, validateReferralCode } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { peekPendingReferralCode } from '@/utils/referral';
-import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
+import { resolveApprovedCoordinatorRoute } from '@/utils/coordinatorRouting';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Check } from 'lucide-react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ role?: string; claim?: string }>();
-  const role = params.role === 'volunteer' ? 'volunteer' : 'contributor';
+  const role = params.role === 'coordinator' ? 'coordinator' : 'contributor';
   // An admin already created this account (name, role, KK number, payment
   // history) — they're confirming details and accepting the terms, not
   // creating anything new.
@@ -68,10 +68,10 @@ export default function RegisterScreen() {
     }
     setSubmitting(true);
     // Always save as 'contributor' here, even when the person picked
-    // "volunteer" — that only reflects their *intent* to apply. The real
-    // 'volunteer' role is granted by an admin approving the application
-    // (kiranam-admin's volunteers/actions.ts), not at signup. Setting it
-    // here early let people get full volunteer-tab access — or get stuck
+    // "coordinator" — that only reflects their *intent* to apply. The real
+    // 'coordinator' role is granted by an admin approving the application
+    // (kiranam-admin's coordinators/actions.ts), not at signup. Setting it
+    // here early let people get full coordinator-tab access — or get stuck
     // in a half-registered state with no reviewable application — just by
     // abandoning the next screen before actually applying.
     // `phone` is already known and OTP-verified from the login step — no
@@ -81,7 +81,7 @@ export default function RegisterScreen() {
     const { error } = await saveProfile({
       fullName: name,
       phone,
-      role: claiming && role === 'volunteer' ? 'volunteer' : 'contributor',
+      role: claiming && role === 'coordinator' ? 'coordinator' : 'contributor',
       whatsappConsent,
       referralCode: claiming ? undefined : refCode,
     });
@@ -112,8 +112,8 @@ export default function RegisterScreen() {
       // their welcome/dashboard, contributors to Home — or the amount
       // picker only if the admin didn't set a monthly amount for them.
       const { data: { user } } = await supabase.auth.getUser();
-      if (role === 'volunteer' && user) {
-        router.replace(await resolveApprovedVolunteerRoute(user.id));
+      if (role === 'coordinator' && user) {
+        router.replace(await resolveApprovedCoordinatorRoute(user.id));
         return;
       }
       const { data: commitment } = user
@@ -123,8 +123,8 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (role === 'volunteer') {
-      // No amount picker yet — a volunteer applicant isn't a volunteer
+    if (role === 'coordinator') {
+      // No amount picker yet — a coordinator applicant isn't a coordinator
       // until an admin approves them, so asking for a monthly commitment
       // now would be premature. That happens once, right after approval —
       // see otp.tsx/index.tsx's post-login routing.
@@ -132,7 +132,7 @@ export default function RegisterScreen() {
       // stack, same reasoning as otp.tsx not remaining in it: once past
       // this step, back must not return the person to an earlier part of
       // signup they've already completed.
-      router.replace('/volunteer-application');
+      router.replace('/coordinator-application');
     } else {
       // New contributors land on the amount picker first, not Home directly —
       // otherwise most people never set up a monthly commitment at all.
