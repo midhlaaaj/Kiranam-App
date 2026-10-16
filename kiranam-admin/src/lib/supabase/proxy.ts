@@ -24,8 +24,10 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refreshes the auth token if expired — required for Server Components,
-  // which cannot write cookies themselves.
-  await supabase.auth.getUser();
+  // which cannot write cookies themselves. getClaims() validates the JWT
+  // locally (no Supabase Auth round trip, unlike getUser()) and refreshes
+  // an expired session the same way.
+  await supabase.auth.getClaims();
 
   return response;
 }

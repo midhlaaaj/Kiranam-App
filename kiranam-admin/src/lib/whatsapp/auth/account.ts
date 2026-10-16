@@ -106,13 +106,13 @@ export interface AccountContext {
 export async function getCurrentAccount(): Promise<AccountContext> {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-  if (userErr || !user) {
+  // Local JWT verification — no Supabase Auth round trip per request.
+  const { data: claimsData, error: userErr } = await supabase.auth.getClaims();
+  const sub = claimsData?.claims?.sub;
+  if (userErr || !sub) {
     throw new UnauthorizedError();
   }
+  const user = { id: sub };
 
   const { data, error } = await supabase
     .from("profiles")

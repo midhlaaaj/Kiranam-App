@@ -116,10 +116,8 @@ export async function proxy(request: NextRequest) {
         },
       }
     );
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+    const { data } = await supabase.auth.getClaims();
+    if (!data?.claims?.sub) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
   }

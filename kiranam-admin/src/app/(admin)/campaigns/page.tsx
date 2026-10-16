@@ -87,10 +87,9 @@ export default async function CampaignsPage({
 async function CampaignsTable({ q, status }: { q?: string; status?: string }) {
   const supabase = await createClient();
 
-  // Self-heal: a campaign whose end date has passed, or whose goal has been
-  // reached, becomes "completed" automatically — matching the same two
-  // conditions the mobile app already checks client-side.
-  await supabase.rpc('self_heal_campaign_completion');
+  // Campaigns past their end date or goal are marked completed by the
+  // refresh-campaign-event-status pg_cron job (032_performance.sql), not
+  // on every page view.
 
   // Archived campaigns are hidden everywhere except the dedicated Archived
   // tab — including under All/Ongoing/Completed, which otherwise filter on

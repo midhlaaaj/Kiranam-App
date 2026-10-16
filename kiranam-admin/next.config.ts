@@ -78,8 +78,14 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         headers: [{ key: "Cache-Control", value: "no-store" }],
       },
-      {
-        source: "/:path((?!_next/static|_next/image|api).*)",
+      // Only the public marketing/legal pages may be cached by the CDN.
+      // Admin pages are per-user and must never be served from a shared
+      // cache — Next.js marks those private/no-store itself.
+      // Scoped to the public host: "/" on admin.kiranam.online is the
+      // signed-in dashboard.
+      ...["/", "/landing", "/join", "/legal/:path*"].map((source) => ({
+        source,
+        has: [{ type: "host" as const, value: "(www\\.)?kiranam\\.online" }],
         headers: [
           {
             key: "Cache-Control",
@@ -87,7 +93,7 @@ const nextConfig: NextConfig = {
               "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
           },
         ],
-      },
+      })),
       {
         source: "/:path*",
         headers: [...SECURITY_HEADERS],

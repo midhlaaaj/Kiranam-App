@@ -76,7 +76,8 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
 
   let request = supabase
     .from('profiles')
-    .select('id, full_name, phone, email, kk_number, created_at')
+    // Commitment embedded (one-to-one) rather than a second round trip.
+    .select('id, full_name, phone, email, kk_number, created_at, commitments(monthly_amount, autopay_enabled, next_due_date)')
     .eq('role', 'contributor')
     .order('created_at', { ascending: false });
 
@@ -86,23 +87,13 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
   }
 
   const { data: rawContributors } = await request;
-  const ids = (rawContributors || []).map((c) => c.id);
 
-  const { data: commitments } = ids.length
-    ? await supabase
-        .from('commitments')
-        .select('contributor_id, monthly_amount, autopay_enabled, next_due_date')
-        .in('contributor_id', ids)
-    : { data: [] };
-
-  const commitmentByContributor = new Map((commitments || []).map((c) => [c.contributor_id, c]));
-
-  const allContributors = (rawContributors || []).map((c) => {
-    const commitment = commitmentByContributor.get(c.id);
+  const allContributors = (rawContributors || []).map(({ commitments, ...c }) => {
+    const commitment = Array.isArray(commitments) ? commitments[0] : commitments;
     return {
       ...c,
       monthlyAmount: commitment?.monthly_amount ?? null,
-      status: deriveContributorStatus(commitment),
+      status: deriveContributorStatus(commitment ?? undefined),
     };
   });
 

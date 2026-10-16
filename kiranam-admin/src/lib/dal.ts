@@ -14,18 +14,19 @@ export interface AdminProfile {
 // multiple Server Components/Actions doesn't re-hit the database.
 export const verifyAdmin = cache(async (): Promise<AdminProfile> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the session JWT locally instead of calling Supabase
+  // Auth on every page — one less network round trip per request.
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims?.sub;
 
-  if (!user) {
+  if (!userId) {
     redirect('/login');
   }
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, full_name, email, role')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single();
 
   if (!profile || profile.role !== 'admin') {

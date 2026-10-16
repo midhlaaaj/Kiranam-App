@@ -34,7 +34,7 @@ export async function createEvent(
       event_date: String(formData.get('event_date') || '') || null,
       time_label: String(formData.get('time_label') || ''),
       location,
-      is_past: false,
+      is_past: isPast(String(formData.get('event_date') || ''), false),
     })
     .select('id')
     .single();
@@ -55,6 +55,12 @@ export async function createEvent(
   return { message: `"${title}" created.` };
 }
 
+/** A dated event is past once its date is before today (UTC, like the
+ * refresh-campaign-event-status job); undated ones keep the manual flag. */
+function isPast(eventDate: string, manual: boolean) {
+  return eventDate ? eventDate < new Date().toISOString().slice(0, 10) : manual;
+}
+
 export async function updateEvent(id: string, formData: FormData) {
   const admin = await verifyAdmin();
   const supabase = await createClient();
@@ -67,7 +73,7 @@ export async function updateEvent(id: string, formData: FormData) {
       event_date: String(formData.get('event_date') || '') || null,
       time_label: String(formData.get('time_label') || ''),
       location: String(formData.get('location') || ''),
-      is_past: formData.get('is_past') === 'on',
+      is_past: isPast(String(formData.get('event_date') || ''), formData.get('is_past') === 'on'),
     })
     .eq('id', id);
   if (error) throw new Error(error.message);

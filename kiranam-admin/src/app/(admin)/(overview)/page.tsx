@@ -58,6 +58,7 @@ async function getDashboard(granularity: Granularity, page: number) {
     campaigns,
     volunteers,
     assignments,
+    allCommitments,
   ] = await Promise.all([
     supabase.from('volunteer_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor'),
@@ -67,6 +68,9 @@ async function getDashboard(granularity: Granularity, page: number) {
     supabase.from('campaigns').select('title, raised, goal'),
     supabase.from('profiles').select('created_at').eq('role', 'volunteer').order('created_at', { ascending: true }),
     supabase.from('contributor_assignments').select('contributor_id'),
+    // Fetched alongside everything else (and filtered below) rather than as
+    // a second round trip keyed on the assignment ids.
+    supabase.from('commitments').select('contributor_id, autopay_enabled, next_due_date'),
   ]);
 
   const totalRaised = (contributions.data || []).reduce((sum, c) => sum + Number(c.amount), 0);
@@ -136,13 +140,7 @@ async function getDashboard(granularity: Granularity, page: number) {
     });
 
   const contributorIds = [...new Set((assignments.data || []).map((a) => a.contributor_id))];
-  const { data: commitments } = contributorIds.length
-    ? await supabase
-        .from('commitments')
-        .select('contributor_id, autopay_enabled, next_due_date')
-        .in('contributor_id', contributorIds)
-    : { data: [] };
-  const commitmentByContributor = new Map((commitments || []).map((c) => [c.contributor_id, c]));
+  const commitmentByContributor = new Map((allCommitments.data || []).map((c) => [c.contributor_id, c]));
   const statusCounts = { Active: 0, Due: 0, Overdue: 0, Inactive: 0 };
   contributorIds.forEach((id) => {
     const commitment = commitmentByContributor.get(id);

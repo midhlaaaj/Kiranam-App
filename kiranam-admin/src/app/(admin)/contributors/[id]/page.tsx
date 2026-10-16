@@ -29,14 +29,21 @@ export default async function ContributorDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', id).single();
-  if (!profile) notFound();
-
-  const [{ data: commitment }, { data: contributions }, { data: assignment }, { data: activeCampaigns }, { data: allVolunteers }] = await Promise.all([
+  // One round of queries: everything below is independent of the profile.
+  const [
+    { data: profile },
+    { data: commitment },
+    { data: contributions },
+    { data: assignment },
+    { data: activeCampaigns },
+    { data: allVolunteers },
+  ] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', id).maybeSingle(),
     supabase.from('commitments').select('*').eq('contributor_id', id).maybeSingle(),
     supabase
       .from('contributions')
-      .select('*')
+      // Collector names come embedded, instead of a follow-up lookup.
+      .select('*, collector:profiles!contributions_collected_by_fkey(full_name)')
       .eq('contributor_id', id)
       .order('created_at', { ascending: false }),
     supabase
@@ -47,6 +54,7 @@ export default async function ContributorDetailPage({
     supabase.from('campaigns').select('id, title').eq('status', 'active').order('title', { ascending: true }),
     supabase.from('profiles').select('id, full_name, phone').eq('role', 'volunteer').order('full_name'),
   ]);
+  if (!profile) notFound();
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -54,21 +62,21 @@ export default async function ContributorDetailPage({
     (c) => c.status === 'success' && new Date(c.created_at) >= monthStart
   );
 
-  let volunteer: { id: string; full_name: string } | null = null;
-  if (assignment?.volunteer_id) {
-    const { data: vol } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .eq('id', assignment.volunteer_id)
-      .maybeSingle();
-    volunteer = vol;
-  }
+  // The assigned coordinator is always in the coordinator list loaded above.
+  const assigned = assignment?.volunteer_id ? (allVolunteers || []).find((v) => v.id === assignment.volunteer_id) : undefined;
+  const volunteer: { id: string; full_name: string } | null = assigned
+    ? { id: assigned.id, full_name: assigned.full_name || '' }
+    : null;
 
-  const collectorIds = [...new Set((contributions || []).map((c) => c.collected_by).filter(Boolean))];
-  const { data: collectors } = collectorIds.length
-    ? await supabase.from('profiles').select('id, full_name').in('id', collectorIds)
-    : { data: [] };
-  const collectorNameById = new Map((collectors || []).map((c) => [c.id, c.full_name || 'Unnamed']));
+  const collectorNameById = new Map(
+    (contributions || [])
+      .filter((c) => c.collected_by)
+      .map((c) => {
+        const collector = c.collector as { full_name: string | null } | { full_name: string | null }[] | null;
+        const name = Array.isArray(collector) ? collector[0]?.full_name : collector?.full_name;
+        return [c.collected_by as string, name || 'Unnamed'];
+      })
+  );
 
   const dueDate = commitment?.next_due_date ? new Date(commitment.next_due_date).toLocaleDateString('en-IN') : '—';
   const meta = [profile.kk_number, profile.phone, profile.email].filter(Boolean).join(' · ');
