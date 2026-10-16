@@ -240,7 +240,7 @@ function MessageContent({ message, t }: { message: Message, t: ReturnType<typeof
     case "template":
       return (
         <div>
-          <span className="mb-1 inline-flex items-center gap-1 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+          <span className="mb-1 inline-flex items-center gap-1 rounded bg-primary/20 px-1.5 py-0.5 text-[11px] sm:text-[10px] font-medium text-primary">
             <LayoutTemplate className="h-3 w-3" />
             {t("template")}
           </span>
@@ -276,7 +276,7 @@ function MessageContent({ message, t }: { message: Message, t: ReturnType<typeof
       if (message.sender_type === "customer") {
         return (
           <div className="flex flex-col gap-0.5">
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="inline-flex items-center gap-1 text-[11px] sm:text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               <CornerDownLeft className="h-3 w-3" />
               {t("buttonReply")}
             </span>
@@ -356,7 +356,7 @@ export function MessageBubble({
               glance. */}
           {message.ai_generated && (
             <span
-              className="inline-flex items-center gap-0.5 rounded-full bg-foreground/10 px-1.5 py-px text-[10px] font-semibold uppercase leading-none tracking-wide text-foreground"
+              className="inline-flex items-center gap-0.5 rounded-full bg-foreground/10 px-1.5 py-px text-[11px] sm:text-[10px] font-semibold uppercase leading-none tracking-wide text-foreground"
               title={t("aiBadgeTitle")}
             >
               <Sparkles className="h-2.5 w-2.5" />
@@ -364,9 +364,9 @@ export function MessageBubble({
             </span>
           )}
           {isAgent && senderName && (
-            <span className="text-[11px] font-medium text-muted-foreground">{senderName} ·</span>
+            <span className="text-xs sm:text-[11px] font-medium text-muted-foreground">{senderName} ·</span>
           )}
-          <span className="text-[11px] text-muted-foreground">{time}</span>
+          <span className="text-xs sm:text-[11px] text-muted-foreground">{time}</span>
           {isAgent && <StatusIcon status={message.status} />}
         </div>
       </div>

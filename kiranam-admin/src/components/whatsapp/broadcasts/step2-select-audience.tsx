@@ -225,7 +225,7 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
       </div>
 
       {audience.type === 'tags' && (
-        <fieldset className="rounded-xl border border-border bg-card p-4">
+        <fieldset className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <legend className="sr-only">{t('selectAudience.selectTags')}</legend>
           <p className="mb-3 text-sm font-medium text-foreground">{t('selectAudience.selectTags')}</p>
           {tags.length === 0 ? (
@@ -247,7 +247,7 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
       )}
 
       {audience.type === 'custom_field' && (
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           {customFields === null ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading fields" />
           ) : customFields.length === 0 ? (
@@ -304,7 +304,7 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
       )}
 
       {audience.type === 'csv' && (
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <input
             ref={fileRef}
             type="file"
@@ -374,7 +374,7 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
         </div>
       )}
 
-      <fieldset className="rounded-xl border border-border bg-card p-4">
+      <fieldset className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
         <legend className="sr-only">{t('selectAudience.excludeTags')}</legend>
         <p className="text-sm font-medium text-foreground">{t('selectAudience.excludeTags')}</p>
         <p className="mb-3 mt-0.5 text-xs text-muted-foreground">{t('selectAudience.excludeHint')}</p>

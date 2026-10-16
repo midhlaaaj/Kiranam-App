@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Calendar,
   HeartHandshake,
@@ -35,6 +36,15 @@ const NAV_ITEMS: NavItem[] = [
 
 export function SidebarNav({ onNavigate, badges }: { onNavigate?: () => void; badges?: Record<string, React.ReactNode> }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Link only prefetches once it scrolls into view, and on phones these links
+  // sit in a closed, off-screen drawer — so without this, tapping one showed
+  // the parent fallback skeleton instead of that page's own loading.tsx.
+  // Prefetching a dynamic route only fetches up to its loading boundary.
+  useEffect(() => {
+    for (const item of NAV_ITEMS) router.prefetch(item.href);
+  }, [router]);
 
   return (
     <nav className="flex-1 space-y-0.5 px-3 py-4">

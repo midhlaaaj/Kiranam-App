@@ -35,7 +35,7 @@ export function SettingsOverview({
   const { user, profile, accountId, accountRole, canManageMembers } = useAuth();
   const { mode } = useTheme();
   const t = useTranslations('Settings.overview');
-  const tRoles = useTranslations('roles');
+  const tRoles = useTranslations('Settings.roles');
   const tSections = useTranslations('Settings.sections');
 
   const [counts, setCounts] = useState<OverviewCounts | null>(null);
@@ -221,7 +221,7 @@ export function SettingsOverview({
               type="button"
               onClick={() => onSelect(section)}
               className={cn(
-                'group flex items-start gap-3.5 rounded-xl border border-border bg-card p-4 text-left transition-colors',
+                'group flex items-start gap-3.5 rounded-lg border border-border bg-card shadow-elevation-md p-4 text-left transition-colors',
                 'hover:border-primary-soft-2 hover:bg-card-2',
               )}
             >

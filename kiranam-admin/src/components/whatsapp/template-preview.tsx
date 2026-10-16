@@ -55,7 +55,7 @@ export function TemplatePreview({
               {body || <span className="text-[#667781]">Your message…</span>}
             </p>
             {footer && <p className="mt-1 text-[13px] text-[#667781]">{footer}</p>}
-            <p className="mt-0.5 text-right text-[11px] text-[#667781]">9:41 am</p>
+            <p className="mt-0.5 text-right text-xs sm:text-[11px] text-[#667781]">9:41 am</p>
           </div>
           {buttons && buttons.length > 0 && (
             <div className="border-t border-[#e9edef]">

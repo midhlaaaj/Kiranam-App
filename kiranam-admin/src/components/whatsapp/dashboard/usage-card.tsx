@@ -65,13 +65,11 @@ export function UsageCard() {
 
   if (!data?.available) {
     return (
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex items-start justify-between">
-          <p className="text-sm font-medium text-muted-foreground">{TITLE}</p>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <Wallet className="h-4 w-4" aria-hidden />
-          </div>
+      <div className="rounded-lg border border-border bg-card shadow-elevation-md p-5">
+        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary">
+          <Wallet className="h-[18px] w-[18px]" aria-hidden />
         </div>
+        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{TITLE}</p>
         <p className="mt-3 text-sm text-muted-foreground">
           {data?.message ?? 'Not available yet.'}
         </p>
@@ -82,15 +80,13 @@ export function UsageCard() {
   const { totalConversations = 0, totalCost = 0, currency, byCategory = [] } = data
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-muted-foreground">{TITLE}</p>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-          <Wallet className="h-4 w-4" />
-        </div>
+    <div className="rounded-lg border border-border bg-card shadow-elevation-md p-5">
+      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary">
+        <Wallet className="h-[18px] w-[18px]" aria-hidden />
       </div>
+      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{TITLE}</p>
       {/* Spend is the headline — that's what this card exists for. */}
-      <p className="mt-3 text-[28px] leading-none font-bold tabular-nums text-foreground">
+      <p className="mt-1.5 text-2xl font-bold tracking-tight tabular-nums text-foreground">
         {currency ? formatCost(totalCost, currency) : totalConversations.toLocaleString('en-IN')}
       </p>
       <p className="mt-2 text-sm text-muted-foreground">

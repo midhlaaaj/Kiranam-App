@@ -143,7 +143,7 @@ export function Step4ScheduleSend({
       </div>
 
       <ol className="space-y-4">
-        <li className="rounded-xl border border-border bg-card p-4">
+        <li className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <p className="text-sm font-medium text-foreground">1. The message</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Template <span className="font-medium text-foreground">{template.name}</span> · {template.category} ·{' '}
@@ -160,7 +160,7 @@ export function Step4ScheduleSend({
           />
         </li>
 
-        <li className="space-y-3 rounded-xl border border-border bg-card p-4">
+        <li className="space-y-3 rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <div>
             <p className="text-sm font-medium text-foreground">2. Who receives it</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
@@ -171,7 +171,7 @@ export function Step4ScheduleSend({
           <AudienceSummary audience={audience} onCount={(value, key) => setCount({ value, key })} />
         </li>
 
-        <li className="rounded-xl border border-border bg-card p-4">
+        <li className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <p className="text-sm font-medium text-foreground">3. Estimated cost</p>
           <p className="mt-1 text-sm text-foreground">
             {rate === null || recipients === null ? (
@@ -197,7 +197,7 @@ export function Step4ScheduleSend({
       </ol>
 
       {isProcessing && (
-        <div role="status" className="rounded-xl border border-border bg-card p-4">
+        <div role="status" className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <div className="mb-2 flex items-center justify-between gap-3 text-sm">
             <p className="flex items-center gap-2 font-medium text-foreground">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />

@@ -126,7 +126,7 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
               {LEGEND_TYPES.map((t_type) => (
                 <span
                   key={t_type}
-                  className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground"
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-[11.5px] text-muted-foreground"
                 >
                   <span
                     className="h-2.5 w-2.5 rounded-full"

@@ -329,7 +329,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                 {notes.map((note) => (
                   <li key={note.id} className="rounded-lg bg-muted px-3 py-2">
                     <p className="whitespace-pre-wrap text-sm text-foreground">{note.note_text}</p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{format(new Date(note.created_at), "d MMM yyyy, h:mm a")}</p>
+                    <p className="mt-1 text-xs sm:text-[11px] text-muted-foreground">{format(new Date(note.created_at), "d MMM yyyy, h:mm a")}</p>
                   </li>
                 ))}
               </ul>

@@ -533,7 +533,7 @@ function ConversationItem({ conversation, isActive, onSelect, assigneeName, isMi
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className={cn("truncate text-sm", unread ? "text-foreground" : "text-muted-foreground")}>{preview}</p>
           {unread && (
-            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold tabular-nums text-primary-foreground">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1 text-xs sm:text-[11px] font-bold tabular-nums text-primary-foreground">
               <span className="sr-only">Unread messages: </span>
               {conversation.unread_count}
             </span>
@@ -542,13 +542,13 @@ function ConversationItem({ conversation, isActive, onSelect, assigneeName, isMi
         {(conversation.status !== "open" || assigneeName) && (
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             {conversation.status !== "open" && (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs sm:text-[11px] font-medium text-muted-foreground">
                 {conversation.status === "pending" ? t("statusPending") : t("statusClosed")}
               </span>
             )}
             {assigneeName && (
               <span
-                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                className="inline-flex items-center gap-1 text-xs sm:text-[11px] text-muted-foreground"
                 title={t("assignedTo", { name: assigneeName })}
               >
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-foreground/10 text-[9px] font-bold text-foreground" aria-hidden>

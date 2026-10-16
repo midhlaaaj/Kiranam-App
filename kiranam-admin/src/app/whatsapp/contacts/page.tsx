@@ -474,7 +474,7 @@ export default function ContactsPage() {
               <Filter className="size-4" />
               {t('filterByTags')}
               {selectedTagIds.length > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
+                <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[11px] sm:text-[10px] font-semibold text-primary-foreground">
                   {selectedTagIds.length}
                 </span>
               )}
@@ -533,7 +533,7 @@ export default function ContactsPage() {
               return (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs sm:text-[11px] font-medium"
                   style={{
                     backgroundColor: tag.color + '20',
                     color: tag.color,
@@ -623,7 +623,7 @@ export default function ContactsPage() {
       )}
 
       {/* Table */}
-      <div className="rounded-lg border border-border overflow-x-auto">
+      <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-elevation-md">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
@@ -700,12 +700,12 @@ export default function ContactsPage() {
                     </button>
                     <span className="mt-0.5 flex flex-wrap gap-1">
                       {contact.whatsapp_consent === false && (
-                        <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-[11px] font-semibold text-destructive">
+                        <span className="rounded-full bg-destructive/10 px-1.5 py-0.5 text-xs sm:text-[11px] font-semibold text-destructive">
                           Opted out
                         </span>
                       )}
                       {contact.kiranam_profile_id && (
-                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground" title="Synced from the Kiranam app">
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs sm:text-[11px] font-medium text-muted-foreground" title="Synced from the Kiranam app">
                           From Kiranam
                         </span>
                       )}
@@ -736,7 +736,7 @@ export default function ContactsPage() {
                         <span className="text-muted-foreground text-xs">-</span>
                       )}
                       {contact.tags && contact.tags.length > 3 && (
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-[11px] sm:text-[10px] text-muted-foreground">
                           +{contact.tags.length - 3}
                         </span>
                       )}

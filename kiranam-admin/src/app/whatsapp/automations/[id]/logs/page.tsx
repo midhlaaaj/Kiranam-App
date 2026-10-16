@@ -118,7 +118,7 @@ export default function AutomationLogsPage({
             return (
               <li
                 key={log.id}
-                className="rounded-xl border border-border bg-card"
+                className="rounded-lg border border-border bg-card shadow-elevation-md"
               >
                 <button
                   type="button"
@@ -180,7 +180,7 @@ function StatusBadge({ status, t }: { status: AutomationLog["status"], t: Return
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-xs sm:text-[11px] font-medium",
         classes,
       )}
     >

@@ -23,14 +23,14 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, icon: Icon, delta, subtitle }: MetricCardProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-          <Icon className="h-4 w-4" />
-        </div>
+    // Same anatomy as the admin panel's StatCard (src/components/StatCard.tsx):
+    // tinted icon disc, uppercase label, 2xl value.
+    <div className="rounded-lg border border-border bg-card shadow-elevation-md p-5">
+      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary">
+        <Icon className="h-[18px] w-[18px]" />
       </div>
-      <p className="mt-3 text-[28px] leading-none font-bold tabular-nums text-foreground">
+      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{title}</p>
+      <p className="mt-1.5 text-2xl font-bold tracking-tight tabular-nums text-foreground">
         {value}
       </p>
       {delta ? <DeltaRow sign={delta.sign} label={delta.label} /> : subtitle ? (

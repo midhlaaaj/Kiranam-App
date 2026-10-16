@@ -200,7 +200,7 @@ export default function AutomationsPage() {
                 <button
                   key={slug}
                   onClick={() => startFromTemplate(slug)}
-                  className="group flex flex-col items-start rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-foreground/40"
+                  className="group flex flex-col items-start rounded-lg border border-border bg-card shadow-elevation-md p-4 text-left transition-colors hover:border-foreground/40"
                 >
                   <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-foreground">
                     <Icon className="h-5 w-5" />
@@ -285,7 +285,7 @@ function AutomationCard({
 }) {
   const meta = triggerMeta(automation.trigger_type)
   return (
-    <li className="rounded-xl border border-border bg-card transition-colors hover:border-border">
+    <li className="rounded-lg border border-border bg-card shadow-elevation-md transition-colors hover:border-border">
       <div className="flex items-center gap-4 p-4">
         <div
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-muted"
@@ -305,7 +305,7 @@ function AutomationCard({
             </span>
             <span
               className={cn(
-                "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs sm:text-[11px] font-semibold",
                 automation.is_active
                   ? "border-success/20 bg-success-soft text-success"
                   : "border-border bg-muted text-muted-foreground",
@@ -320,7 +320,7 @@ function AutomationCard({
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span
               className={cn(
-                "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                "inline-flex items-center rounded-full border px-2 py-0.5 text-xs sm:text-[11px] font-medium",
                 meta.pillClass,
               )}
             >

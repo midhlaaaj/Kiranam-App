@@ -16,10 +16,14 @@ export function Skeleton({ className = '', style }: { className?: string; style?
 export function SkeletonPageHeading({
   titleWidth = 'w-40',
   withAction = false,
+  mobileAction = false,
   descriptionWidth,
 }: {
   titleWidth?: string;
   withAction?: boolean;
+  /** Action button shown beside the title on phones only — where
+   * AddNewPanel parks it when the page uses a `mobileToolbar`. */
+  mobileAction?: boolean;
   /** Set when the real AddNewPanel/PageHeading on this page passes a
    * `description` — otherwise the title bar is a row shorter than the real
    * one and the header height jumps once it mounts. */
@@ -27,11 +31,15 @@ export function SkeletonPageHeading({
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-4 border-b border-kiranam-border pb-5 mb-6 lg:pr-14">
-      <div>
-        <Skeleton className={`h-8 ${titleWidth}`} />
-        {descriptionWidth && <Skeleton className={`mt-2 h-4 ${descriptionWidth}`} />}
+      {/* min-w-0 + max-w-full: a fixed-width bar (w-96 description) would
+          otherwise set the column's min width and overflow a phone screen,
+          where the real heading's text simply wraps. */}
+      <div className="min-w-0">
+        <Skeleton className={`h-8 max-w-full ${titleWidth}`} />
+        {descriptionWidth && <Skeleton className={`mt-2 h-4 max-w-full ${descriptionWidth}`} />}
       </div>
       {withAction && <Skeleton className="h-10 w-36 rounded-lg" />}
+      {mobileAction && !withAction && <Skeleton className="h-10 w-36 rounded-lg sm:hidden" />}
     </div>
   );
 }
@@ -72,20 +80,25 @@ export function SkeletonTable({
   actions?: boolean;
 }) {
   const textCols = actions ? cols - 1 : cols;
+  // Phones only have room for the leading column(s) — the real tables hide
+  // their secondary columns below sm too — so the rest drop out instead of
+  // running off the card's edge.
+  const mobileCols = avatar || actions ? 1 : 2;
+  const colVisibility = (j: number) => (j >= mobileCols ? 'hidden sm:block' : '');
   return (
     <div className={`${cardClass} overflow-hidden`}>
-      <div className="flex items-center gap-6 border-b border-kiranam-border px-5 py-3">
+      <div className="flex items-center gap-4 border-b border-kiranam-border px-4 py-3 sm:gap-6 sm:px-5">
         {avatar && <Skeleton className="h-3 w-10 shrink-0" />}
         {Array.from({ length: textCols }).map((_, i) => (
-          <Skeleton key={i} className="h-3 w-20" />
+          <Skeleton key={i} className={`h-3 w-20 ${colVisibility(i)}`} />
         ))}
         {actions && <Skeleton className="ml-auto h-3 w-12" />}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-6 border-b border-kiranam-border px-5 py-4 last:border-0">
+        <div key={i} className="flex items-center gap-4 border-b border-kiranam-border px-4 py-4 last:border-0 sm:gap-6 sm:px-5">
           {avatar && <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />}
           {Array.from({ length: textCols }).map((_, j) => (
-            <Skeleton key={j} className={`h-4 ${j === 0 ? 'w-32' : 'w-16'}`} />
+            <Skeleton key={j} className={`h-4 ${j === 0 ? 'w-32' : 'w-16'} ${colVisibility(j)}`} />
           ))}
           {actions && (
             <div className="ml-auto flex shrink-0 gap-1">
@@ -150,23 +163,52 @@ export function SkeletonChart({ height = 260 }: { height?: number }) {
  * action on the right (same sizes as FilterBar / AddNewPanel). */
 export function SkeletonToolbar({
   filters = 1,
-  searchWidth = 'w-64',
   action = 'w-44',
+  compactOnMobile = false,
 }: {
   filters?: number;
-  searchWidth?: string;
   /** Width class of the primary action button, or null for none. */
   action?: string | null;
+  /** The page passes AddNewPanel a `mobileToolbar` (MobileToolbar's icon row:
+   * filter left, search + export right). Pair with SkeletonPageHeading's
+   * `mobileAction`, since the add button moves up beside the title there. */
+  compactOnMobile?: boolean;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <>
+      {compactOnMobile && (
+        <div className="mb-6 flex items-center justify-between gap-2 sm:hidden">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <Skeleton className="h-10 w-10 rounded-lg" />
+          </div>
+        </div>
+      )}
+      <SkeletonToolbarRow filters={filters} action={action} className={compactOnMobile ? 'hidden sm:flex' : 'flex'} />
+    </>
+  );
+}
+
+function SkeletonToolbarRow({
+  filters,
+  action,
+  className,
+}: {
+  filters: number;
+  action: string | null;
+  className: string;
+}) {
+  return (
+    <div className={`mb-6 flex-wrap items-center justify-between gap-3 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
         {Array.from({ length: filters }).map((_, i) => (
           <Skeleton key={i} className="h-9 w-40 rounded-lg" />
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <Skeleton className={`h-9 ${searchWidth} rounded-lg`} />
+      <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+        {/* Same sizing as FilterBar's search box: full width on phones. */}
+        <Skeleton className="h-9 w-full rounded-lg sm:w-64" />
         {action && <Skeleton className={`h-10 ${action} rounded-lg`} />}
       </div>
     </div>

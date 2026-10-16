@@ -152,7 +152,7 @@ export default function BroadcastsPage() {
       </div>
 
       {error ? (
-        <div role="alert" className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-10 text-center">
+        <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card shadow-elevation-md p-10 text-center">
           <p className="text-sm text-foreground">{t('errorLoad')}</p>
           <Button variant="outline" onClick={fetchBroadcasts}>
             {t('retry')}
@@ -166,7 +166,7 @@ export default function BroadcastsPage() {
           ))}
         </div>
       ) : broadcasts.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-12 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card shadow-elevation-md p-12 text-center">
           <Radio className="h-10 w-10 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium text-foreground">{t('noBroadcastsYet')}</p>
           <p className="text-sm text-muted-foreground">{t('createFirst')}</p>
@@ -215,7 +215,7 @@ export default function BroadcastsPage() {
           </div>
 
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-10 text-center">
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card shadow-elevation-md p-10 text-center">
               <p className="text-sm text-foreground">No broadcasts match these filters.</p>
               <Button
                 variant="outline"
@@ -228,7 +228,7 @@ export default function BroadcastsPage() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border bg-card">
+            <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-elevation-md">
               <Table>
                 <TableHeader>
                   <TableRow className="border-border hover:bg-transparent">

@@ -14,6 +14,7 @@ import {
   Crown,
   FileText,
   LayoutDashboard,
+  LogOut,
   MessageSquare,
   Radio,
   Settings,
@@ -112,11 +113,19 @@ interface SidebarProps {
 }
 
 import { useTranslations } from "next-intl";
+import { ModeToggle } from "@/components/whatsapp/layout/mode-toggle";
+
+function ActiveIndicator() {
+  return (
+    <span className="absolute top-1/2 left-0 h-4 w-[3px] -translate-y-1/2 rounded-full bg-primary" aria-hidden />
+  );
+}
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const t = useTranslations("Sidebar");
+  const tHeader = useTranslations("Header");
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole } = useAuth();
+  const { profile, profileLoading, account, accountRole, signOut } = useAuth();
   const totalUnread = useTotalUnread();
   const unreadNotifications = useUnreadNotifications();
   // Only surface the account-name strip when it actually carries
@@ -179,31 +188,32 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
       <aside
         className={cn(
           // Mobile: fixed drawer that slides in from the left.
-          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-border bg-card",
+          "fixed inset-y-0 left-0 z-40 flex h-full w-72 max-w-[85vw] flex-col border-r border-border bg-card",
           // `invisible` when closed takes the off-screen drawer's links out
           // of the tab order; visibility is transitioned so the slide-out
           // still animates. lg:visible keeps the desktop sidebar unaffected.
           "transition-[transform,visibility] duration-200 ease-out will-change-transform",
           open ? "visible translate-x-0" : "invisible -translate-x-full lg:visible",
           // Desktop: static, always visible — reset all the mobile framing.
-          "lg:static lg:z-0 lg:w-60 lg:translate-x-0 lg:transition-none",
+          "lg:static lg:z-0 lg:w-64 lg:max-w-none lg:translate-x-0 lg:transition-none",
         )}
         aria-label="WhatsApp navigation"
       >
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
-        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-          <Link href="/whatsapp/dashboard" className="flex items-baseline gap-1.5">
-            <span className="text-lg font-extrabold tracking-tight text-kiranam-brand">
+        {/* Same wordmark row as the admin sidebar (AdminShell). */}
+        <div className="flex shrink-0 items-start justify-between gap-2 border-b border-border px-5 py-5">
+          <Link href="/whatsapp/dashboard" className="flex min-w-0 items-baseline gap-1.5">
+            <span className="text-3xl leading-none font-extrabold tracking-tight text-kiranam-brand">
               Kiranam
             </span>
-            <span className="text-xs font-medium text-muted-foreground">WhatsApp</span>
+            <span className="truncate text-sm font-medium text-muted-foreground">WhatsApp</span>
           </Link>
           <button
             type="button"
             onClick={onClose}
             aria-label={t("closeMenu")}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
+            className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -212,15 +222,15 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Always-visible way back to the main admin panel. */}
         <Link
           href={ADMIN_PANEL_URL}
-          className="mx-3 mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="mx-3 mt-3 flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
+          <ArrowLeft className="h-[17px] w-[17px]" aria-hidden />
           {t("menuBackToAdmin")}
         </Link>
 
         {/* Main navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-3">
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-0.5">
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -241,19 +251,21 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      // Taller on mobile so fingers can hit the row reliably (≥44px).
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                      // Same row as the admin sidebar (SidebarNav): 44px tall, soft
+                      // brand fill + left indicator bar when active.
+                      "relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary-soft text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" aria-hidden />
+                    {isActive && <ActiveIndicator />}
+                    <item.icon className="h-[17px] w-[17px]" aria-hidden />
                     <span className="flex-1">{t(item.labelKey as string)}</span>
                     {item.beta && (
                       <span
                         aria-label={t("beta")}
-                        className="rounded-full border border-warning/30 bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-warning"
+                        className="rounded-full border border-warning/30 bg-warning-soft px-1.5 py-0.5 text-[11px] sm:text-[10px] font-semibold uppercase tracking-wider text-warning"
                       >
                         {t("beta")}
                       </span>
@@ -261,7 +273,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     {showUnreadCount && (
                       <span
                         aria-label={t("unreadConversations", { count: totalUnread })}
-                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold tabular-nums text-primary-foreground"
+                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs sm:text-[11px] font-semibold tabular-nums text-primary-foreground"
                       >
                         {totalUnread > 99 ? "99+" : totalUnread}
                       </span>
@@ -269,7 +281,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     {showNotificationBadge && (
                       <span
                         aria-label={t("unreadNotifications", { count: unreadNotifications })}
-                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-[11px] font-semibold tabular-nums text-foreground"
+                        className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1 text-xs sm:text-[11px] font-semibold tabular-nums text-foreground"
                       >
                         {unreadNotifications > 9 ? "9+" : unreadNotifications}
                       </span>
@@ -282,7 +294,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
           <div className="my-4 border-t border-border" />
 
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-0.5">
             {bottomNavItems.map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
@@ -291,13 +303,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     href={item.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                      "relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary-soft text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <item.icon className="h-4 w-4" aria-hidden />
+                    {isActive && <ActiveIndicator />}
+                    <item.icon className="h-[17px] w-[17px]" aria-hidden />
                     {t(item.labelKey as string)}
                   </Link>
                 </li>
@@ -333,7 +346,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                   const Icon = meta.icon;
                   return (
                     <span
-                      className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${meta.className}`}
+                      className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] sm:text-[10px] font-medium uppercase tracking-wider ${meta.className}`}
                     >
                       <Icon className="size-3" />
                       {t(meta.labelKey as string)}
@@ -366,6 +379,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <span className="block truncate text-xs text-muted-foreground">{profile?.email ?? ""}</span>
             </span>
           </a>
+        </div>
+        {/* Log out sits at the very bottom, as in the admin sidebar. The
+            theme toggle rides along here because the top bar is mobile-only. */}
+        <div className="flex shrink-0 items-center gap-2 border-t border-border p-3">
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex flex-1 cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <LogOut className="h-[17px] w-[17px]" aria-hidden />
+            {tHeader("menuSignOut")}
+          </button>
+          <ModeToggle />
         </div>
       </aside>
     </>

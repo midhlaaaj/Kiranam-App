@@ -63,7 +63,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
       </div>
 
       {error ? (
-        <div role="alert" className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-8 text-center">
+        <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card shadow-elevation-md p-8 text-center">
           <p className="text-sm text-foreground">{t('chooseTemplate.errorLoad')}</p>
           <Button variant="outline" onClick={load}>
             Try again
@@ -76,7 +76,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
           ))}
         </div>
       ) : templates.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-card p-8 text-center">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card shadow-elevation-md p-8 text-center">
           <FileText className="h-8 w-8 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium text-foreground">No approved templates yet</p>
           <p className="max-w-sm text-sm text-muted-foreground">
@@ -107,7 +107,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
             </div>
           )}
           {filtered.length === 0 ? (
-            <p className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            <p className="rounded-lg border border-border bg-card shadow-elevation-md p-6 text-center text-sm text-muted-foreground">
               No templates match “{query}”.
             </p>
           ) : (

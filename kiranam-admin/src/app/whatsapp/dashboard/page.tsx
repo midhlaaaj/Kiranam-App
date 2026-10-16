@@ -138,7 +138,7 @@ export default function DashboardPage() {
       {/* Metric cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {metricsError ? (
-          <div role="alert" className="flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 sm:col-span-2 xl:col-span-4">
+          <div role="alert" className="flex flex-col items-start gap-2 rounded-lg border border-border bg-card shadow-elevation-md p-4 sm:col-span-2 xl:col-span-4">
             <p className="text-sm text-foreground">{t('metricsError')}</p>
             <Button variant="outline" size="sm" onClick={retryMetrics}>
               {t('retry')}

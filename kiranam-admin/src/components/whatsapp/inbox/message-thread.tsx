@@ -993,7 +993,7 @@ export function MessageThread({
                   : "Free-form replies are allowed for 24h after the customer's last message."
               }
               className={cn(
-                "ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium sm:ml-2",
+                "ml-1 inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-xs sm:text-[11px] font-medium sm:ml-2",
                 sessionInfo.expired
                   ? "cursor-pointer border-border bg-muted text-foreground hover:bg-muted/70"
                   : sessionInfo.hoursLeft < 2
@@ -1184,7 +1184,7 @@ export function MessageThread({
               <div key={group.date}>
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
-                  <span className="rounded-full bg-muted px-3 py-1 text-[10px] font-medium text-muted-foreground">
+                  <span className="rounded-full bg-muted px-3 py-1 text-[11px] sm:text-[10px] font-medium text-muted-foreground">
                     {formatDateSeparator(group.date, t)}
                   </span>
                 </div>

@@ -58,7 +58,7 @@ export function AudienceSummary({
   }, [key, complete, accountId]);
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4" aria-live="polite">
+    <div className="rounded-lg border border-border bg-card shadow-elevation-md p-4" aria-live="polite">
       <p className="text-sm font-medium text-foreground">{t('summaryTitle')}</p>
       {!complete ? (
         <p className="mt-1 text-sm text-muted-foreground">{t('summaryIncomplete')}</p>

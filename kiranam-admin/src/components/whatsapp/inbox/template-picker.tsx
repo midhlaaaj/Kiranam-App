@@ -339,7 +339,7 @@ export function TemplatePicker({
                   placeholder={t("urlSuffixValuePlaceholder")}
                   className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
-                <p className="text-[10px] text-muted-foreground break-all">
+                <p className="text-[11px] sm:text-[10px] text-muted-foreground break-all">
                   {t("finalUrl", { url: slot.url.replace(/\{\{1\}\}/g, buttonParams[slot.index] || "{{1}}") })}
                 </p>
               </div>

@@ -57,9 +57,9 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
     i === 0 || totalLoaded > PAGE_SIZES[i - 1]
 
   return (
-    <section className="rounded-xl border border-border bg-card">
+    <section className="rounded-lg border border-border bg-card shadow-elevation-md">
       <header className="flex items-center justify-between border-b border-border px-5 py-4">
-        <h2 className="text-sm font-semibold text-foreground">{t('title')}</h2>
+        <h2 className="text-lg font-bold tracking-tight text-foreground">{t('title')}</h2>
         <Link
           href="/whatsapp/inbox"
           className="text-xs font-medium text-primary hover:text-primary/80"

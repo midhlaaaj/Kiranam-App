@@ -275,7 +275,7 @@ function RunCard({
               </span>
             )}
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs sm:text-[11px] text-muted-foreground">
             <span>{t("started", { time: format(new Date(run.started_at), "PP p") })}</span>
             {run.reprompt_count > 0 && (
               <span>· {t("reprompts", { count: run.reprompt_count })}</span>
@@ -344,7 +344,7 @@ function EventLine({ ev }: { ev: EventRow }) {
         </span>
       )}
       {Object.keys(ev.payload).length > 0 && (
-        <span className="min-w-0 truncate text-[10px] text-muted-foreground">
+        <span className="min-w-0 truncate text-[11px] sm:text-[10px] text-muted-foreground">
           {summarizePayload(ev.payload)}
         </span>
       )}

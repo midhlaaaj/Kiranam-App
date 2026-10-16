@@ -291,7 +291,7 @@ export function Step3Personalize({
       )}
 
       {placeholders.length === 0 && !mediaHeaderType ? (
-        <div className="rounded-xl border border-border bg-card p-4">
+        <div className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <p className="text-sm text-muted-foreground">{t('personalize.noPreview')}</p>
         </div>
       ) : placeholders.length === 0 ? null : (
@@ -411,7 +411,7 @@ export function Step3Personalize({
       )}
 
       {/* Live preview — the shared WhatsApp-style render. */}
-      <div className="rounded-xl border border-border bg-card p-4">
+      <div className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Eye className="h-4 w-4 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium text-foreground">{t('personalize.preview')}</p>

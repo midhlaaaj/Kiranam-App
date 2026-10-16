@@ -48,7 +48,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     "U";
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4 lg:px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 lg:hidden">
       <div className="flex min-w-0 items-center gap-2">
         {/* Hamburger — mobile only. 44×44 hit target per Apple HIG. */}
         <button
@@ -68,12 +68,14 @@ export function Header({ onOpenSidebar }: HeaderProps) {
             desktop. */}
         <Link
           href="/whatsapp/dashboard"
-          className="flex items-baseline gap-1.5 lg:hidden"
+          className="flex min-w-0 items-baseline gap-1.5 lg:hidden"
         >
-          <span className="text-base font-extrabold tracking-tight text-kiranam-brand">
+          {/* Same wordmark size as the admin panel's mobile top bar
+              (AdminShell) so the two sections feel like one app. */}
+          <span className="text-3xl leading-none font-extrabold tracking-tight text-kiranam-brand">
             Kiranam
           </span>
-          <span className="text-xs font-medium text-muted-foreground">WhatsApp</span>
+          <span className="truncate text-sm font-medium text-muted-foreground">WhatsApp</span>
         </Link>
       </div>
 
