@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { getManualContributionOptions, recordManualContribution, type OfflinePaymentState } from './actions';
 import { Modal } from '@/components/Modal';
 import { buttonPrimary, inputClass } from '@/lib/ui';
+import { isoDay } from '@/lib/format';
 
 const initialState: OfflinePaymentState = {};
 
@@ -147,7 +148,7 @@ export function ManualContributionButton() {
           )}
 
           <input name="amount" type="number" min="1" step="1" placeholder="Amount (₹)" required className={inputClass} />
-          <input name="date" type="date" className={inputClass} />
+          <input name="date" type="date" max={isoDay()} className={inputClass} />
           {campaigns.length > 0 && (
             <select name="campaign_id" defaultValue="" className={inputClass}>
               <option value="">General / monthly commitment</option>

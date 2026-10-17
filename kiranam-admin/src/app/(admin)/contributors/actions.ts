@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
+import { isIsoDay, isoDay } from '@/lib/format';
 import { getAutoAssignKkNumber } from '@/lib/kkSettings';
 import { validatePhoneNumber } from '@/lib/phone';
 import { COUNTRIES } from '@/lib/countries';
@@ -301,6 +302,11 @@ export async function addOfflinePayment(
   const campaignId = String(formData.get('campaign_id') || '').trim() || null;
 
   if (!(amount > 0)) return { error: 'Amount must be greater than zero.' };
+  if (date && !isIsoDay(date)) return { error: 'Enter a valid date.' };
+  // The picker's `max` already blocks this; checked again here since the
+  // form value is client-controlled. Compared in India time, not the
+  // server's UTC, so "today" is never rejected late in the IST evening.
+  if (date && date > isoDay()) return { error: "The payment date can't be in the future." };
 
   const supabase = await createClient();
 

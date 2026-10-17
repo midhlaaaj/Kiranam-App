@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { addOfflinePayment, type OfflinePaymentState } from './actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
+import { isoDay } from '@/lib/format';
 
 const initialState: OfflinePaymentState = {};
 
@@ -73,7 +74,7 @@ export function OfflinePaymentForm({
             </label>
             <label className="grid gap-1 text-xs font-medium text-kiranam-muted">
               Date
-              <input name="date" type="date" className={inputClass} />
+              <input name="date" type="date" max={isoDay()} className={inputClass} />
             </label>
             {campaigns.length > 0 && (
               <label className="grid gap-1 text-xs font-medium text-kiranam-muted sm:col-span-2">
