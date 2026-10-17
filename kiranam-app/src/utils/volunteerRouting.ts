@@ -87,15 +87,43 @@ export async function resolvePostAuthRoute(uid: string): Promise<Href> {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', uid).single();
   const application = await getLatestApplication(uid);
 
-  if (profile?.role === 'volunteer' && application?.status === 'approved') {
+  // The role is what grants access, not the application row: coordinators
+  // registered directly by an admin never filed an application.
+  if (profile?.role === 'volunteer') {
     return resolveApprovedVolunteerRoute(uid);
   }
 
   const rejectedRoute = await checkFreshRejection(uid);
   if (rejectedRoute) return rejectedRoute;
 
-  if (profile?.role === 'volunteer' || application?.status === 'pending' || application?.status === 'approved') {
+  if (application?.status === 'pending' || application?.status === 'approved') {
     return '/pending';
   }
   return '/(tabs)/home';
+}
+
+/** Where a just-authenticated user goes next. Accounts an admin created
+ * (contributors/coordinators registered in the admin panel) already have a
+ * name, role, KK number and payment history, but have never accepted the
+ * terms — `terms_accepted_at` is only ever set by the app's own sign-up
+ * screen. They get that screen once ("claim"), prefilled with what the admin
+ * entered, then carry on normally; saving updates their existing profile, so
+ * nothing already attached to the account is lost. */
+export async function resolveEntryRoute(uid: string): Promise<Href> {
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, role, terms_accepted_at')
+    .eq('id', uid)
+    .single();
+
+  // Admins sign in to the admin panel, never through this onboarding — and
+  // saving it would overwrite their role.
+  if (!profile?.terms_accepted_at && profile?.role !== 'admin') {
+    const claiming = !!profile?.full_name;
+    return {
+      pathname: '/register',
+      params: { role: profile?.role === 'volunteer' ? 'volunteer' : 'contributor', ...(claiming ? { claim: '1' } : {}) },
+    };
+  }
+  return resolvePostAuthRoute(uid);
 }

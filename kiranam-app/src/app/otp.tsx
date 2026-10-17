@@ -20,7 +20,7 @@ import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { COUNTRIES, getCountryByIso2 } from '@/utils/countries';
 import { validatePhoneNumber } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
-import { resolvePostAuthRoute } from '@/utils/volunteerRouting';
+import { resolveEntryRoute } from '@/utils/volunteerRouting';
 import { ArrowLeft, Pencil, Check, X, ChevronDown } from 'lucide-react-native';
 
 // Longest dial codes first, so e.g. "971" matches before "97" would.
@@ -161,27 +161,22 @@ export default function OtpScreen() {
       setError('Something went wrong. Please try again.');
       return;
     }
-    const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', uid).single();
+    const dest = await resolveEntryRoute(uid);
     setVerifying(false);
 
-    if (profile?.full_name) {
-      const dest = await resolvePostAuthRoute(uid);
-      // `replace` alone only swaps the current (otp) entry — splash and the
-      // mobile-number screen pushed before it stay underneath, so hardware
-      // back from home would land a signed-in user back on the phone-entry
-      // screen. dismissAll() first collapses the stack to its root before
-      // replace() swaps that root entry, leaving nothing to go back to.
-      router.dismissAll();
-      router.replace(dest);
+    // `replace` alone only swaps the current (otp) entry — splash and the
+    // mobile-number screen pushed before it stay underneath, so hardware
+    // back from home would land a signed-in user back on the phone-entry
+    // screen. dismissAll() first collapses the stack to its root before
+    // replace() swaps that root entry, leaving nothing to go back to.
+    router.dismissAll();
+    // A brand-new account has no role yet: carry the one picked on the
+    // login screen forward to registration.
+    if (typeof dest === 'object' && 'pathname' in dest && dest.pathname === '/register') {
+      router.replace({ pathname: '/register', params: { ...(dest.params as object), ...(!(dest.params as any)?.claim ? { role } : {}) } });
       return;
     }
-
-    // New account: proceed to Registration Screen, carrying the chosen role forward.
-    // Same dismissAll()+replace() as above — otp (and everything before it)
-    // must not remain in the back stack, or the hardware back button would
-    // return a signed-in user to the OTP or phone-entry screen.
-    router.dismissAll();
-    router.replace({ pathname: '/register', params: { role } });
+    router.replace(dest);
   };
 
   const formatTime = (seconds: number) => {

@@ -8,12 +8,18 @@ import { Toast } from '@/components/Toast';
 import { validateRequired, validateReferralCode } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { peekPendingReferralCode } from '@/utils/referral';
+import { resolveApprovedVolunteerRoute } from '@/utils/volunteerRouting';
+import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Check } from 'lucide-react-native';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ role?: string }>();
+  const params = useLocalSearchParams<{ role?: string; claim?: string }>();
   const role = params.role === 'volunteer' ? 'volunteer' : 'contributor';
+  // An admin already created this account (name, role, KK number, payment
+  // history) — they're confirming details and accepting the terms, not
+  // creating anything new.
+  const claiming = params.claim === '1';
   const { phone, saveProfile } = useApp();
   const [name, setName] = useState('');
   const [showReferralField, setShowReferralField] = useState(false);
@@ -23,6 +29,17 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<{ name?: string; refCode?: string; terms?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Claiming an admin-created account: start from the name the admin entered.
+  useEffect(() => {
+    if (!claiming) return;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+      if (data?.full_name) setName((current) => current || data.full_name);
+    })();
+  }, [claiming]);
 
   // A code captured from a /join link (or the iOS clipboard fallback) gets
   // redeemed automatically at signup regardless of this field — this just
@@ -59,7 +76,15 @@ export default function RegisterScreen() {
     // abandoning the next screen before actually applying.
     // `phone` is already known and OTP-verified from the login step — no
     // need to ask for it again here.
-    const { error } = await saveProfile({ fullName: name, phone, role: 'contributor', whatsappConsent, referralCode: refCode });
+    // A claimed account keeps the role the admin gave it — saving 'contributor'
+    // here would silently demote an admin-registered coordinator.
+    const { error } = await saveProfile({
+      fullName: name,
+      phone,
+      role: claiming && role === 'volunteer' ? 'volunteer' : 'contributor',
+      whatsappConsent,
+      referralCode: claiming ? undefined : refCode,
+    });
     setSubmitting(false);
     if (error) {
       // Network/server failures (and raw backend errors like a Postgres
@@ -79,6 +104,22 @@ export default function RegisterScreen() {
       } else {
         setErrors({ name: error });
       }
+      return;
+    }
+
+    if (claiming) {
+      // Same destination as any returning login: coordinators go through
+      // their welcome/dashboard, contributors to Home — or the amount
+      // picker only if the admin didn't set a monthly amount for them.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (role === 'volunteer' && user) {
+        router.replace(await resolveApprovedVolunteerRoute(user.id));
+        return;
+      }
+      const { data: commitment } = user
+        ? await supabase.from('commitments').select('id').eq('contributor_id', user.id).maybeSingle()
+        : { data: null };
+      router.replace(commitment ? '/(tabs)/home' : { pathname: '/choose-amount', params: { onboarding: '1' } });
       return;
     }
 
@@ -112,8 +153,12 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         {/* Title */}
-        <Text style={styles.title}>Tell us about yourself</Text>
-        <Text style={styles.subtitle}>A few details to set up your account.</Text>
+        <Text style={styles.title}>{claiming ? 'Confirm your details' : 'Tell us about yourself'}</Text>
+        <Text style={styles.subtitle}>
+          {claiming
+            ? 'Your Kiranam account is ready. Check your name and accept the terms to continue — your contributions are already here.'
+            : 'A few details to set up your account.'}
+        </Text>
 
         {/* Name Field */}
         <Input
@@ -129,7 +174,7 @@ export default function RegisterScreen() {
         />
 
         {/* Referral Code — collapsed by default, contributors only */}
-        {role === 'contributor' && (
+        {role === 'contributor' && !claiming && (
           showReferralField ? (
             <Input
               variant="underline"
@@ -194,7 +239,7 @@ export default function RegisterScreen() {
         {/* Continue CTA */}
         <View style={styles.buttonContainer}>
           <Button
-            title="Create Account"
+            title={claiming ? 'Continue' : 'Create Account'}
             onPress={handleCreateAccount}
             loading={submitting}
           />

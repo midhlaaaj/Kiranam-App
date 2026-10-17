@@ -7,7 +7,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Button } from '@/components/Button';
 import { supabase } from '@/lib/supabase';
 import { extractReferralCodeFromText, stashPendingReferralCode } from '@/utils/referral';
-import { resolvePostAuthRoute } from '@/utils/volunteerRouting';
+import { resolveEntryRoute } from '@/utils/volunteerRouting';
 
 const CLIPBOARD_CHECKED_KEY = 'kiranam.referralClipboardChecked';
 
@@ -55,15 +55,7 @@ export default function SplashScreen() {
       }
 
       const uid = session.user.id;
-      const { data: profile } = await supabase.from('profiles').select('full_name, role').eq('id', uid).single();
-      if (cancelled) return;
-
-      if (!profile?.full_name) {
-        router.replace({ pathname: '/register', params: { role: profile?.role === 'volunteer' ? 'volunteer' : 'contributor' } });
-        return;
-      }
-
-      const dest = await resolvePostAuthRoute(uid);
+      const dest = await resolveEntryRoute(uid);
       if (cancelled) return;
       router.replace(dest);
     })();
