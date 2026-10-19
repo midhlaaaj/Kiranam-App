@@ -26,9 +26,11 @@ export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [showReferralField, setShowReferralField] = useState(false);
   const [refCode, setRefCode] = useState('');
-  const [whatsappConsent, setWhatsappConsent] = useState(true);
+  // Required, never pre-ticked: WhatsApp is how Kiranam delivers login codes,
+  // receipts and reminders, so consent is an explicit, affirmative step.
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; refCode?: string; terms?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; refCode?: string; terms?: string; whatsapp?: string }>({});
   const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -38,8 +40,11 @@ export default function RegisterScreen() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+      const { data } = await supabase.from('profiles').select('full_name, whatsapp_consent').eq('id', user.id).single();
       if (data?.full_name) setName((current) => current || data.full_name);
+      // Consent already recorded for this account (e.g. collected by the team
+      // offline): show it ticked instead of asking them to find it again.
+      if (data?.whatsapp_consent) setWhatsappConsent(true);
     })();
   }, [claiming]);
 
@@ -62,6 +67,10 @@ export default function RegisterScreen() {
     const refCodeError = showReferralField ? validateReferralCode(refCode) : null;
     if (nameError || refCodeError) {
       setErrors({ name: nameError || undefined, refCode: refCodeError || undefined });
+      return;
+    }
+    if (!whatsappConsent) {
+      setErrors({ whatsapp: 'WhatsApp consent is required — Kiranam sends your login codes and receipts on WhatsApp.' });
       return;
     }
     if (!agreedToTerms) {
@@ -195,17 +204,28 @@ export default function RegisterScreen() {
         )}
 
         {/* Consent checkboxes */}
+        <View style={styles.whatsappNotice}>
+          <Text style={styles.whatsappNoticeText}>
+            Kiranam uses WhatsApp to send your login codes, payment receipts, reminders and important updates. WhatsApp
+            consent is required to use the app.
+          </Text>
+        </View>
         <View style={styles.consentGroup}>
           <TouchableOpacity
             style={styles.checkboxRow}
             activeOpacity={0.7}
-            onPress={() => setWhatsappConsent((prev) => !prev)}
+            onPress={() => {
+              setWhatsappConsent((prev) => !prev);
+              setErrors((prev) => ({ ...prev, whatsapp: undefined }));
+            }}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: whatsappConsent }}
           >
             <View style={[styles.checkbox, whatsappConsent && styles.checkboxChecked]}>
               {whatsappConsent && <Check size={13} color="#FFFFFF" strokeWidth={3} />}
             </View>
             <Text style={styles.checkboxLabel}>
-              I&apos;d like to receive contribution reminders over WhatsApp.
+              I agree to receive login codes, receipts, reminders and updates from Kiranam on WhatsApp. (Required)
             </Text>
           </TouchableOpacity>
 
@@ -233,6 +253,7 @@ export default function RegisterScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+        {errors.whatsapp && <Text style={styles.consentError}>{errors.whatsapp}</Text>}
         {errors.terms && <Text style={styles.consentError}>{errors.terms}</Text>}
 
         {/* Continue CTA */}
@@ -291,6 +312,18 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '700',
     color: '#EC2028',
+  },
+  whatsappNotice: {
+    backgroundColor: '#FFF4E5',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+  },
+  whatsappNoticeText: {
+    fontFamily: 'Inter',
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#7A4B00',
   },
   consentGroup: {
     marginTop: 4,

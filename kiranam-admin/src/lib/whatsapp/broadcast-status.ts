@@ -35,6 +35,8 @@ export const broadcastStatusConfig: Record<BroadcastStatus, StatusDisplay> = {
   sending: { label: "sending", classes: WARNING, pulse: true },
   sent: { label: "sent", classes: SUCCESS },
   failed: { label: "failed", classes: DANGER },
+  // Hit the daily limit; the rest are waiting for allowance.
+  queued: { label: "queued", classes: INFO },
 };
 
 export const recipientStatusConfig: Record<RecipientStatus, StatusDisplay> = {

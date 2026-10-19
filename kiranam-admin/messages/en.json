@@ -648,6 +648,7 @@
       "scheduled": "Scheduled",
       "sending": "Sending",
       "sent": "Sent",
+      "queued": "Queued",
       "failed": "Failed",
       "pending": "Pending",
       "delivered": "Delivered",
@@ -727,13 +728,24 @@
           "all": "All Contacts",
           "tags": "Filter by Tags",
           "customField": "Custom Field",
-          "csv": "Upload CSV"
+          "csv": "Upload CSV",
+          "contacts": "Select Contacts"
         },
         "allDesc": "Send to all {count} contacts in your database.",
         "allDescLoading": "Send to all contacts in your database.",
         "tagDesc": "Send to contacts matching specific tags.",
         "customFieldDesc": "Send to contacts matching a custom field rule.",
         "csvDesc": "Upload a CSV with phone numbers (and optional names).",
+        "contactsDesc": "Pick specific people to send to.",
+        "contactsSearch": "Search by name or phone…",
+        "contactsSelected": "{count, plural, one {# contact selected} other {# contacts selected}}",
+        "contactsSelectShown": "Select all shown",
+        "contactsClear": "Clear selection",
+        "contactsNone": "No contacts found.",
+        "contactsNoWhatsapp": "No WhatsApp consent yet",
+        "contactsMore": "Showing the first {count} matches — search to narrow down.",
+        "contactsNoName": "Unnamed",
+        "contactsRemove": "Remove {name}",
         "selectTags": "Select Tags",
         "searchTags": "Search tags...",
         "noTagsFound": "No tags found.",
@@ -796,7 +808,15 @@
         "fieldMap": {
           "name": "Name",
           "phone": "Phone",
-          "email": "Email"
+          "email": "Email",
+          "first_name": "First name",
+          "company": "Company",
+          "kk_number": "KK number",
+          "monthly_amount": "Monthly commitment",
+          "next_due_date": "Next due date",
+          "autopay_status": "Autopay (On/Off)",
+          "last_payment_date": "Last payment date",
+          "total_contributed": "Total contributed"
         }
       },
       "scheduleSend": {
@@ -811,6 +831,7 @@
         "audienceTags": "Filtered by tags",
         "audienceField": "Filtered by custom field",
         "audienceCsv": "CSV upload",
+        "audienceContacts": "{count, plural, one {# selected contact} other {# selected contacts}}",
         "variables": "Variables:",
         "variablesMapped": "{count} mapped",
         "saveDraft": "Save as Draft",

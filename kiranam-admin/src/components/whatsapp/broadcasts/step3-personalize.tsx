@@ -16,6 +16,12 @@ import { ArrowLeft, ArrowRight, Eye, ImageIcon, Loader2 } from 'lucide-react';
 import { TemplatePreview } from '@/components/whatsapp/template-preview';
 import { PreviewImage } from '@/components/ImageLightbox';
 import { useTranslations } from 'next-intl';
+import {
+  CONTACT_FIELD_KEYS,
+  contactFieldValue,
+  fetchKiranamDetails,
+  type KiranamDetails,
+} from '@/lib/whatsapp/broadcast-fields';
 
 type VariableType = 'static' | 'field' | 'custom_field';
 
@@ -51,11 +57,7 @@ function isValidHttpUrl(value: string): boolean {
   }
 }
 
-const contactFields = [
-  { value: 'name', labelKey: 'name' },
-  { value: 'phone', labelKey: 'phone' },
-  { value: 'email', labelKey: 'email' },
-];
+const contactFields = CONTACT_FIELD_KEYS.map((key) => ({ value: key, labelKey: key }));
 
 /** The words around a placeholder, so "{{2}}" reads as "…thanks for ___ this month". */
 function placeholderContext(body: string, placeholder: string) {
@@ -83,6 +85,7 @@ export function Step3Personalize({
   const [firstContactCustomValues, setFirstContactCustomValues] = useState<
     Map<string, string>
   >(new Map());
+  const [firstContactDetails, setFirstContactDetails] = useState<KiranamDetails | undefined>(undefined);
   const [loadingPreview, setLoadingPreview] = useState(true);
 
   // Load user's custom fields + a representative contact for the
@@ -109,6 +112,8 @@ export function Step3Personalize({
       setFirstContact(contact);
 
       if (contact) {
+        const details = await fetchKiranamDetails(supabase, [contact.id]);
+        if (!cancelled) setFirstContactDetails(details.get(contact.id));
         const { data: customVals } = await supabase
           .from('contact_custom_values')
           .select('custom_field_id, value')
@@ -204,10 +209,9 @@ export function Step3Personalize({
         if (mapping.type === 'static' && mapping.value) {
           replacement = mapping.value;
         } else if (mapping.type === 'field' && mapping.value) {
-          const fieldMap: Record<string, string | undefined> = firstContact
-            ? { name: firstContact.name, phone: firstContact.phone, email: firstContact.email, company: firstContact.company }
-            : {};
-          replacement = fieldMap[mapping.value] || `[${mapping.value.charAt(0).toUpperCase()}${mapping.value.slice(1)}]`;
+          replacement =
+            (firstContact && contactFieldValue(mapping.value, firstContact, firstContactDetails)) ||
+            `[${t(`personalize.fieldMap.${mapping.value}`)}]`;
         } else if (mapping.type === 'custom_field' && mapping.value) {
           replacement =
             customValues.get(mapping.value) ||
@@ -223,7 +227,9 @@ export function Step3Personalize({
     placeholders,
     firstContact,
     firstContactCustomValues,
+    firstContactDetails,
     customFields,
+    t,
   ]);
 
   const previewLabel = firstContact

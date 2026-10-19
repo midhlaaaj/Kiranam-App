@@ -79,6 +79,20 @@ export function Step4ScheduleSend({
   const [count, setCount] = useState<{ value: number; key: string } | null>(null);
   const [tagNames, setTagNames] = useState<Record<string, string>>({});
   const rate = useCostEstimate(template.category);
+  // Today's sending allowance (Settings → WhatsApp → Sending limits).
+  const [allowance, setAllowance] = useState<{ remaining: number | null; autoResume: boolean } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/whatsapp/whatsapp/limits', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!cancelled && j) setAllowance({ remaining: j.remaining, autoResume: !!j.autoResume });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const currentKey = audienceKey(audience);
   const recipients = count?.key === currentKey ? count.value : null;
@@ -111,7 +125,9 @@ export function Step4ScheduleSend({
         ? `Tagged ${(audience.tagIds ?? []).map((id) => tagNames[id] ?? '…').join(', ')}`
         : audience.type === 'csv'
           ? t('scheduleSend.audienceCsv')
-          : t('scheduleSend.audienceField');
+          : audience.type === 'contacts'
+            ? t('scheduleSend.audienceContacts', { count: audience.contactIds?.length ?? 0 })
+            : t('scheduleSend.audienceField');
   const excluded = (audience.excludeTagIds ?? []).map((id) => tagNames[id] ?? '…');
 
   const fmt = (n: number, currency: string) =>
@@ -169,6 +185,13 @@ export function Step4ScheduleSend({
             </p>
           </div>
           <AudienceSummary audience={audience} onCount={(value, key) => setCount({ value, key })} />
+          {allowance && allowance.remaining !== null && recipients !== null && recipients > allowance.remaining && (
+            <p role="status" className="rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
+              Only about {allowance.remaining.toLocaleString('en-IN')} more people can be messaged right now (daily limit). The
+              other {(recipients - allowance.remaining).toLocaleString('en-IN')} will wait
+              {allowance.autoResume ? ' and go out automatically as allowance frees up.' : ' — press “Send remaining” on the broadcast later.'}
+            </p>
+          )}
         </li>
 
         <li className="rounded-lg border border-border bg-card shadow-elevation-md p-4">

@@ -90,12 +90,7 @@ export default function PrivacyPolicyPage() {
           and record contributions and issue receipts/acknowledgements; match
           and match coordinators with contributors; send transactional
           messages needed to run the Services — including your one-time login
-          code, which we deliver over WhatsApp, and payment confirmations; send
-          contribution reminders and programme updates via WhatsApp or
-          push/in-app notification, only where you&apos;ve given specific
-          consent, which you can withdraw at any time (this doesn&apos;t affect
-          the login code, which is required to sign in and isn&apos;t
-          consent-based); detect and prevent fraud, abuse, and security
+          code, which we deliver over WhatsApp, and payment confirmations; send contribution reminders, receipts and programme updates via WhatsApp or push/in-app notification — WhatsApp consent is given when you sign up and is required to use the app, because WhatsApp is how we deliver your login code and receipts; detect and prevent fraud, abuse, and security
           incidents; and comply with applicable law.
         </Section>
 
@@ -149,9 +144,7 @@ export default function PrivacyPolicyPage() {
 
         <Section title="8. Your rights">
           Subject to applicable law, including the DPDP Act, you can: review
-          and correct your profile information; withdraw consent for anything
-          consent-based (e.g. WhatsApp reminders, push notifications) at any
-          time, without affecting processing that already happened;
+          and correct your profile information; withdraw consent for anything consent-based (e.g. push notifications) at any time — withdrawing WhatsApp consent means you can no longer use the app, so you would delete your account instead, without affecting processing that already happened;
           permanently delete your account and associated data from Profile →
           Delete Account (in the app), subject to the retention described in
           Section 6; and nominate another individual to exercise these rights

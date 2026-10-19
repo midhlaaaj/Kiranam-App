@@ -174,7 +174,7 @@ export default function BroadcastDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const { retryFailed, isProcessing: retrying, sentSoFar, totalToSend } = useBroadcastSending();
+  const { retryFailed, sendRemaining, isProcessing: retrying, sentSoFar, totalToSend } = useBroadcastSending();
   const [confirmRetry, setConfirmRetry] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -222,6 +222,20 @@ export default function BroadcastDetailPage() {
     return [...groups.values()].sort((a, b) => b.count - a.count);
   }, [recipients]);
   const failedTotal = failureGroups.reduce((n, g) => n + g.count, 0);
+
+  const pendingTotal = useMemo(() => recipients.filter((r) => r.status === 'pending').length, [recipients]);
+
+  async function handleSendRemaining() {
+    try {
+      const { sent, failed, stillWaiting } = await sendRemaining(broadcastId);
+      if (stillWaiting > 0) toast.info(`Sent to ${sent.toLocaleString('en-IN')} more. ${stillWaiting.toLocaleString('en-IN')} still waiting for allowance.`);
+      else if (failed > 0) toast.warning(`Sent to ${(sent).toLocaleString('en-IN')}. ${failed} failed.`);
+      else toast.success(`Sent to the remaining ${sent.toLocaleString('en-IN')}.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not send the remaining messages.');
+    }
+    fetchData();
+  }
 
   async function handleRetry() {
     setConfirmRetry(false);
@@ -431,6 +445,26 @@ export default function BroadcastDetailPage() {
           color="bg-destructive/10 text-destructive"
         />
       </div>
+
+      {(pendingTotal > 0 && broadcast.status === 'queued') && (
+        <section aria-labelledby="queued-heading" className="mb-4 rounded-xl border border-info/30 bg-card p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="queued-heading" className="text-sm font-semibold text-foreground">
+                {pendingTotal.toLocaleString('en-IN')} {pendingTotal === 1 ? 'person is' : 'people are'} waiting
+              </h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                This broadcast stopped at the daily sending limit. The rest go out as allowance frees up — automatically if
+                “Continue automatically” is on in Settings, or press the button once there is room.
+              </p>
+            </div>
+            <Button variant="outline" onClick={handleSendRemaining} disabled={retrying}>
+              {retrying ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
+              {retrying ? (totalToSend ? `Sending ${sentSoFar} of ${totalToSend}…` : 'Preparing…') : 'Send remaining'}
+            </Button>
+          </div>
+        </section>
+      )}
 
       {(failedTotal > 0 || retrying) && (
         <section aria-labelledby="failures-heading" className="rounded-xl border border-destructive/30 bg-card p-4">

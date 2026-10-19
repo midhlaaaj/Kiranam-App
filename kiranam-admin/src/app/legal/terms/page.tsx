@@ -88,17 +88,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="7. Communications and consent">
-          We deliver your one-time login code over WhatsApp — this is how
-          sign-in works and isn&apos;t optional or consent-based. If you
-          separately opt in during sign-up or from your profile settings,
-          we&apos;ll also send contribution reminders and related updates to
-          you over WhatsApp and/or push or in-app notification. You can
-          withdraw that reminder consent at any time from your profile
-          settings; doing so stops future reminder messages but doesn&apos;t
-          affect your account, past contributions, your login code, or other
-          transactional messages needed to run the app (e.g. payment
-          confirmations). Your carrier&apos;s message and data rates may apply
-          to WhatsApp messages.
+          Kiranam uses WhatsApp to run the app. By creating an account you agree to receive messages from us on the WhatsApp number you registered with: your one-time login code, payment confirmations and receipts, contribution reminders, and important updates about your account and the campaigns you support. WhatsApp consent is required to use the Services — if you don&apos;t want to receive messages from us on WhatsApp, please don&apos;t create an account, or delete your account from Profile → Delete Account. You can pause your contributions to stop reminder messages while your account stays open. We may also send push or in-app notifications. Your carrier&apos;s message and data rates may apply to WhatsApp messages.
         </Section>
 
         <Section title="8. Acceptable use">

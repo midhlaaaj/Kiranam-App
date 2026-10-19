@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, ArrowRight, Check, FileUp, Filter, Loader2, Tags, Upload, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, FileUp, Filter, Loader2, Tags, Upload, UserCheck, Users } from 'lucide-react';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { CustomField, Tag } from '@/types/whatsapp';
 import { Button } from '@/components/whatsapp/ui/button';
@@ -17,6 +17,7 @@ import {
   type CustomFieldOperator,
 } from '@/lib/whatsapp/broadcast-audience';
 import { AudienceSummary } from './audience-summary';
+import { ContactPicker } from './contact-picker';
 
 type AudienceType = AudienceConfig['type'];
 
@@ -111,6 +112,7 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
       { type: 'all', label: t('selectAudience.method.all'), description: t('selectAudience.allDescLoading'), icon: Users },
       { type: 'tags', label: t('selectAudience.method.tags'), description: t('selectAudience.tagDesc'), icon: Tags },
       { type: 'custom_field', label: t('selectAudience.method.customField'), description: t('selectAudience.customFieldDesc'), icon: Filter },
+      { type: 'contacts', label: t('selectAudience.method.contacts'), description: t('selectAudience.contactsDesc'), icon: UserCheck },
       { type: 'csv', label: t('selectAudience.method.csv'), description: t('selectAudience.csvDesc'), icon: Upload },
     ],
     [t]
@@ -148,6 +150,7 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
       tagIds: type === 'tags' ? audience.tagIds : undefined,
       customField: type === 'custom_field' ? audience.customField : undefined,
       csvContacts: type === 'csv' ? audience.csvContacts : undefined,
+      contactIds: type === 'contacts' ? audience.contactIds : undefined,
     });
   }
 
@@ -301,6 +304,10 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
             </div>
           )}
         </div>
+      )}
+
+      {audience.type === 'contacts' && (
+        <ContactPicker selectedIds={audience.contactIds ?? []} onChange={(contactIds) => onUpdate({ ...audience, contactIds })} />
       )}
 
       {audience.type === 'csv' && (

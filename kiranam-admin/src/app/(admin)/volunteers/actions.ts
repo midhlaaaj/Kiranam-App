@@ -94,7 +94,8 @@ export async function registerVolunteer(
 
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ full_name: fullName, role: 'volunteer', ...(kkNumber ? { kk_number: kkNumber } : {}) })
+    // Admin-registered: the admin holds the person's WhatsApp consent.
+    .update({ full_name: fullName, role: 'volunteer', whatsapp_consent: true, ...(kkNumber ? { kk_number: kkNumber } : {}) })
     .eq('id', volunteerId);
   if (profileError) {
     const message = /duplicate key|unique/i.test(profileError.message)

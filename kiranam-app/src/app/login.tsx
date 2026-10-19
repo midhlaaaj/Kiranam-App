@@ -117,6 +117,10 @@ export default function LoginScreen() {
           </View>
         </View>
 
+        <Text style={styles.whatsappNote}>
+          We send your login code on WhatsApp, and use it for receipts and updates too. WhatsApp is required to use Kiranam.
+        </Text>
+
         <CountryCodePicker
           visible={pickerVisible}
           selectedIso2={country.iso2}
@@ -269,5 +273,12 @@ const styles = StyleSheet.create({
     color: '#B0ADA8',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  whatsappNote: {
+    fontFamily: 'Inter',
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#7A756E',
+    marginTop: 12,
   },
 });

@@ -117,14 +117,16 @@ export async function resolvePostAuthRoute(uid: string): Promise<Href> {
 export async function resolveEntryRoute(uid: string): Promise<Href> {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('full_name, role, terms_accepted_at')
+    .select('full_name, role, terms_accepted_at, whatsapp_consent')
     .eq('id', uid)
     .maybeSingle();
   if (profileError) throw new Error(profileError.message);
 
   // Admins sign in to the admin panel, never through this onboarding — and
   // saving it would overwrite their role.
-  if (!profile?.terms_accepted_at && profile?.role !== 'admin') {
+  // WhatsApp consent is required for everyone: accounts created before it was
+  // (self-signed-up without ticking it, or created by an admin) are asked once.
+  if ((!profile?.terms_accepted_at || !profile?.whatsapp_consent) && profile?.role !== 'admin') {
     const claiming = !!profile?.full_name;
     return {
       pathname: '/register',

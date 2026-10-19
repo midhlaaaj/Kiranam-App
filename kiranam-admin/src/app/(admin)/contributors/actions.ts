@@ -168,7 +168,10 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   // and skip straight past /register the first time they actually log in.
   const { error: profileError } = await supabaseAdmin
     .from('profiles')
-    .update({ full_name: fullName, kk_number: kkNumber })
+    // Registered by an admin who holds the person's consent for WhatsApp messages
+    // (login codes, receipts, reminders) — recorded here so they aren't shown as
+    // "no WhatsApp consent" and can be included in broadcasts.
+    .update({ full_name: fullName, kk_number: kkNumber, whatsapp_consent: true })
     .eq('id', contributorId);
   if (profileError) {
     const message = /duplicate key|unique/i.test(profileError.message)

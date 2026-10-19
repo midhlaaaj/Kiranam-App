@@ -23,6 +23,7 @@ import { Label } from '@/components/whatsapp/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/whatsapp/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/whatsapp/ui/alert';
 import { SettingsPanelHead } from './settings-panel-head';
+import { SendLimitsCard } from './send-limits-card';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   Accordion,
@@ -694,6 +695,8 @@ export function WhatsAppConfig() {
             </div>
           </CardContent>
         </Card>
+
+        {connectionStatus === 'connected' && <SendLimitsCard />}
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">

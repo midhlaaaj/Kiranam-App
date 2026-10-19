@@ -16,8 +16,10 @@ export interface CustomFieldFilter {
 }
 
 export interface AudienceConfig {
-  type: 'all' | 'tags' | 'custom_field' | 'csv';
+  type: 'all' | 'tags' | 'custom_field' | 'csv' | 'contacts';
   tagIds?: string[];
+  /** Hand-picked contacts (type 'contacts'). */
+  contactIds?: string[];
   customField?: CustomFieldFilter;
   csvContacts?: { phone: string; name?: string }[];
   /** Contacts carrying any of these tags are subtracted from the result. */
@@ -42,7 +44,8 @@ export function isAudienceComplete(a: AudienceConfig) {
     a.type === 'all' ||
     (a.type === 'tags' && !!a.tagIds?.length) ||
     (a.type === 'custom_field' && !!a.customField?.fieldId && !!a.customField.value) ||
-    (a.type === 'csv' && !!a.csvContacts?.length)
+    (a.type === 'csv' && !!a.csvContacts?.length) ||
+    (a.type === 'contacts' && !!a.contactIds?.length)
   );
 }
 
@@ -114,6 +117,8 @@ export async function resolveAudience(
     );
   } else if (audience.type === 'tags' && audience.tagIds?.length) {
     contacts = await fetchContactsByIds(supabase, [...(await contactIdsWithTags(supabase, audience.tagIds))]);
+  } else if (audience.type === 'contacts' && audience.contactIds?.length) {
+    contacts = await fetchContactsByIds(supabase, [...new Set(audience.contactIds)]);
   } else if (audience.type === 'custom_field' && audience.customField?.fieldId && audience.customField.value) {
     contacts = await fetchContactsByIds(supabase, await matchCustomField(supabase, audience.customField));
   } else if (audience.type === 'csv' && audience.csvContacts?.length) {

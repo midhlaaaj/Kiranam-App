@@ -620,6 +620,7 @@
       "scheduled": "예약됨",
       "sending": "전송 중",
       "sent": "전송됨",
+      "queued": "Queued",
       "failed": "실패",
       "pending": "대기 중",
       "delivered": "전달됨",
@@ -699,13 +700,24 @@
           "all": "전체 연락처",
           "tags": "태그로 필터링",
           "customField": "커스텀 필드",
-          "csv": "CSV 업로드"
+          "csv": "CSV 업로드",
+          "contacts": "Select Contacts"
         },
         "allDesc": "데이터베이스의 전체 연락처 {count}명에게 보냅니다.",
         "allDescLoading": "데이터베이스의 전체 연락처에게 보냅니다.",
         "tagDesc": "특정 태그와 일치하는 연락처에 보냅니다.",
         "customFieldDesc": "커스텀 필드 규칙과 일치하는 연락처에 보냅니다.",
         "csvDesc": "전화번호(선택적으로 이름 포함)가 담긴 CSV를 업로드하세요.",
+        "contactsDesc": "Pick specific people to send to.",
+        "contactsSearch": "Search by name or phone…",
+        "contactsSelected": "{count, plural, one {# contact selected} other {# contacts selected}}",
+        "contactsSelectShown": "Select all shown",
+        "contactsClear": "Clear selection",
+        "contactsNone": "No contacts found.",
+        "contactsNoWhatsapp": "No WhatsApp consent yet",
+        "contactsMore": "Showing the first {count} matches — search to narrow down.",
+        "contactsNoName": "Unnamed",
+        "contactsRemove": "Remove {name}",
         "selectTags": "태그 선택",
         "searchTags": "태그 검색...",
         "noTagsFound": "태그를 찾을 수 없습니다.",
@@ -751,7 +763,15 @@
         "fieldMap": {
           "name": "이름",
           "phone": "전화번호",
-          "email": "이메일"
+          "email": "이메일",
+          "first_name": "First name",
+          "company": "Company",
+          "kk_number": "KK number",
+          "monthly_amount": "Monthly commitment",
+          "next_due_date": "Next due date",
+          "autopay_status": "Autopay (On/Off)",
+          "last_payment_date": "Last payment date",
+          "total_contributed": "Total contributed"
         }
       },
       "scheduleSend": {
@@ -766,6 +786,7 @@
         "audienceTags": "태그로 필터링됨",
         "audienceField": "커스텀 필드로 필터링됨",
         "audienceCsv": "CSV 업로드",
+        "audienceContacts": "{count, plural, one {# selected contact} other {# selected contacts}}",
         "variables": "변수:",
         "variablesMapped": "{count}개 매핑됨",
         "saveDraft": "초안으로 저장",

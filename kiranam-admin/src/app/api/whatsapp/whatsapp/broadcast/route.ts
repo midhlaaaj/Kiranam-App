@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/whatsapp/supabase/server'
 import { hasMinRole, isAccountRole } from '@/lib/whatsapp/auth/roles'
-import { sendTemplateMessage } from '@/lib/whatsapp/whatsapp/meta-api'
+import { sendBroadcastMessage } from '@/lib/whatsapp/whatsapp/send-broadcast-message'
 import { decrypt } from '@/lib/whatsapp/whatsapp/encryption'
 import type { SendTimeParams } from '@/lib/whatsapp/whatsapp/template-send-builder'
 import { isMessageTemplate } from '@/lib/whatsapp/whatsapp/template-row-guard'
-import {
-  sanitizePhoneForMeta,
-  isValidE164,
-  phoneVariants,
-  isRecipientNotAllowedError,
-} from '@/lib/whatsapp/whatsapp/phone-utils'
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -192,68 +186,23 @@ export async function POST(request: Request) {
     let failedCount = 0
 
     for (const recipient of recipients) {
-      const sanitized = sanitizePhoneForMeta(recipient.phone)
+      const outcome = await sendBroadcastMessage({
+        phoneNumberId: config.phone_number_id,
+        accessToken,
+        phone: recipient.phone,
+        templateName: template_name,
+        language: template_language || 'en_US',
+        template: templateRow,
+        messageParams: recipient.messageParams,
+        params: recipient.params ?? [],
+      })
 
-      if (!isValidE164(sanitized)) {
-        results.push({
-          phone: recipient.phone,
-          status: 'failed',
-          error: 'Invalid phone number format',
-        })
-        failedCount++
-        continue
-      }
-
-      // Retry with phone variants on "not in allowed list" so numbers
-      // that differ only in a trunk-prefix 0 still reach recipients.
-      const variants = phoneVariants(sanitized)
-      let sentMessageId: string | null = null
-      let lastError: string | null = null
-
-      for (const variant of variants) {
-        try {
-          const result = await sendTemplateMessage({
-            phoneNumberId: config.phone_number_id,
-            accessToken,
-            to: variant,
-            templateName: template_name,
-            language: template_language || 'en_US',
-            template: templateRow ?? undefined,
-            messageParams: recipient.messageParams,
-            params: recipient.params ?? [],
-          })
-          sentMessageId = result.messageId
-          lastError = null
-          break
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          if (!isRecipientNotAllowedError(errorMessage)) {
-            lastError = errorMessage
-            break
-          }
-          lastError = errorMessage
-          // retry with next variant
-        }
-      }
-
-      if (sentMessageId) {
-        results.push({
-          phone: recipient.phone,
-          status: 'sent',
-          whatsapp_message_id: sentMessageId,
-        })
+      if (outcome.ok) {
+        results.push({ phone: recipient.phone, status: 'sent', whatsapp_message_id: outcome.messageId })
         sentCount++
       } else {
-        console.error(
-          `Failed to send broadcast to ${recipient.phone}:`,
-          lastError
-        )
-        results.push({
-          phone: recipient.phone,
-          status: 'failed',
-          error: lastError || 'Unknown error',
-        })
+        console.error(`Failed to send broadcast to ${recipient.phone}:`, outcome.error)
+        results.push({ phone: recipient.phone, status: 'failed', error: outcome.error })
         failedCount++
       }
     }
