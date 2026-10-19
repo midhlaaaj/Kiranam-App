@@ -33,17 +33,40 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
     password,
     email_confirm: true,
   });
+
+  let userId = data?.user?.id;
   if (error) {
-    // An account already exists for this email (e.g. a former admin) — the
-    // inviting admin restores access from the Team page instead.
-    if ((error as { code?: string }).code === 'email_exists' || /already (been )?registered/i.test(error.message)) {
-      return { error: 'An account with this email already exists. Sign in instead, or use "Forgot password" if you don’t remember it.' };
+    const alreadyExists =
+      (error as { code?: string }).code === 'email_exists' || /already (been )?registered/i.test(error.message);
+    if (!alreadyExists) return { error: error.message };
+
+    // A previously revoked admin: their login still exists, so instead of
+    // creating one, set the password they just chose and promote them
+    // again. The valid invite (checked above) is what authorises this.
+    const { data: existing } = await admin
+      .from('profiles')
+      .select('id')
+      .ilike('email', email.replace(/[\\%_]/g, (c) => `\\${c}`))
+      .maybeSingle();
+    if (!existing) {
+      return { error: "We couldn't set up this account. Ask the admin who invited you to send a new invite." };
     }
-    return { error: error.message };
+    const { error: updateError } = await admin.auth.admin.updateUserById(existing.id, {
+      password,
+      email_confirm: true,
+    });
+    if (updateError) return { error: updateError.message };
+
+    // New accounts are promoted by the on-confirm trigger; this account is
+    // already confirmed, so run the same promotion (marks the invite used
+    // and sets role = 'admin') directly.
+    const { error: promoteError } = await admin.rpc('promote_if_invited', { p_user_id: existing.id, p_email: email });
+    if (promoteError) return { error: promoteError.message };
+    userId = existing.id;
   }
 
-  if (data.user && fullName) {
-    await admin.from('profiles').update({ full_name: fullName }).eq('id', data.user.id);
+  if (userId && fullName) {
+    await admin.from('profiles').update({ full_name: fullName }).eq('id', userId);
   }
 
   redirect('/login');

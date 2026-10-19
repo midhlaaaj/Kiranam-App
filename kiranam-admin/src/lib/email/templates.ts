@@ -107,20 +107,6 @@ export function adminInviteEmail(params: { signupUrl: string; invitedEmail: stri
   );
 }
 
-export function adminAccessRestoredEmail(params: { loginUrl: string; email: string }) {
-  return wrapper(
-    `
-    ${heading('Your admin access has been restored')}
-    ${paragraph(`Admin access to the Kiranam dashboard has been restored for <strong style="color: ${INK};">${params.email}</strong>.`)}
-    ${paragraph('Sign in with your existing password. If you don’t remember it, use "Forgot password" on the sign-in page.')}
-    ${button(params.loginUrl, 'Sign In')}
-    ${fallbackLinkNote(params.loginUrl)}
-    ${disclaimerNote()}
-    `,
-    'Your Kiranam admin access has been restored'
-  );
-}
-
 export function passwordResetEmail(params: { resetUrl: string }) {
   return wrapper(
     `

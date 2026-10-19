@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { sendEmail } from '@/lib/email/resend';
-import { adminInviteEmail, adminAccessRestoredEmail } from '@/lib/email/templates';
+import { adminInviteEmail } from '@/lib/email/templates';
 
 // Must match the `expires_at` default set by the admin_invite_expiry
 // migration, and is what enforces the deadline server-side (is_email_invited
@@ -63,15 +63,26 @@ async function issueInvite(adminId: string, email: string): Promise<InviteState>
     .eq('email', email)
     .maybeSingle();
 
+  // A *used* invite means this email signed up as an admin at some point.
+  // If they still are one there's nothing to do; if access was revoked since,
+  // fall through and reset the invite so they go through the same invite
+  // email + sign-up as anyone new (they pick a fresh password at sign-up).
   if (existing?.used_at) {
-    return restoreAdminAccess(adminId, email, existing.id);
+    const { data: current } = await supabase
+      .from('profiles')
+      .select('role')
+      .ilike('email', email.replace(/[\\%_]/g, (c) => `\\${c}`))
+      .maybeSingle();
+    if (current?.role === 'admin') {
+      return { error: 'This email already has admin access.' };
+    }
   }
 
   let inviteId: string;
   if (existing) {
     const { error } = await supabase
       .from('admin_invites')
-      .update({ invited_by: adminId, expires_at: expiresAt.toISOString(), created_at: new Date().toISOString() })
+      .update({ invited_by: adminId, expires_at: expiresAt.toISOString(), created_at: new Date().toISOString(), used_at: null })
       .eq('id', existing.id);
     if (error) return { error: friendlyErrorMessage(error.message) };
     inviteId = existing.id;
@@ -108,54 +119,6 @@ async function issueInvite(adminId: string, email: string): Promise<InviteState>
     };
   }
   return { message: `Invite emailed to ${email} — it expires in ${ADMIN_INVITE_EXPIRY_DAYS} days.` };
-}
-
-/** Re-invite of someone who already accepted an invite before (typically an
- * admin whose access was revoked). Their auth account still exists, so the
- * /signup path can't work for them (createUser fails with email_exists) and
- * the confirm trigger that promotes invitees never fires again — instead,
- * flip their profile straight back to admin and tell them to sign in. */
-async function restoreAdminAccess(adminId: string, email: string, inviteId: string): Promise<InviteState> {
-  const supabase = createAdminClient();
-
-  // ilike for case-insensitive match; escape its wildcards (_ is common in emails).
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, role, full_name')
-    .ilike('email', email.replace(/[\\%_]/g, (c) => `\\${c}`))
-    .maybeSingle();
-
-  if (!profile) {
-    // Account was deleted since the invite was used — start a fresh invite.
-    await supabase.from('admin_invites').delete().eq('id', inviteId);
-    return issueInvite(adminId, email);
-  }
-  if (profile.role === 'admin') {
-    return { error: 'This email already has admin access.' };
-  }
-
-  const { error } = await supabase.from('profiles').update({ role: 'admin' }).eq('id', profile.id);
-  if (error) return { error: friendlyErrorMessage(error.message) };
-
-  await logAction(adminId, 'restore_admin', 'profiles', profile.id, { email, label: profile.full_name || email });
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const loginUrl = `${siteUrl}/login`;
-  const { error: emailError } = await sendEmail({
-    to: email,
-    subject: 'Your Kiranam admin access has been restored',
-    html: adminAccessRestoredEmail({ loginUrl, email }),
-  });
-
-  revalidatePath('/settings/admin-users');
-  if (emailError) {
-    console.error('Failed to send admin access restored email:', emailError);
-    return {
-      warning: `Admin access restored for ${email}, but the email couldn't be sent. Let them know they can sign in with their existing password.`,
-      signupUrl: loginUrl,
-    };
-  }
-  return { message: `Admin access restored for ${email} — they can sign in with their existing password.` };
 }
 
 export async function revokeInvite(inviteId: string) {
