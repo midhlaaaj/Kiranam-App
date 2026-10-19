@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { findValidInvite } from '@/lib/adminInvite';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export interface SignupState {
@@ -9,20 +9,22 @@ export interface SignupState {
 }
 
 export async function signup(_prevState: SignupState, formData: FormData): Promise<SignupState> {
-  const email = String(formData.get('email') || '').trim().toLowerCase();
+  const token = String(formData.get('token') || '');
   const password = String(formData.get('password') || '');
   const fullName = String(formData.get('fullName') || '').trim();
 
-  if (!email || !password) {
-    return { error: 'Enter your email and password.' };
+  if (!password) {
+    return { error: 'Enter a password.' };
   }
 
-  const supabase = await createClient();
-
-  const { data: invited } = await supabase.rpc('is_email_invited', { p_email: email });
-  if (!invited) {
-    return { error: "This email hasn't been invited as an admin." };
+  // The secret code from the emailed link is what authorises sign-up. The
+  // email comes from the invite itself — never from the form — so knowing
+  // an invited address isn't enough to claim it.
+  const invite = await findValidInvite(token);
+  if (!invite) {
+    return { error: 'This invite link is no longer valid. Ask an admin to send you a new one.' };
   }
+  const email = invite.email.toLowerCase();
 
   // Invited admins are trusted (the invite itself is the verification
   // step), so create the user pre-confirmed rather than sending a
@@ -68,6 +70,9 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
   if (userId && fullName) {
     await admin.from('profiles').update({ full_name: fullName }).eq('id', userId);
   }
+
+  // Single use: the code can't be replayed once the account exists.
+  await admin.from('admin_invites').update({ token_hash: null }).eq('id', invite.id);
 
   redirect('/login');
 }

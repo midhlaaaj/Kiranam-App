@@ -8,6 +8,7 @@ import { logAction } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { sendEmail } from '@/lib/email/resend';
 import { adminInviteEmail } from '@/lib/email/templates';
+import { newInviteToken } from '@/lib/adminInvite';
 
 // Must match the `expires_at` default set by the admin_invite_expiry
 // migration, and is what enforces the deadline server-side (is_email_invited
@@ -78,18 +79,21 @@ async function issueInvite(adminId: string, email: string): Promise<InviteState>
     }
   }
 
+  // A new secret on every issue/resend: only the latest emailed link works.
+  const { token, tokenHash } = newInviteToken();
+
   let inviteId: string;
   if (existing) {
     const { error } = await supabase
       .from('admin_invites')
-      .update({ invited_by: adminId, expires_at: expiresAt.toISOString(), created_at: new Date().toISOString(), used_at: null })
+      .update({ invited_by: adminId, expires_at: expiresAt.toISOString(), created_at: new Date().toISOString(), used_at: null, token_hash: tokenHash })
       .eq('id', existing.id);
     if (error) return { error: friendlyErrorMessage(error.message) };
     inviteId = existing.id;
   } else {
     const { data, error } = await supabase
       .from('admin_invites')
-      .insert({ email, invited_by: adminId, expires_at: expiresAt.toISOString() })
+      .insert({ email, invited_by: adminId, expires_at: expiresAt.toISOString(), token_hash: tokenHash })
       .select('id')
       .single();
     if (error) return { error: friendlyErrorMessage(error.message) };
@@ -103,7 +107,7 @@ async function issueInvite(adminId: string, email: string): Promise<InviteState>
   // send doesn't roll the invite back — but the admin is told, and handed
   // the link to share directly, instead of a false "sent".
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const signupUrl = `${siteUrl}/signup`;
+  const signupUrl = `${siteUrl}/signup?token=${encodeURIComponent(token)}`;
   const { error: emailError } = await sendEmail({
     to: email,
     subject: "You've been invited to manage Kiranam",

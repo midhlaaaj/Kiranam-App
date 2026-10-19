@@ -97,7 +97,7 @@ export function adminInviteEmail(params: { signupUrl: string; invitedEmail: stri
     `
     ${heading("You've been invited to manage Kiranam")}
     ${paragraph(`Someone on the Kiranam team has invited <strong style="color: ${INK};">${params.invitedEmail}</strong> to help manage the Kiranam admin dashboard.`)}
-    ${paragraph('Click below and sign up with this exact email address to set your password and get started.')}
+    ${paragraph('Click below to set your password and get started. This link is personal to you — please don’t forward it.')}
     ${button(params.signupUrl, 'Accept Invite')}
     ${paragraph(`This invite expires on <strong style="color: ${INK};">${expiresLabel}</strong> — after that, ask an admin to resend it.`)}
     ${fallbackLinkNote(params.signupUrl)}
