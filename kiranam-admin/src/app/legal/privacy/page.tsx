@@ -186,7 +186,7 @@ export default function PrivacyPolicyPage() {
           Act, 2000, we&apos;ve appointed a Grievance Officer for concerns
           about this Policy or our handling of your personal data:
           <p className="mt-3">
-            Grievance Officer: Diya Prasad
+            Grievance Officer: Navas
             <br />
             Email:{" "}
             <a href="mailto:support@kiranam.online" className="underline">
