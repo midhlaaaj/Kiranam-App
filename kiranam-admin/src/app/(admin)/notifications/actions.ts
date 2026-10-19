@@ -36,7 +36,7 @@ export async function sendAnnouncement(_prevState: SendState, formData: FormData
   let ids = retryIds;
   if (ids.length === 0) {
     const roles = audience === 'all' ? ['contributor', 'volunteer'] : [audience];
-    const { data: recipients, error } = await supabase.from('profiles').select('id').in('role', roles);
+    const { data: recipients, error } = await supabase.from('profiles').select('id').in('role', roles).not('phone', 'is', null);
     if (error) return { error: 'Couldn’t load the recipient list. Nothing was sent.', values };
     ids = (recipients || []).map((r) => r.id);
   }

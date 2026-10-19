@@ -56,6 +56,7 @@ export async function signup(_prevState: SignupState, formData: FormData): Promi
     const { error: updateError } = await admin.auth.admin.updateUserById(existing.id, {
       password,
       email_confirm: true,
+      ban_duration: 'none', // lift the login block applied when access was revoked
     });
     if (updateError) return { error: updateError.message };
 

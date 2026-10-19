@@ -72,7 +72,7 @@ export default async function VolunteerDetailPage({
   const [{ data: referral }, { data: assignments }, { data: allContributors }] = await Promise.all([
     supabase.from('referrals').select('referral_code').eq('volunteer_id', id).maybeSingle(),
     supabase.from('contributor_assignments').select('contributor_id').eq('volunteer_id', id),
-    supabase.from('profiles').select('id, full_name, phone').eq('role', 'contributor').order('full_name'),
+    supabase.from('profiles').select('id, full_name, phone').eq('role', 'contributor').not('phone', 'is', null).order('full_name'),
   ]);
 
   const assignedIds = new Set((assignments || []).map((a) => a.contributor_id));

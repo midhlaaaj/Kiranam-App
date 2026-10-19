@@ -21,7 +21,7 @@ async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?
   const { data } = await supabase
     .from('profiles')
     .select('created_at')
-    .eq('role', 'contributor')
+    .eq('role', 'contributor').not('phone', 'is', null)
     .order('created_at', { ascending: true });
 
   const isCustom = Boolean(cgFrom && cgTo);
@@ -61,7 +61,7 @@ async function getDashboard(granularity: Granularity, page: number) {
     allCommitments,
   ] = await Promise.all([
     supabase.from('volunteer_applications').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor').not('phone', 'is', null),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'volunteer'),
     supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('contributions').select('amount, created_at').eq('status', 'success'),

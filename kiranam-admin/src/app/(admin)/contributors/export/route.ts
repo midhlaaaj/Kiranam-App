@@ -19,7 +19,7 @@ export async function GET() {
   const { data: contributors } = await supabase
     .from('profiles')
     .select('id, full_name, phone')
-    .eq('role', 'contributor')
+    .eq('role', 'contributor').not('phone', 'is', null)
     .order('full_name');
 
   const ids = (contributors || []).map((c) => c.id);

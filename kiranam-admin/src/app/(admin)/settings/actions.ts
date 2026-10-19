@@ -176,13 +176,13 @@ export async function checkKkNumberCoverage(): Promise<KkCoverageState> {
   const { count: total, error: totalError } = await supabase
     .from('profiles')
     .select('id', { count: 'exact', head: true })
-    .eq('role', 'contributor');
+    .eq('role', 'contributor').not('phone', 'is', null);
   if (totalError) return { error: totalError.message };
 
   const { data: missing, error: missingError } = await supabase
     .from('profiles')
     .select('id, full_name, phone')
-    .eq('role', 'contributor')
+    .eq('role', 'contributor').not('phone', 'is', null)
     .is('kk_number', null)
     .order('full_name', { ascending: true });
   if (missingError) return { error: missingError.message };

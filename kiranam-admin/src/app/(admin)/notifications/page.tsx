@@ -95,7 +95,7 @@ async function getSentHistory(audience: string | undefined, page: number) {
 async function getAudienceCounts() {
   const supabase = await createClient();
   const [c, v] = await Promise.all([
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor'),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'contributor').not('phone', 'is', null),
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'volunteer'),
   ]);
   return { contributor: c.count ?? 0, volunteer: v.count ?? 0, all: (c.count ?? 0) + (v.count ?? 0) };

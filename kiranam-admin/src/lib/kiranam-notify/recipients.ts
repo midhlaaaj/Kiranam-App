@@ -80,6 +80,8 @@ export async function listCommunityRecipients(): Promise<Recipient[]> {
       .from('profiles')
       .select('id, full_name, phone, email')
       .in('role', ['contributor', 'volunteer'])
+      // Email-only accounts (revoked admins) aren't community members.
+      .not('phone', 'is', null)
       .order('id')
       .range(from, from + PAGE - 1);
     if (error) throw new Error(`Could not load recipients: ${error.message}`);

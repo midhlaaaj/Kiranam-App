@@ -78,7 +78,7 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
     .from('profiles')
     // Commitment embedded (one-to-one) rather than a second round trip.
     .select('id, full_name, phone, email, kk_number, created_at, commitments(monthly_amount, autopay_enabled, next_due_date)')
-    .eq('role', 'contributor')
+    .eq('role', 'contributor').not('phone', 'is', null)
     .order('created_at', { ascending: false });
 
   const term = searchTerm(q);
