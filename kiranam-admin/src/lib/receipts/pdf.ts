@@ -98,7 +98,7 @@ export async function buildReceiptPdf(data: ReceiptData): Promise<Uint8Array> {
   for (const line of [
     'P.O.Kattippara, Poonoor',
     '673573, Kerala, India',
-    'Ph: +91 8592892020',
+    'Ph: +91 9946661059',
     'Email: support@kiranam.online',
     'www.healthcarefoundation.in',
   ]) {

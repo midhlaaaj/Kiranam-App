@@ -325,18 +325,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // (which replace `session`) instead of re-subscribing every realtime
   // channel that depends on it.
   const sessionRef = useRef(session);
+
+  // "Now" for render-time date comparisons (e.g. isPaidThisCycle). Kept in
+  // state so render stays pure; refreshed every minute and on app resume.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const interval = setInterval(tick, 60000);
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') tick();
+    });
+    return () => {
+      clearInterval(interval);
+      sub.remove();
+    };
+  }, []);
   useEffect(() => {
     userNameRef.current = userName;
     userEmailRef.current = userEmail;
     sessionRef.current = session;
   });
 
+  // Clears everything scoped to the signed-in user. Called from the auth
+  // handlers below when the session goes away, rather than from an effect on
+  // `session`, so signing out doesn't trigger a synchronous setState cascade.
+  const resetUserData = useCallback(() => {
+    setUserName('');
+    setUserEmail('');
+    setUserAvatarUrl('');
+    setPhone('');
+    setIsVolunteer(false);
+    setMyReferralCode('');
+    setIsReferralCodeDefault(true);
+    setHasReferredContributor(false);
+    setPayments([]);
+    setNotifications([]);
+    setVolunteerMembers([]);
+    setHasCommitment(false);
+    setCommitmentAmountState(500);
+    setAutopayEnabledState(false);
+    setMandateStatus(null);
+    setContributionPausedState(false);
+    setNextDueDateState('');
+    setProfileLoading(false);
+  }, []);
+
   // Track auth session
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => setSession(sess));
+    const applySession = (next: Session | null) => {
+      if (!next) resetUserData();
+      // A different user signing in shows the loading skeletons until their
+      // data lands; the same user's token refresh doesn't.
+      else if (sessionRef.current?.user.id !== next.user.id) setProfileLoading(true);
+      setSession(next);
+    };
+    supabase.auth.getSession().then(({ data }) => applySession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => applySession(sess));
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [resetUserData]);
 
   // Confirming a new email (see updateEmail) happens by tapping a link outside
   // the app, so there's no in-app event for it. On resume, re-check with the
@@ -453,8 +499,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
-    refreshCampaigns();
-    refreshEvents();
+    // Deferred a tick so the initial fetch isn't a synchronous call chain
+    // from the effect body (its setState calls land after awaits anyway).
+    const initialLoad = setTimeout(() => {
+      refreshCampaigns();
+      refreshEvents();
+    }, 0);
 
     // Any contribution (in-app payment, or a volunteer/admin recording one
     // offline) bumps campaigns.raised via a DB trigger. Subscribing to that
@@ -488,6 +538,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 60000);
 
     return () => {
+      clearTimeout(initialLoad);
       supabase.removeChannel(campaignsChannel);
       subscription.remove();
       clearInterval(interval);
@@ -633,38 +684,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Load everything scoped to the signed-in user whenever the session changes
   useEffect(() => {
-    if (!session) {
-      setUserName('');
-      setUserEmail('');
-      setUserAvatarUrl('');
-      setPhone('');
-      setIsVolunteer(false);
-      setMyReferralCode('');
-      setIsReferralCodeDefault(true);
-      setHasReferredContributor(false);
-      setPayments([]);
-      setNotifications([]);
-      setVolunteerMembers([]);
-      setHasCommitment(false);
-      setCommitmentAmountState(500);
-      setAutopayEnabledState(false);
-      setMandateStatus(null);
-      setContributionPausedState(false);
-      setNextDueDateState('');
-      setProfileLoading(false);
-      return;
-    }
+    if (!session) return;
 
     const uid = session.user.id;
     let cancelled = false;
-    setProfileLoading(true);
-    registerPushToken(uid);
-    loadUserData(uid).finally(() => {
-      if (!cancelled) setProfileLoading(false);
-    });
+    // Deferred a tick so the load isn't a synchronous call from the effect body.
+    const start = setTimeout(() => {
+      registerPushToken(uid);
+      loadUserData(uid).finally(() => {
+        if (!cancelled) setProfileLoading(false);
+      });
+    }, 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(start);
     };
   // Only the signed-in *user* changing (login/logout/switch account) should
   // trigger a full reload — a session reference change for the same user
@@ -1288,7 +1322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await Promise.all([refreshCampaigns(), refreshEvents(), refreshUserData()]);
   }, [refreshCampaigns, refreshEvents, refreshUserData]);
 
-  const isPaidThisCycle = !!nextDueDateIso && new Date(nextDueDateIso).getTime() > Date.now();
+  const isPaidThisCycle = !!nextDueDateIso && new Date(nextDueDateIso).getTime() > now;
   // Not just "does this session have a confirmed email" — it must be *this*
   // email that's confirmed. Otherwise, right after typing in a new unverified
   // address (still != session.user.email until the confirmation link is

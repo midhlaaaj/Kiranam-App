@@ -44,11 +44,16 @@ export function UpdateRequiredGate({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    check();
+    // Deferred a tick so the first check isn't a synchronous call from the
+    // effect body (its setState calls land after the network await anyway).
+    const first = setTimeout(check, 0);
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') check();
     });
-    return () => sub.remove();
+    return () => {
+      clearTimeout(first);
+      sub.remove();
+    };
   }, [check]);
 
   if (!blocked) return <>{children}</>;

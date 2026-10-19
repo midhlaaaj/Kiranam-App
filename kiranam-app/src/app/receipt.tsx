@@ -76,7 +76,7 @@ export default function ReceiptScreen() {
             <div class="address">
               P.O.Kattippara, Poonoor<br />
               673573, Kerala, India<br />
-              Ph: +91 8592892020<br />
+              Ph: +91 9946661059<br />
               Email: support@kiranam.online<br />
               www.healthcarefoundation.in
             </div>
