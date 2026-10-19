@@ -38,6 +38,7 @@ import {
   LayoutTemplate,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ContactDetailSkeleton, FieldRowsSkeleton, NotesSkeleton } from './contacts-skeleton';
 
 interface ContactDetailViewProps {
   open: boolean;
@@ -382,9 +383,14 @@ export function ContactDetailView({
         side="right"
         className="bg-popover border-border text-popover-foreground sm:max-w-lg w-full p-0"
       >
-        {loading || !contact ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="size-6 animate-spin text-primary" />
+        {loading ? (
+          <ContactDetailSkeleton />
+        ) : !contact ? (
+          <div role="alert" className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+            <p className="text-sm font-medium text-foreground">Couldn&apos;t load this contact</p>
+            <Button variant="outline" size="sm" onClick={() => void fetchContact()}>
+              Try again
+            </Button>
           </div>
         ) : (
           <div className="flex flex-col h-full">
@@ -615,9 +621,7 @@ export function ContactDetailView({
 
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {loadingNotes ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                    </div>
+                    <NotesSkeleton />
                   ) : notes.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">
                       {t('notesTab.noNotes')}
@@ -659,9 +663,7 @@ export function ContactDetailView({
               {/* Custom Fields Tab */}
               <TabsContent value="custom" className="flex-1 overflow-y-auto px-4 py-3">
                 {loadingCustom ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="size-5 animate-spin text-muted-foreground" />
-                  </div>
+                  <FieldRowsSkeleton label="Loading custom fields" />
                 ) : customFields.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     {t('noCustomFields')}

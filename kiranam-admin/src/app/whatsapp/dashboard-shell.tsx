@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/hooks/whatsapp/use-auth";
 import { Sidebar } from "@/components/whatsapp/layout/sidebar";
 import { Header } from "@/components/whatsapp/layout/header";
 import { PresenceHeartbeat } from "@/components/whatsapp/presence/presence-heartbeat";
+import { Skeleton, SkeletonCard, SkeletonPageHeader, SkeletonRegion } from "@/components/whatsapp/ui/skeleton";
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -26,16 +27,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <ShellSkeleton />;
 
   if (!user) return null;
 
@@ -51,6 +43,51 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
+  );
+}
+
+/**
+ * Shown while the session resolves: the same frame as the real shell (sidebar
+ * on desktop, top bar on mobile, then the page area) so the layout doesn't
+ * jump from a centred spinner to the full app.
+ */
+function ShellSkeleton() {
+  return (
+    <SkeletonRegion label="Loading" className="flex h-screen overflow-hidden bg-background">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
+        <div className="px-5 py-5">
+          <Skeleton className="h-8 w-36" />
+        </div>
+        <div className="flex-1 space-y-1.5 px-3 py-2">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full rounded-lg" />
+          ))}
+        </div>
+        <div className="border-t border-border p-3">
+          <div className="flex items-center gap-3 px-3 py-2">
+            <Skeleton className="size-8 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
+        </div>
+      </aside>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-card px-4 lg:hidden">
+          <Skeleton className="h-10 w-10 rounded-md" />
+          <Skeleton className="h-7 w-32" />
+        </div>
+        <main className="flex-1 overflow-hidden px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <SkeletonPageHeader />
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </main>
+      </div>
+    </SkeletonRegion>
   );
 }
 

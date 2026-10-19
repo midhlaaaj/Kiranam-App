@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { useAuth } from '@/hooks/whatsapp/use-auth';
@@ -63,10 +64,11 @@ export function AudienceSummary({
       {!complete ? (
         <p className="mt-1 text-sm text-muted-foreground">{t('summaryIncomplete')}</p>
       ) : state === 'loading' ? (
-        <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          {t('summaryCalculating')}
-        </p>
+        <SkeletonRegion label={t('summaryCalculating')} className="mt-3 space-y-2">
+          <Skeleton className="h-4 w-40 max-w-full" />
+          <Skeleton className="h-4 w-56 max-w-full" />
+          <Skeleton className="h-5 w-48 max-w-full" />
+        </SkeletonRegion>
       ) : state === 'error' || !breakdown ? (
         <p role="alert" className="mt-1 text-sm text-destructive">
           {t('summaryError')}

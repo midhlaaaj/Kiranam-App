@@ -2,9 +2,9 @@
 
 import { use, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 
+import { AutomationBuilderSkeleton } from "@/components/whatsapp/automations/builder-skeleton"
 import {
   AutomationBuilder,
   fromServerSteps,
@@ -27,13 +27,24 @@ export default function EditAutomationPage({
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const res = await fetch(`/api/whatsapp/automations/${id}`)
+      let res: Response
+      try {
+        res = await fetch(`/api/whatsapp/automations/${id}`)
+      } catch {
+        // Network failure — show the error state instead of skeleton forever.
+        if (!cancelled) setError(t("loadError", { status: 0 }))
+        return
+      }
       if (!res.ok) {
         if (!cancelled) setError(t("loadError", { status: res.status }))
         return
       }
-      const body = await res.json()
+      const body = await res.json().catch(() => null)
       if (cancelled) return
+      if (!body?.automation) {
+        setError(t("loadError", { status: res.status }))
+        return
+      }
       setInitial({
         id: body.automation.id,
         name: body.automation.name ?? "",
@@ -67,13 +78,7 @@ export default function EditAutomationPage({
     )
   }
 
-  if (!initial) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    )
-  }
+  if (!initial) return <AutomationBuilderSkeleton />
 
   return <AutomationBuilder initial={initial} />
 }

@@ -11,6 +11,7 @@ import {
 } from '@/lib/whatsapp/broadcast-audience';
 import { fetchKiranamDetails, needsKiranamDetails } from '@/lib/whatsapp/broadcast-fields';
 import {
+  getOtpRecipientsLast24h,
   getSendLimits,
   planSend,
   recentlyMessagedContactIds,
@@ -387,7 +388,12 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       // broadcast is marked 'queued' until the rest can go out.
       const limits = await getSendLimits(supabase, accountId);
       const alreadyMessaged = limits ? await recentlyMessagedContactIds(supabase, accountId) : new Set<string>();
-      const { now: toSend, later: waiting } = planSend(recipients, alreadyMessaged, remainingAllowance(limits, alreadyMessaged));
+      const otpRecipients = limits ? await getOtpRecipientsLast24h(supabase) : 0;
+      const { now: toSend, later: waiting } = planSend(
+        recipients,
+        alreadyMessaged,
+        remainingAllowance(limits, alreadyMessaged, otpRecipients),
+      );
       setTotalToSend(toSend.length);
 
       const totalRecipients = toSend.length;
@@ -492,7 +498,12 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       const limits = await getSendLimits(supabase, accountId);
       const alreadyMessaged = limits ? await recentlyMessagedContactIds(supabase, accountId) : new Set<string>();
-      const { now: toSend, later: waiting } = planSend(pending, alreadyMessaged, remainingAllowance(limits, alreadyMessaged));
+      const otpRecipients = limits ? await getOtpRecipientsLast24h(supabase) : 0;
+      const { now: toSend, later: waiting } = planSend(
+        pending,
+        alreadyMessaged,
+        remainingAllowance(limits, alreadyMessaged, otpRecipients),
+      );
       if (toSend.length === 0) {
         throw new Error('No sending allowance is free right now. Allowance returns as messages from the last 24 hours age out.');
       }

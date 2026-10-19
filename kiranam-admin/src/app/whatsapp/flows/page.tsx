@@ -35,6 +35,7 @@ import {
 import { Input } from "@/components/whatsapp/ui/input";
 import { Badge } from "@/components/whatsapp/ui/badge";
 import { cn } from "@/lib/whatsapp/utils";
+import { Skeleton, SkeletonPageHeader, SkeletonRegion } from "@/components/whatsapp/ui/skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 /**
@@ -91,6 +92,8 @@ export default function FlowsPage() {
   const t = useTranslations("Flows.list");
   const [flows, setFlows] = useState<FlowRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -121,6 +124,9 @@ export default function FlowsPage() {
         if (!cancelled) {
           console.error(err);
           toast.error(t("loadError"));
+          // Show an error with Retry - not the "no flows yet" empty state,
+          // which would wrongly tell the user they have nothing.
+          setLoadFailed(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -132,7 +138,7 @@ export default function FlowsPage() {
     // `t` (next-intl) gets a new reference every render — only used here
     // for an error-message string, not worth retriggering the fetch over.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reloadKey]);
 
   async function handleCreate() {
     if (!newName.trim()) return;
@@ -202,9 +208,48 @@ export default function FlowsPage() {
   }
 
   if (loading) {
+    // Same structure as the loaded page: header + action, then a card grid.
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <SkeletonRegion label="Loading flows" className="space-y-6">
+        <SkeletonPageHeader withAction />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex flex-col rounded-lg border border-border bg-card p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="mt-3 h-3 w-full" />
+              <Skeleton className="mt-1.5 h-3 w-2/3" />
+              <Skeleton className="mt-4 h-3 w-20" />
+              <div className="mt-4 flex justify-end gap-2 border-t border-border pt-3">
+                <Skeleton className="h-8 w-16 rounded-md" />
+                <Skeleton className="h-8 w-20 rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </SkeletonRegion>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-destructive">{t("loadError")}</p>
+        <Button
+          variant="outline"
+          onClick={() => {
+            setLoadFailed(false);
+            setLoading(true);
+            setReloadKey((k) => k + 1);
+          }}
+        >
+          {t("retry")}
+        </Button>
       </div>
     );
   }

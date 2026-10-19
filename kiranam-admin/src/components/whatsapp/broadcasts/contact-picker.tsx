@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, Loader2, Search, X } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { Input } from '@/components/whatsapp/ui/input';
 import { Button } from '@/components/whatsapp/ui/button';
@@ -125,7 +126,15 @@ export function ContactPicker({
       </div>
 
       {results === null ? (
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading contacts" />
+        <SkeletonRegion label="Loading contacts" className="divide-y divide-border rounded-lg border border-border">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-2.5">
+              <Skeleton className="h-4 w-4 shrink-0" />
+              <Skeleton className="h-4 min-w-0 flex-1" />
+              <Skeleton className="h-4 w-28 shrink-0 max-[420px]:w-20" />
+            </div>
+          ))}
+        </SkeletonRegion>
       ) : results.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t('contactsNone')}</p>
       ) : (

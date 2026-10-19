@@ -25,6 +25,7 @@ import {
 import { cn } from '@/lib/whatsapp/utils';
 import { useTranslations } from 'next-intl';
 import type { Tag } from '@/types/whatsapp';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 
 // Created and maintained by database triggers (profile sync + contribution
 // pause) and relied on by broadcasts — "Paused" in particular keeps paused
@@ -54,6 +55,7 @@ export function TagManager() {
   const { user, accountId, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tagToDelete, setTagToDelete] = useState<Tag | null>(null);
@@ -73,8 +75,10 @@ export function TagManager() {
   }, [authLoading, user?.id]);
 
   async function fetchTags(userId: string) {
+    // `loading` (skeleton) is the first load only; refetches after add/delete
+    // update the list in place.
     try {
-      setLoading(true);
+      setLoadError(false);
       const { data, error } = await supabase
         .from('tags')
         .select('*')
@@ -85,6 +89,7 @@ export function TagManager() {
       setTags(data || []);
     } catch (err) {
       console.error('Failed to fetch tags:', err);
+      setLoadError(true);
       toast.error(t('failedToLoadTags'));
     } finally {
       setLoading(false);
@@ -169,8 +174,21 @@ export function TagManager() {
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="size-6 animate-spin text-primary" />
+          <SkeletonRegion label="Loading tags" className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-8 w-24 rounded-full" />
+              <Skeleton className="h-8 w-20 rounded-full" />
+              <Skeleton className="h-8 w-28 rounded-full" />
+              <Skeleton className="h-8 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-9 w-full rounded-lg" />
+          </SkeletonRegion>
+        ) : loadError && tags.length === 0 ? (
+          <div role="alert" className="flex flex-col items-center gap-3 py-6 text-center">
+            <p className="text-sm text-foreground">{t('failedToLoadTags')}</p>
+            <Button variant="outline" size="sm" onClick={() => user && fetchTags(user.id)}>
+              Try again
+            </Button>
           </div>
         ) : (
           <>

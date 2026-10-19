@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -70,11 +71,18 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
           </Button>
         </div>
       ) : templates === null ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-busy="true" aria-label="Loading templates">
+        <SkeletonRegion label="Loading templates" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-32 animate-pulse rounded-xl border border-border bg-muted/60" />
+            <div key={i} className="space-y-3 rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-40 min-w-0 max-w-[60%]" />
+                <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-3/4" />
+            </div>
           ))}
-        </div>
+        </SkeletonRegion>
       ) : templates.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card shadow-elevation-md p-8 text-center">
           <FileText className="h-8 w-8 text-muted-foreground" aria-hidden />

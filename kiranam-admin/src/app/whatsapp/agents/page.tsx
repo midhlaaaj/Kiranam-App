@@ -8,6 +8,7 @@ import { AiUsageCard } from '@/components/whatsapp/agents/ai-usage';
 import { AiConfig } from '@/components/whatsapp/settings/ai-config';
 import { useAuth } from '@/hooks/whatsapp/use-auth';
 import { canEditSettings } from '@/lib/whatsapp/auth/roles';
+import { Skeleton, SkeletonPanel, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 
 type Tab = 'playground' | 'setup' | 'usage';
 
@@ -48,6 +49,18 @@ export default function AgentsPage() {
         Your bring-your-own-key AI agent — set it up, then test it in the
         playground before it replies to customers in the inbox.
       </p>
+
+      {!decided && (
+        // Which tab to open depends on the config lookup; hold the space
+        // with a tab bar + panel instead of leaving a blank gap.
+        <SkeletonRegion label="Loading AI agents" className="mt-6">
+          <div className="flex gap-2">
+            <Skeleton className="h-9 w-32 rounded-lg" />
+            <Skeleton className="h-9 w-24 rounded-lg" />
+          </div>
+          <SkeletonPanel className="mt-4" fields={3} />
+        </SkeletonRegion>
+      )}
 
       {decided && (
         <Tabs

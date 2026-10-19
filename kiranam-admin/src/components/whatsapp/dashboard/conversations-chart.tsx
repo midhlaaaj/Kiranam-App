@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { MessageSquare } from 'lucide-react'
 import type { ConversationsSeriesPoint } from '@/lib/whatsapp/dashboard/types'
 import { EmptyState } from './empty-state'
-import { Skeleton } from './skeleton'
+import { ErrorState } from './error-state'
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton'
 import { cn } from '@/lib/whatsapp/utils'
 
 type RangeDays = 7 | 30 | 90
@@ -13,6 +14,9 @@ interface ConversationsChartProps {
   /** Per-range data, so switching tabs never re-fetches. */
   series: Record<RangeDays, ConversationsSeriesPoint[] | null>
   loading: boolean
+  /** The request for the current range failed (data stays null). */
+  error?: boolean
+  onRetry?: () => void
   range: RangeDays
   onRangeChange: (r: RangeDays) => void
 }
@@ -29,7 +33,7 @@ const PADDING = { top: 16, right: 16, bottom: 28, left: 40 }
 
 import { useTranslations } from 'next-intl'
 
-export function ConversationsChart({ series, loading, range, onRangeChange }: ConversationsChartProps) {
+export function ConversationsChart({ series, loading, error, onRetry, range, onRangeChange }: ConversationsChartProps) {
   const t = useTranslations('Dashboard.conversationsChart')
   const data = series[range]
 
@@ -75,8 +79,12 @@ export function ConversationsChart({ series, loading, range, onRangeChange }: Co
       </header>
 
       <div className="p-5">
-        {loading || !data ? (
-          <Skeleton className="h-[240px] w-full" />
+        {loading ? (
+          <SkeletonRegion label="Loading conversations chart">
+            <Skeleton className="h-[240px] w-full" />
+          </SkeletonRegion>
+        ) : error || !data ? (
+          <ErrorState className="h-[240px]" onRetry={onRetry} />
         ) : data.every((p) => p.incoming === 0 && p.outgoing === 0) ? (
           <EmptyState
             icon={MessageSquare}

@@ -18,6 +18,7 @@ import { MessageThread } from "@/components/whatsapp/inbox/message-thread";
 import { ContactSidebar } from "@/components/whatsapp/inbox/contact-sidebar";
 import { WifiOff } from "lucide-react";
 import { cn } from "@/lib/whatsapp/utils";
+import { InboxPageSkeleton } from "@/components/whatsapp/inbox/inbox-skeleton";
 
 // Remembers the agent's show/hide choice for the desktop contact panel
 // across reloads and sessions (device-scoped, like the theme prefs).
@@ -28,7 +29,7 @@ const CONTACT_PANEL_STORAGE_KEY = "wacrm:inbox:contact-panel-open";
 // wrapper supplies it; the inner component holds all the inbox state.
 export default function InboxPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<InboxPageSkeleton />}>
       <InboxPageInner />
     </Suspense>
   );

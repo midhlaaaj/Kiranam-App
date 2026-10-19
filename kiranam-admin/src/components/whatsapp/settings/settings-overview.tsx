@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { Skeleton } from '@/components/whatsapp/ui/skeleton';
 import { useTranslations } from 'next-intl';
 
 import { createClient } from '@/lib/whatsapp/supabase/client';
@@ -235,7 +236,8 @@ export function SettingsOverview({
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                   {loading ? (
                     <>
-                      <Loader2 className="size-3 animate-spin" /> {t('loading')}
+                      <Skeleton className="h-3 w-24" />
+                      <span className="sr-only">{t('loading')}</span>
                     </>
                   ) : (
                     subtitle

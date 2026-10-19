@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/whatsapp/ui/dialog';
 import { useTranslations } from 'next-intl';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 
 interface DocSummary {
   id: string;
@@ -54,8 +55,11 @@ export function AiKnowledgeCard({
   const loadedAccountIdRef = useRef<string | null>(null);
   const t = useTranslations('Settings.aiKnowledge');
 
+  // Skeleton on the first load only; refetches after add / edit / delete refresh in place.
+  const hasLoadedRef = useRef(false);
+
   const fetchDocs = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const res = await fetch('/api/whatsapp/ai/knowledge');
       const data = await res.json();
@@ -64,6 +68,7 @@ export function AiKnowledgeCard({
     } catch {
       toast.error(t('loadFailed'));
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
     // `t` (next-intl) gets a new reference every render — including it
@@ -189,9 +194,14 @@ export function AiKnowledgeCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-          <div className="flex items-center py-4 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('loading')}
-          </div>
+          <SkeletonRegion label={t('loading')} className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="space-y-2 rounded-lg border border-border p-3">
+                <Skeleton className="h-4 w-48 max-w-full" />
+                <Skeleton className="h-3 w-full" />
+              </div>
+            ))}
+          </SkeletonRegion>
         ) : (
           <>
             {docs.length === 0 && editing === null && (

@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/whatsapp/ui/select';
-import { ArrowLeft, ArrowRight, Eye, ImageIcon, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, ImageIcon } from 'lucide-react';
+import { Skeleton } from '@/components/whatsapp/ui/skeleton';
 import { TemplatePreview } from '@/components/whatsapp/template-preview';
 import { PreviewImage } from '@/components/ImageLightbox';
 import { useTranslations } from 'next-intl';
@@ -421,8 +422,11 @@ export function Step3Personalize({
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <Eye className="h-4 w-4 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium text-foreground">{t('personalize.preview')}</p>
-          <span className="text-xs text-muted-foreground">{previewLabel}</span>
-          {loadingPreview && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden />}
+          {loadingPreview ? (
+            <Skeleton className="h-3.5 w-32" />
+          ) : (
+            <span className="text-xs text-muted-foreground">{previewLabel}</span>
+          )}
         </div>
         <TemplatePreview
           headerType={template.header_type}

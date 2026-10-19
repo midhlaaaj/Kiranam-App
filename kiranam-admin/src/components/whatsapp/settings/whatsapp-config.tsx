@@ -23,7 +23,7 @@ import { Label } from '@/components/whatsapp/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/whatsapp/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/whatsapp/ui/alert';
 import { SettingsPanelHead } from './settings-panel-head';
-import { SendLimitsCard } from './send-limits-card';
+import { SkeletonPanel, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import {
   Accordion,
@@ -97,8 +97,12 @@ export function WhatsAppConfig() {
       ? `${window.location.origin}/api/whatsapp/webhook`
       : '';
 
+  // Skeleton on the FIRST load only; refetches after a save / reset refresh the
+  // panel in place instead of swapping it for a skeleton and wiping the form.
+  const hasLoadedRef = useRef(false);
+
   const fetchConfig = useCallback(async (acctId: string) => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       // Load form values from Supabase (shows what's in DB).
       // Switched from `user_id` (which would only match the row's
@@ -164,6 +168,7 @@ export function WhatsAppConfig() {
       console.error('fetchConfig error:', err);
       toast.error('Failed to load WhatsApp configuration');
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, [supabase]);
@@ -387,9 +392,13 @@ export function WhatsAppConfig() {
           title={t("title")}
           description={t("description")}
         />
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-primary" />
-        </div>
+        <SkeletonRegion label="Loading WhatsApp settings" className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          <div className="space-y-6">
+            <SkeletonPanel fields={4} />
+            <SkeletonPanel fields={1} />
+          </div>
+          <SkeletonPanel fields={3} />
+        </SkeletonRegion>
       </section>
     );
   }
@@ -695,8 +704,6 @@ export function WhatsAppConfig() {
             </div>
           </CardContent>
         </Card>
-
-        {connectionStatus === 'connected' && <SendLimitsCard />}
 
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3">

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Check,
-  Loader2,
   X,
   ChevronDown,
   ChevronRight,
@@ -19,6 +18,7 @@ import type {
   AutomationLogStepResult,
 } from "@/types/whatsapp"
 import { Button } from "@/components/whatsapp/ui/button"
+import { Skeleton, SkeletonRegion } from "@/components/whatsapp/ui/skeleton"
 import { stepLabel, triggerEventLabel } from "@/lib/whatsapp/automations/labels"
 import { cn } from "@/lib/whatsapp/utils"
 import { formatRelative } from "@/lib/whatsapp/automations/trigger-meta"
@@ -79,10 +79,42 @@ export default function AutomationLogsPage({
     )
   }
 
-  if (!automation || logs === null) {
+  if (logs === null) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <SkeletonRegion label="Loading automation history" className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-md" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-56" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-elevation-md">
+              <Skeleton className="h-4 w-4 shrink-0" />
+              <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-40 max-w-full" />
+                <Skeleton className="h-3 w-56 max-w-full" />
+              </div>
+              <Skeleton className="h-3 w-14 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </SkeletonRegion>
+    )
+  }
+
+  // Loaded, but there is no such automation (deleted, or not yours): say so
+  // instead of leaving the skeleton up forever.
+  if (!automation) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{t("loadError")}</p>
+        <Button variant="outline" onClick={() => router.push("/whatsapp/automations")}>
+          {t("back")}
+        </Button>
       </div>
     )
   }

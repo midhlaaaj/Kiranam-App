@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/whatsapp/ui/select';
 import { Loader2, AlertTriangle } from 'lucide-react';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { useTranslations } from 'next-intl';
 
 // Common WhatsApp market dial codes. `phone` is stored/sent as
@@ -390,10 +391,11 @@ export function ContactForm({
           <div className="space-y-2">
             <Label className="text-muted-foreground">{t('tagsLabel')}</Label>
             {loadingTags ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="size-3 animate-spin" />
-                {t('loadingTags')}
-              </div>
+              <SkeletonRegion label={t('loadingTags')} className="flex gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-20 rounded-full" />
+                <Skeleton className="h-6 w-14 rounded-full" />
+              </SkeletonRegion>
             ) : tags.length === 0 ? (
               <p className="text-xs text-muted-foreground">
                 {t('noTagsAvailable')}

@@ -6,6 +6,7 @@ import { isMessageTemplate } from '@/lib/whatsapp/whatsapp/template-row-guard';
 import { fetchKiranamDetails, needsKiranamDetails } from '@/lib/whatsapp/broadcast-fields';
 import { fetchCustomValueIndex, resolveVariables, type VariableMapping } from '@/lib/whatsapp/broadcast-variables';
 import {
+  getOtpRecipientsLast24h,
   getSendLimits,
   planSend,
   recentlyMessagedContactIds,
@@ -82,7 +83,7 @@ export async function resumeQueuedBroadcasts(): Promise<ResumeResult[]> {
         continue;
       }
 
-      const allowance = remainingAllowance(limits, messaged);
+      const allowance = remainingAllowance(limits, messaged, await getOtpRecipientsLast24h(supabase));
       const { now: toSend, later: waiting } = planSend(pending, messaged, allowance);
       if (toSend.length === 0) break; // no allowance left for this account today
 

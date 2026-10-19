@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { resumeQueuedBroadcasts } from '@/lib/whatsapp/broadcast-resume';
 
 // Continues WhatsApp broadcasts that stopped at the daily sending limit, for
-// accounts with "Continue automatically" switched on (Settings → WhatsApp →
-// Sending limits). Triggered by Vercel Cron (vercel.json), which sends
+// accounts with "Continue automatically" switched on (on the Sending limits
+// page). Triggered by Vercel Cron (vercel.json), which sends
 // `Authorization: Bearer $CRON_SECRET`.
 export const maxDuration = 300;
 

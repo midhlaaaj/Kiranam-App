@@ -76,6 +76,9 @@ export function RegisterVolunteerForm({
     }
   }
 
+  // Reacts to the server action's result (toast, then reset the form on success) —
+  // this is the "sync with an external system" case, not derived state.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (state === lastState.current) return;
     lastState.current = state;
@@ -95,6 +98,7 @@ export function RegisterVolunteerForm({
       onDone?.();
     }
   }, [state, onDone]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function resetAfterUpgrade() {
     formRef.current?.reset();

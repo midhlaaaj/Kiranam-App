@@ -55,6 +55,7 @@ import { CustomFieldsManager } from '@/components/whatsapp/contacts/custom-field
 import { useCan } from '@/hooks/whatsapp/use-can';
 import { GatedButton } from '@/components/whatsapp/ui/gated-button';
 import { useTranslations } from 'next-intl';
+import { ContactRowsSkeleton } from '@/components/whatsapp/contacts/contacts-skeleton';
 
 const PAGE_SIZE = 25;
 
@@ -70,6 +71,8 @@ export default function ContactsPage() {
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
+  // The last list request failed (shown instead of a misleading "no contacts").
+  const [loadError, setLoadError] = useState(false);
   // What's typed vs. what's queried — debounced so typing a name doesn't
   // fire a request (and clear the selection) on every keystroke.
   const [searchInput, setSearchInput] = useState('');
@@ -136,6 +139,7 @@ export default function ContactsPage() {
   const fetchContacts = useCallback(async () => {
     const seq = ++fetchSeq.current;
     setLoading(true);
+    setLoadError(false);
     // The visible rows are about to change — drop any selection that
     // referred to the old page/search results so the bulk bar can't
     // act on rows the user can no longer see.
@@ -162,6 +166,7 @@ export default function ContactsPage() {
       if (seq !== fetchSeq.current) return; // superseded by a newer fetch
       if (error) {
         toast.error(t('toastFailedLoad'));
+        setLoadError(true);
         setLoading(false);
         return;
       }
@@ -184,6 +189,7 @@ export default function ContactsPage() {
       if (seq !== fetchSeq.current) return; // superseded by a newer fetch
       if (error) {
         toast.error(t('toastFailedLoad'));
+        setLoadError(true);
         setLoading(false);
         return;
       }
@@ -647,13 +653,18 @@ export default function ContactsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <TableRow key={i} className="border-border" aria-hidden>
-                  <TableCell colSpan={8}>
-                    <div className="h-5 animate-pulse rounded bg-muted" />
-                  </TableCell>
-                </TableRow>
-              ))
+              <ContactRowsSkeleton />
+            ) : loadError && contacts.length === 0 ? (
+              <TableRow className="border-border">
+                <TableCell colSpan={8} className="text-center py-12">
+                  <div role="alert" className="flex flex-col items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">Couldn&apos;t load contacts</p>
+                    <Button variant="outline" size="sm" onClick={() => void fetchContacts()}>
+                      Try again
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : contacts.length === 0 ? (
               <TableRow className="border-border">
                 <TableCell colSpan={8} className="text-center py-12">

@@ -15,6 +15,7 @@ import { GatedButton } from '@/components/whatsapp/ui/gated-button';
 import { getBroadcastStatus } from '@/lib/whatsapp/broadcast-status';
 import { templateDisplayName } from '@/lib/whatsapp/template-display';
 import { cn } from '@/lib/whatsapp/utils';
+import { Skeleton, SkeletonRegion, SkeletonTable } from '@/components/whatsapp/ui/skeleton';
 
 /** Poll cadence while any broadcast is sending (counts come from the
  * aggregate trigger in migration 003; we just re-read the snapshot). */
@@ -159,12 +160,14 @@ export default function BroadcastsPage() {
           </Button>
         </div>
       ) : broadcasts === null ? (
-        <div className="space-y-2" aria-busy="true" aria-label="Loading broadcasts">
-          <div className="h-9 w-80 animate-pulse rounded-full bg-muted" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/70" />
-          ))}
-        </div>
+        <SkeletonRegion label="Loading broadcasts" className="space-y-4">
+          {/* Same shape as the loaded page: status tabs + search, then the table. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Skeleton className="h-10 w-72 max-w-full rounded-full" />
+            <Skeleton className="h-9 w-full sm:w-64" />
+          </div>
+          <SkeletonTable rows={6} cols={6} />
+        </SkeletonRegion>
       ) : broadcasts.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-border bg-card shadow-elevation-md p-12 text-center">
           <Radio className="h-10 w-10 text-muted-foreground" aria-hidden />

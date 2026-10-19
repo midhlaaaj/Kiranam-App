@@ -33,6 +33,7 @@ import { Textarea } from '@/components/whatsapp/ui/textarea';
 import { Badge } from '@/components/whatsapp/ui/badge';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/whatsapp/ui/card';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { SettingsPanelHead } from './settings-panel-head';
 import {
   Dialog,
@@ -194,7 +195,10 @@ export function TemplateManager() {
   const supabase = createClient();
   const { user, loading: authLoading } = useAuth();
 
+  // `loading` is only the FIRST load (skeleton); later refetches after a save,
+  // delete or sync refresh the list in place without replacing the page.
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   // user_id → display name, for "Created by" on each card.
   const [creators, setCreators] = useState<Record<string, string>>({});
@@ -265,7 +269,7 @@ export function TemplateManager() {
   // broadcast template picker).
   async function fetchTemplates() {
     try {
-      setLoading(true);
+      setLoadError(false);
       const { data, error } = await supabase
         .from('message_templates')
         .select('*')
@@ -284,6 +288,7 @@ export function TemplateManager() {
       }
     } catch (err) {
       console.error('Failed to fetch templates:', err);
+      setLoadError(true);
       toast.error(t('toastLoadFailed'));
     } finally {
       setLoading(false);
@@ -552,14 +557,53 @@ export function TemplateManager() {
 
   if (loading) {
     return (
-      <div className="space-y-4" aria-busy="true" aria-label="Loading templates">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-muted" />
+      <SkeletonRegion label="Loading templates" className="space-y-4">
+        {/* Panel head: title + description on the left, Sync and New on the right */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <Skeleton className="h-6 w-40 max-w-full" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-9 w-36 max-w-full rounded-lg" />
+            <Skeleton className="h-9 w-32 max-w-full rounded-lg" />
+          </div>
+        </div>
+        {/* Status tabs + search */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Skeleton className="h-10 w-72 max-w-full rounded-full" />
+          <Skeleton className="h-9 w-full sm:w-64" />
+        </div>
+        {/* Template cards */}
         <div className="grid gap-3 xl:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-36 animate-pulse rounded-xl bg-muted/70" />
+            <div key={i} className="space-y-3 rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-44 min-w-0 max-w-[60%]" />
+                <Skeleton className="h-5 w-20 shrink-0 rounded-full" />
+              </div>
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-24" />
+            </div>
           ))}
         </div>
-      </div>
+      </SkeletonRegion>
+    );
+  }
+
+  // First load failed and there is nothing to show: say so, instead of the
+  // misleading "no templates yet" empty state.
+  if (loadError && templates.length === 0) {
+    return (
+      <Card>
+        <CardContent role="alert" className="flex flex-col items-center gap-3 py-12 text-center">
+          <p className="text-sm text-foreground">{t('toastLoadFailed')}</p>
+          <Button variant="outline" onClick={() => fetchTemplates()}>
+            Try again
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 

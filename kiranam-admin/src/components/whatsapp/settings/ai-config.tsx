@@ -39,6 +39,7 @@ import type { AiProvider } from '@/lib/whatsapp/ai/types';
 import type { AccountMember } from '@/types/whatsapp';
 import { fetchAccountMembers, memberLabel } from '@/lib/whatsapp/account/members';
 import { useTranslations } from 'next-intl';
+import { Skeleton, SkeletonPanel, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 
 const MASKED_KEY = '••••••••••••••••';
 
@@ -91,8 +92,11 @@ export function AiConfig() {
   // the loadedAccountIdRef pattern in whatsapp-config.tsx.
   const loadedAccountIdRef = useRef<string | null>(null);
 
+  // Skeleton on the first load only; the refetch after a save refreshes in place.
+  const hasLoadedRef = useRef(false);
+
   const fetchConfig = useCallback(async () => {
-    setLoading(true);
+    if (!hasLoadedRef.current) setLoading(true);
     try {
       const res = await fetch('/api/whatsapp/ai/config');
       const data = await res.json();
@@ -119,6 +123,7 @@ export function AiConfig() {
     } catch {
       toast.error(t('loadFailed'));
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
     // `t` (next-intl) gets a new reference every render — including it
@@ -244,11 +249,16 @@ export function AiConfig() {
   };
 
   if (loading || profileLoading) {
+    // (It used to show the "failed to load" message while loading.)
     return (
-      <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('loadFailed')} {/* Re-using label or a global one, wait, loading is better. Let's use useTranslations from overview or just hardcode Loading... actually I should add loading to aiConfig */}
-        {/* Wait, I didn't add loading to aiConfig. I'll just use loading. */}
-      </div>
+      <SkeletonRegion label="Loading AI settings" className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-40 max-w-full" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <SkeletonPanel fields={4} />
+        <SkeletonPanel fields={2} />
+      </SkeletonRegion>
     );
   }
 

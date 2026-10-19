@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Loader2,
   CircleCheck,
   CircleAlert,
   Clock,
@@ -21,6 +20,7 @@ import { flowEventLabel, nodeLabel } from "@/lib/whatsapp/automations/labels";
 import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/whatsapp/ui/badge";
+import { Skeleton, SkeletonRegion } from "@/components/whatsapp/ui/skeleton";
 import { cn } from "@/lib/whatsapp/utils";
 
 /**
@@ -101,6 +101,7 @@ export default function FlowRunsPage() {
   const params = useParams<{ id: string }>();
   const t = useTranslations("Flows.logs");
   const tEdit = useTranslations("Flows.edit");
+  const tList = useTranslations("Flows.list");
 
   const [flow, setFlow] = useState<{ id: string; name: string } | null>(null);
   const [runs, setRuns] = useState<RunRow[]>([]);
@@ -108,6 +109,8 @@ export default function FlowRunsPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [notFound, setNotFound] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!params.id) return;
@@ -134,6 +137,7 @@ export default function FlowRunsPage() {
         if (!cancelled) {
           console.error(err);
           toast.error(t("loadError"));
+          setLoadFailed(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -145,7 +149,7 @@ export default function FlowRunsPage() {
     // `t` (next-intl) gets a new reference every render — only used here
     // for an error-message string, not worth retriggering the fetch over.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [params.id, reloadKey]);
 
   function toggle(runId: string) {
     setExpanded((prev) => {
@@ -158,8 +162,41 @@ export default function FlowRunsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <SkeletonRegion label="Loading flow runs" className="mx-auto max-w-4xl p-6">
+        <Skeleton className="mb-3 h-3 w-32" />
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="mt-2 h-4 w-80 max-w-full" />
+        <div className="mt-6 flex flex-col gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3.5">
+              <Skeleton className="h-4 w-4 shrink-0" />
+              <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-40 max-w-full" />
+                <Skeleton className="h-3 w-56 max-w-full" />
+              </div>
+              <Skeleton className="h-3 w-14 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </SkeletonRegion>
+    );
+  }
+  if (loadFailed) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <p className="text-sm text-destructive">{t("loadError")}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setLoadFailed(false);
+            setLoading(true);
+            setReloadKey((k) => k + 1);
+          }}
+          className="text-sm text-primary hover:opacity-80"
+        >
+          {tList("retry")}
+        </button>
       </div>
     );
   }

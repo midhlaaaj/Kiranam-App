@@ -3,6 +3,7 @@
 import { Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 
+import { AutomationBuilderSkeleton } from "@/components/whatsapp/automations/builder-skeleton"
 import {
   AutomationBuilder,
   type BuilderInitial,
@@ -16,7 +17,7 @@ import type { AutomationStepType, AutomationTriggerType } from "@/types/whatsapp
 // component reads the `?template=` query string.
 export default function NewAutomationPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<AutomationBuilderSkeleton />}>
       <NewAutomationPageInner />
     </Suspense>
   )

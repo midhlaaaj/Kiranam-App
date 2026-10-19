@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, Loader2, Send } from 'lucide-react';
@@ -79,7 +80,7 @@ export function Step4ScheduleSend({
   const [count, setCount] = useState<{ value: number; key: string } | null>(null);
   const [tagNames, setTagNames] = useState<Record<string, string>>({});
   const rate = useCostEstimate(template.category);
-  // Today's sending allowance (Settings → WhatsApp → Sending limits).
+  // Today's sending allowance (the Sending limits page).
   const [allowance, setAllowance] = useState<{ remaining: number | null; autoResume: boolean } | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -198,9 +199,9 @@ export function Step4ScheduleSend({
           <p className="text-sm font-medium text-foreground">3. Estimated cost</p>
           <p className="mt-1 text-sm text-foreground">
             {rate === null || recipients === null ? (
-              <span className="inline-flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> Estimating…
-              </span>
+              <SkeletonRegion label="Estimating the cost" className="inline-block">
+                <Skeleton className="h-4 w-56 max-w-full" />
+              </SkeletonRegion>
             ) : rate === 'unavailable' ? (
               <span className="text-muted-foreground">
                 Meta bills each delivered {template.category.toLowerCase()} message to your WhatsApp account. There isn’t

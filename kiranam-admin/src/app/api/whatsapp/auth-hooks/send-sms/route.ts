@@ -116,5 +116,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'send_failed' }, { status: 502 })
   }
 
+  // Count it toward the daily WhatsApp allowance (Settings → Sending limits).
+  // Never let bookkeeping fail a login.
+  try {
+    await supabaseAdmin().rpc('log_otp_send', { p_phone: phone })
+  } catch (err) {
+    console.warn('[send-sms-hook] could not log OTP send', err)
+  }
+
   return NextResponse.json({})
 }

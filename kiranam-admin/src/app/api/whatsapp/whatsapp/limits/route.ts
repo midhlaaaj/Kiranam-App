@@ -4,13 +4,15 @@ import { hasMinRole, isAccountRole } from '@/lib/whatsapp/auth/roles'
 import { decrypt } from '@/lib/whatsapp/whatsapp/encryption'
 import { META_API_BASE } from '@/lib/whatsapp/whatsapp/meta-api'
 import {
+  effectiveReserve,
+  getOtpRecipientsLast24h,
   getSendLimits,
   recentlyMessagedContactIds,
   remainingAllowance,
   tierToLimit,
 } from '@/lib/whatsapp/send-limits'
 
-// Settings → WhatsApp → "Sending limits".
+// the Sending limits page (/whatsapp/sending-limits).
 //   GET  → saved limits + how many people were messaged in the last 24h
 //   PUT  → save cap / reserve / auto-resume (admins and owners)
 //   POST → { action: 'check_meta' } read the current tier from Meta
@@ -38,11 +40,14 @@ async function status(supabase: Awaited<ReturnType<typeof createClient>>, accoun
   const limits = await getSendLimits(supabase, accountId)
   if (!limits) return null
   const used = await recentlyMessagedContactIds(supabase, accountId)
+  const otpsLast24h = await getOtpRecipientsLast24h(supabase)
   return {
     ...limits,
     metaLimit: tierToLimit(limits.metaTier),
     messagedLast24h: used.size,
-    remaining: remainingAllowance(limits, used),
+    otpsLast24h,
+    effectiveReserve: effectiveReserve(limits, otpsLast24h),
+    remaining: remainingAllowance(limits, used, otpsLast24h),
   }
 }
 

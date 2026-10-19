@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { cn } from "@/lib/whatsapp/utils";
 import { useAuth } from "@/hooks/whatsapp/use-auth";
 import { useTotalUnread } from "@/hooks/whatsapp/use-total-unread";
+import { Skeleton } from "@/components/whatsapp/ui/skeleton";
 import { useUnreadNotifications } from "@/hooks/whatsapp/use-unread-notifications";
 import {
   ArrowLeft,
@@ -26,6 +27,7 @@ import {
   Workflow,
   X,
   Zap,
+  Gauge,
 } from "lucide-react";
 
 // wacrm is served from this same Next.js app (under /whatsapp), sharing
@@ -96,6 +98,7 @@ const navItems: NavItem[] = [
   { href: "/whatsapp/notifications", labelKey: "notifications", icon: Bell },
   { href: "/whatsapp/contacts", labelKey: "contacts", icon: Users },
   { href: "/whatsapp/broadcasts", labelKey: "broadcasts", icon: Radio },
+  { href: "/whatsapp/sending-limits", labelKey: "sendingLimits", icon: Gauge },
   { href: "/whatsapp/templates", labelKey: "templates", icon: FileText },
   { href: "/whatsapp/automations", labelKey: "automations", icon: Zap },
   { href: "/whatsapp/flows", labelKey: "flows", icon: Workflow },
@@ -362,22 +365,36 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             href={`${ADMIN_PANEL_URL.replace(/\/$/, "")}/settings/account`}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/60"
           >
-            <Avatar className="size-8 shrink-0">
-              {profile?.avatar_url ? (
-                <AvatarImage src={profile.avatar_url} alt="" />
-              ) : null}
-              <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
-                {profile?.full_name?.charAt(0)?.toUpperCase() ??
-                  profile?.email?.charAt(0)?.toUpperCase() ??
-                  "U"}
-              </AvatarFallback>
-            </Avatar>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium text-foreground">
-                {profile?.full_name ?? t("defaultUser")}
-              </span>
-              <span className="block truncate text-xs text-muted-foreground">{profile?.email ?? ""}</span>
-            </span>
+            {profileLoading && !profile ? (
+              // Hold the chip's shape until the profile arrives instead of
+              // flashing the "U" / "User" placeholders and then swapping.
+              <>
+                <Skeleton className="size-8 shrink-0 rounded-full" />
+                <span className="min-w-0 flex-1 space-y-1.5" role="status" aria-label="Loading profile">
+                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </span>
+              </>
+            ) : (
+              <>
+                <Avatar className="size-8 shrink-0">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt="" />
+                  ) : null}
+                  <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
+                    {profile?.full_name?.charAt(0)?.toUpperCase() ??
+                      profile?.email?.charAt(0)?.toUpperCase() ??
+                      "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-foreground">
+                    {profile?.full_name ?? t("defaultUser")}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">{profile?.email ?? ""}</span>
+                </span>
+              </>
+            )}
           </a>
         </div>
         {/* Log out sits at the very bottom, as in the admin sidebar. The

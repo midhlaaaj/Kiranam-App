@@ -25,6 +25,7 @@ import {
 } from "@/lib/whatsapp/whatsapp/interactive";
 import type { QuickReply, QuickReplyKind } from "@/types/whatsapp";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Skeleton, SkeletonRegion } from "@/components/whatsapp/ui/skeleton";
 
 interface DraftState {
   id?: string;
@@ -45,16 +46,22 @@ function emptyDraft(): DraftState {
 
 export function QuickRepliesManager() {
   const [items, setItems] = useState<QuickReply[]>([]);
+  // Skeleton on the first load only; reloads after a save / delete refresh in place.
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch("/api/whatsapp/quick-replies", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) setItems((data.quick_replies as QuickReply[]) ?? []);
+      if (res.ok) {
+        setItems((data.quick_replies as QuickReply[]) ?? []);
+        setLoadError(false);
+      } else setLoadError(true);
+    } catch {
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -140,8 +147,24 @@ export function QuickRepliesManager() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-10">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <SkeletonRegion label="Loading quick replies" className="flex flex-col gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-card p-3">
+              <Skeleton className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-40 max-w-full" />
+                <Skeleton className="h-3 w-3/4" />
+              </div>
+              <Skeleton className="h-7 w-16 shrink-0" />
+            </div>
+          ))}
+        </SkeletonRegion>
+      ) : loadError && items.length === 0 ? (
+        <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border border-border py-10 text-center">
+          <p className="text-sm text-foreground">Could not load quick replies.</p>
+          <Button variant="outline" onClick={() => void load()}>
+            Try again
+          </Button>
         </div>
       ) : items.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground">

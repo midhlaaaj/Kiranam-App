@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/whatsapp/ui/button";
 import { cn } from "@/lib/whatsapp/utils";
 import { toast } from "sonner";
+import { Skeleton, SkeletonRegion } from "@/components/whatsapp/ui/skeleton";
 
 // Icon per notification type. Only one type exists today
 // (conversation_assigned) but this keeps future types a one-line add.
@@ -19,7 +20,7 @@ const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { accountId } = useAuth();
+  const { accountId, loading: authLoading, profileLoading } = useAuth();
   const [notifications, setNotifications] = useState<Notification[] | null>(
     null,
   );
@@ -39,6 +40,9 @@ export default function NotificationsPage() {
       setError(fetchErr.message);
       return;
     }
+    // A successful (re)load clears an earlier failure — without this, "Try again"
+    // kept showing the old error even after the data came back.
+    setError(null);
     setNotifications((data ?? []) as Notification[]);
   }, [accountId]);
 
@@ -141,10 +145,13 @@ export default function NotificationsPage() {
     }
   }, [unreadIds.length, load]);
 
-  if (error) {
+  // Auth finished but there's no account to load alerts for: say so, don't
+  // leave the skeleton up forever.
+  const noAccount = !authLoading && !profileLoading && !accountId
+  if (error || noAccount) {
     return (
-      <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-destructive">{error}</p>
+      <div role="alert" className="flex h-64 flex-col items-center justify-center gap-2">
+        <p className="text-sm text-destructive">{error ?? "Your profile isn't linked to an account."}</p>
         <Button variant="outline" onClick={() => load()}>
           Try again
         </Button>
@@ -154,10 +161,28 @@ export default function NotificationsPage() {
 
   if (notifications === null) {
     return (
-      <div className="space-y-2" aria-busy="true" aria-label="Loading alerts">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-16 animate-pulse rounded-xl bg-muted/70" />
-        ))}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Alerts</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Conversations teammates assign to you. New customer messages show in the Inbox.
+            </p>
+          </div>
+          <Skeleton className="h-8 w-36 rounded-lg" />
+        </div>
+        <SkeletonRegion label="Loading alerts" className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+              <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-2/3" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          ))}
+        </SkeletonRegion>
       </div>
     );
   }

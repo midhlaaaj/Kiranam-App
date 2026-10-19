@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { useTranslations } from "next-intl";
 
 import { FlowEditorShell } from "@/components/whatsapp/flows/flow-editor-shell";
+import { FlowEditorSkeleton } from "@/components/whatsapp/flows/editor-skeleton";
 import type { FlowRow, FlowNodeRow } from "@/lib/whatsapp/flows/types";
 
 /**
@@ -26,11 +26,14 @@ export default function FlowEditorPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const t = useTranslations("Flows.edit");
+  const tList = useTranslations("Flows.list");
 
   const [flow, setFlow] = useState<FlowRow | null>(null);
   const [nodes, setNodes] = useState<FlowNodeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!params.id) return;
@@ -55,6 +58,8 @@ export default function FlowEditorPage() {
         if (!cancelled) {
           console.error(err);
           toast.error(t("loadError"));
+          // A failed load is not "flow not found" - offer a retry instead.
+          setLoadFailed(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -66,12 +71,24 @@ export default function FlowEditorPage() {
     // `t` (next-intl) gets a new reference every render — only used here
     // for an error-message string, not worth retriggering the fetch over.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [params.id, reloadKey]);
 
-  if (loading) {
+  if (loading) return <FlowEditorSkeleton />;
+  if (loadFailed) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <p className="text-sm text-destructive">{t("loadError")}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setLoadFailed(false);
+            setLoading(true);
+            setReloadKey((k) => k + 1);
+          }}
+          className="text-sm text-primary hover:opacity-80"
+        >
+          {tList("retry")}
+        </button>
       </div>
     );
   }

@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/whatsapp/ui/dropdown-menu";
 import { ScrollArea } from "@/components/whatsapp/ui/scroll-area";
+import { ConversationListSkeleton } from "./inbox-skeleton";
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -91,6 +92,8 @@ export function ConversationList({
   // user_id → name, for the assignee chip on each row.
   const [agents, setAgents] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   // Contact-based filters (issue #272). Tags use OR logic (a conversation
   // matches if its contact carries any selected tag), consistent with
   // Broadcast audience filtering. Company is an exact match on the field.
@@ -135,10 +138,12 @@ export function ConversationList({
           hint: error.hint,
           code: error.code,
         });
+        setLoadError(true);
         setLoading(false);
         return;
       }
 
+      setLoadError(false);
       onConversationsLoadedRef.current(normalizeConversations(data ?? []));
       setLoading(false);
     })();
@@ -149,7 +154,7 @@ export function ConversationList({
     // `resyncToken` is included so the parent can force a refetch when
     // the realtime channel reconnects or the tab regains focus — catches
     // up on any events sent while the WS was disconnected or throttled.
-  }, [resyncToken]);
+  }, [resyncToken, reloadKey]);
 
   // Tag definitions for the filter picker — loaded once so labels/colours
   // stay stable regardless of which conversations happen to be loaded.
@@ -419,16 +424,21 @@ export function ConversationList({
           parent's overflow-hidden with no scrollbar (issue #229). */}
       <ScrollArea className="min-h-0 flex-1">
         {loading ? (
-          <div aria-busy="true" aria-label="Loading conversations">
-            {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="flex items-start gap-3 px-3 py-3">
-                <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-muted" />
-                <div className="flex-1 space-y-2 pt-1">
-                  <div className="h-3 w-2/3 animate-pulse rounded bg-muted" />
-                  <div className="h-3 w-full animate-pulse rounded bg-muted/70" />
-                </div>
-              </div>
-            ))}
+          <ConversationListSkeleton />
+        ) : loadError && conversations.length === 0 ? (
+          <div role="alert" className="flex flex-col items-center gap-2 px-4 py-12 text-center">
+            <p className="text-sm font-medium text-foreground">Couldn&apos;t load conversations</p>
+            <button
+              type="button"
+              onClick={() => {
+                setLoadError(false);
+                setLoading(true);
+                setReloadKey((k) => k + 1);
+              }}
+              className="text-xs font-semibold text-foreground underline underline-offset-2"
+            >
+              Try again
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">

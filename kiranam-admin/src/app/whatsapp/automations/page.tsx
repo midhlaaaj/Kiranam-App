@@ -36,6 +36,7 @@ import {
 import { AUTOMATION_TEMPLATES, type TemplateSlug } from "@/lib/whatsapp/automations/templates"
 import { triggerMeta, formatRelative } from "@/lib/whatsapp/automations/trigger-meta"
 import { cn } from "@/lib/whatsapp/utils"
+import { Skeleton, SkeletonPageHeader, SkeletonRegion } from "@/components/whatsapp/ui/skeleton"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 
 const TEMPLATE_ORDER: TemplateSlug[] = [
@@ -62,6 +63,9 @@ export default function AutomationsPage() {
   const [deleting, setDeleting] = useState(false)
 
   async function load() {
+    // A retry starts from a clean slate: clear the error and show the skeleton again.
+    setError(null)
+    setAutomations(null)
     try {
       const supabase = createClient()
       const { data, error: fetchErr } = await supabase
@@ -150,13 +154,32 @@ export default function AutomationsPage() {
   }
 
   if (automations === null) {
+    // Same structure as the loaded page: header + action, template cards, list.
     return (
-      <div className="space-y-3" aria-busy="true" aria-label="Loading automations">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-muted" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-xl bg-muted/70" />
-        ))}
-      </div>
+      <SkeletonRegion label="Loading automations" className="space-y-6">
+        <SkeletonPageHeader withAction />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border bg-card p-4 shadow-elevation-md">
+              <Skeleton className="mb-3 h-9 w-9 rounded-lg" />
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="mt-2 h-3 w-full" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 shadow-elevation-md">
+              <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-48 max-w-full" />
+                <Skeleton className="h-3 w-72 max-w-full" />
+              </div>
+              <Skeleton className="h-5 w-9 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </SkeletonRegion>
     )
   }
 

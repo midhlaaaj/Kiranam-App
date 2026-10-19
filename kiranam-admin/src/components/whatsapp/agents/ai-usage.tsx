@@ -19,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/whatsapp/ui/select';
-import { Skeleton } from '@/components/whatsapp/dashboard/skeleton';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { BarChart } from '@/components/whatsapp/tremor/bar-chart';
 import { formatCompactNumber } from '@/lib/whatsapp/currency';
+import { Button } from '@/components/whatsapp/ui/button';
 import { format, parseISO } from 'date-fns';
 
 interface UsageResponse {
@@ -60,10 +61,12 @@ export function AiUsageCard() {
   const [days, setDays] = useState<number>(30);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<UsageResponse | null>(null);
+  const [failed, setFailed] = useState(false);
   const loadedRef = useRef<string | null>(null);
 
   const fetchUsage = useCallback(async (windowDays: number) => {
     setLoading(true);
+    setFailed(false);
     try {
       const res = await fetch(`/api/whatsapp/ai/usage?days=${windowDays}`, {
         cache: 'no-store',
@@ -72,12 +75,14 @@ export function AiUsageCard() {
       if (!res.ok) {
         toast.error(json?.error ?? 'Failed to load usage');
         setData(null);
+        setFailed(true);
         return;
       }
       setData(json as UsageResponse);
     } catch {
       toast.error('Failed to load usage');
       setData(null);
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -130,8 +135,26 @@ export function AiUsageCard() {
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        {loading || !data ? (
-          <Skeleton className="h-[220px] w-full" />
+        {loading ? (
+          <SkeletonRegion label="Loading token usage" className="space-y-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-border p-3">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="mt-2 h-6 w-14" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="h-[220px] w-full" />
+          </SkeletonRegion>
+        ) : failed || !data ? (
+          // Previously a failed fetch left the skeleton up forever.
+          <div className="flex flex-col items-center justify-center gap-3 py-10 text-center text-sm text-muted-foreground">
+            <p>Couldn’t load token usage.</p>
+            <Button variant="outline" size="sm" onClick={() => void fetchUsage(days)}>
+              Try again
+            </Button>
+          </div>
         ) : !hasSpend ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground">
             <BarChart3 className="h-8 w-8 opacity-40" />

@@ -100,66 +100,96 @@ export interface GetConversationAnalyticsArgs {
   end: number
 }
 
-interface MetaConversationAnalyticsDataPoint {
-  start: number
-  end: number
-  conversation: number
-  cost?: number
+interface MetaAnalyticsDataPoint {
+  /** Pricing analytics (per-message billing, since July 2025). */
+  volume?: number
+  pricing_category?: string
+  /** Conversation analytics (the older per-conversation billing). */
+  conversation?: number
   conversation_category?: string
+  cost?: number
 }
 
-interface MetaConversationAnalyticsResponse {
+interface MetaAnalyticsResponse {
   currency?: string
-  conversation_analytics?: {
-    data?: Array<{ data_points?: MetaConversationAnalyticsDataPoint[] }>
-  }
+  pricing_analytics?: { data?: Array<{ data_points?: MetaAnalyticsDataPoint[] }> }
+  conversation_analytics?: { data?: Array<{ data_points?: MetaAnalyticsDataPoint[] }> }
 }
 
-/**
- * Pulls WABA-level conversation volume + spend for `[start, end)` from
- * Meta's Conversation Analytics field (`GET /{waba-id}?fields=conversation_analytics...`).
- * Requires the access token to carry `whatsapp_business_management`.
- */
-export async function getConversationAnalytics(
-  args: GetConversationAnalyticsArgs
-): Promise<ConversationAnalyticsSummary> {
-  const { wabaId, accessToken, start, end } = args
-  const fields =
-    `currency,conversation_analytics.start(${start}).end(${end})` +
-    `.granularity(DAILY).dimensions(["conversation_category"])`
-  const url = `${META_API_BASE}/${wabaId}?fields=${encodeURIComponent(fields)}`
-  const response = await fetch(url, {
+/** AUTHENTICATION_INTERNATIONAL → authentication, MARKETING_LITE → marketing, … */
+function normaliseCategory(raw: string | undefined): string {
+  const base = (raw ?? 'unknown').toLowerCase().replace(/_(international|lite)$/, '')
+  return base || 'unknown'
+}
+
+async function fetchAnalytics(
+  wabaId: string,
+  accessToken: string,
+  fieldsExpr: string
+): Promise<MetaAnalyticsResponse> {
+  const response = await fetch(`${META_API_BASE}/${wabaId}?fields=${encodeURIComponent(fieldsExpr)}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
-  if (!response.ok) {
-    await throwMetaError(response, 'Failed to fetch conversation analytics')
-  }
+  if (!response.ok) await throwMetaError(response, 'Failed to fetch WhatsApp analytics')
+  return (await response.json()) as MetaAnalyticsResponse
+}
 
-  const data = (await response.json()) as MetaConversationAnalyticsResponse
-  const points =
-    data.conversation_analytics?.data?.flatMap((d) => d.data_points ?? []) ?? []
-
+function summarise(currency: string | undefined, points: MetaAnalyticsDataPoint[]): ConversationAnalyticsSummary {
   const byCategoryMap = new Map<string, { conversations: number; cost: number }>()
   for (const p of points) {
-    const key = p.conversation_category ?? 'unknown'
+    const key = normaliseCategory(p.pricing_category ?? p.conversation_category)
     const bucket = byCategoryMap.get(key) ?? { conversations: 0, cost: 0 }
-    bucket.conversations += p.conversation ?? 0
+    bucket.conversations += p.volume ?? p.conversation ?? 0
     bucket.cost += p.cost ?? 0
     byCategoryMap.set(key, bucket)
   }
-
   const byCategory = [...byCategoryMap.entries()].map(([category, v]) => ({
     category,
     conversations: v.conversations,
     cost: v.cost,
   }))
-
   return {
-    currency: data.currency ?? null,
+    currency: currency ?? null,
     totalConversations: byCategory.reduce((sum, c) => sum + c.conversations, 0),
     totalCost: byCategory.reduce((sum, c) => sum + c.cost, 0),
     byCategory,
   }
+}
+
+/**
+ * Pulls WABA-level message volume + spend for `[start, end)`.
+ *
+ * Since 1 July 2025 WhatsApp bills per message, and that shows up in the
+ * Pricing Analytics field (`pricing_analytics`, metrics VOLUME + COST). The
+ * older Conversation Analytics field (`conversation_analytics`) only reports
+ * the retired per-conversation model, so on its own it stays at zero — it's
+ * kept as a fallback for accounts that still have data there.
+ * Requires the access token to carry `whatsapp_business_management`.
+ * (`conversations` in the result = billable messages for pricing analytics.)
+ */
+export async function getConversationAnalytics(
+  args: GetConversationAnalyticsArgs
+): Promise<ConversationAnalyticsSummary> {
+  const { wabaId, accessToken, start, end } = args
+
+  const pricing = await fetchAnalytics(
+    wabaId,
+    accessToken,
+    `currency,pricing_analytics.start(${start}).end(${end}).granularity(DAILY)` +
+      `.metric_types(["COST","VOLUME"]).dimensions(["PRICING_CATEGORY"])`
+  )
+  const pricingPoints = pricing.pricing_analytics?.data?.flatMap((d) => d.data_points ?? []) ?? []
+  const fromPricing = summarise(pricing.currency, pricingPoints)
+  if (fromPricing.totalConversations > 0 || fromPricing.totalCost > 0) return fromPricing
+
+  const legacy = await fetchAnalytics(
+    wabaId,
+    accessToken,
+    `currency,conversation_analytics.start(${start}).end(${end})` +
+      `.granularity(DAILY).dimensions(["conversation_category"])`
+  ).catch(() => null)
+  const legacyPoints = legacy?.conversation_analytics?.data?.flatMap((d) => d.data_points ?? []) ?? []
+  return legacyPoints.length > 0 ? summarise(legacy?.currency ?? pricing.currency, legacyPoints) : fromPricing
 }
 
 // ============================================================

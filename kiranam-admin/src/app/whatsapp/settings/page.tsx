@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton, SkeletonPanel, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { Suspense, useMemo, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -27,9 +28,28 @@ import {
 // the boundary; the inner component reads the query string.
 export default function SettingsPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<SettingsPageSkeleton />}>
       <SettingsPageInner />
     </Suspense>
+  );
+}
+
+/** Shown while the query string resolves: same title, rail and panel layout as the real page. */
+function SettingsPageSkeleton() {
+  return (
+    <SkeletonRegion label="Loading settings">
+      <Skeleton className="h-8 w-40 max-w-full" />
+      <Skeleton className="mt-2 h-4 w-72 max-w-full" />
+      <div className="mt-6 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:items-start">
+        {/* Mirrors the real rail: a scrolling row of pills below lg, a column from lg. */}
+        <div className="flex gap-1 overflow-hidden lg:flex-col lg:gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-24 shrink-0 rounded-lg lg:w-full" />
+          ))}
+        </div>
+        <SkeletonPanel fields={4} />
+      </div>
+    </SkeletonRegion>
   );
 }
 

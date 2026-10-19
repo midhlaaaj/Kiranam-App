@@ -66,10 +66,28 @@ export async function recentlyMessagedContactIds(supabase: Supabase, accountId: 
   }
 }
 
+/**
+ * Distinct people sent a login code in the last 24 hours (see migration 038).
+ * 0 when the counter isn't available, so sending never breaks over it.
+ */
+export async function getOtpRecipientsLast24h(supabase: Supabase): Promise<number> {
+  const { data, error } = await supabase.rpc('otp_recipients_last_24h');
+  return error || typeof data !== 'number' ? 0 : data;
+}
+
+/** The reserve actually held back: the configured one, or more if login codes already used more. */
+export function effectiveReserve(limits: SendLimits, otpRecipients: number): number {
+  return Math.max(limits.reserve, otpRecipients);
+}
+
 /** How many NEW people a broadcast may still reach right now (null = unlimited). */
-export function remainingAllowance(limits: SendLimits | null, alreadyMessaged: Set<string>): number | null {
+export function remainingAllowance(
+  limits: SendLimits | null,
+  alreadyMessaged: Set<string>,
+  otpRecipients = 0
+): number | null {
   if (!limits || limits.cap === null) return null;
-  return Math.max(0, limits.cap - limits.reserve - alreadyMessaged.size);
+  return Math.max(0, limits.cap - effectiveReserve(limits, otpRecipients) - alreadyMessaged.size);
 }
 
 /**

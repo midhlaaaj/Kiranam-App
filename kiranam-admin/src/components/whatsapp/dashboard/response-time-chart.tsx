@@ -5,11 +5,15 @@ import { DOW_SHORT_MON_FIRST } from '@/lib/whatsapp/dashboard/date-utils'
 import type { ResponseTimeSummary } from '@/lib/whatsapp/dashboard/types'
 import { BarChart } from '@/components/whatsapp/tremor/bar-chart'
 import { EmptyState } from './empty-state'
-import { Skeleton } from './skeleton'
+import { ErrorState } from './error-state'
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton'
 
 interface ResponseTimeChartProps {
   data: ResponseTimeSummary | null
   loading: boolean
+  /** The request failed (data stays null). */
+  error?: boolean
+  onRetry?: () => void
   /** Minutes. Surfaced as a "target" pill in the header. The
    *  hand-rolled SVG version drew this as a horizontal dashed
    *  line on the chart; Tremor BarChart doesn't expose Recharts
@@ -30,6 +34,8 @@ const CATEGORY = 'Avg minutes'
 export function ResponseTimeChart({
   data,
   loading,
+  error,
+  onRetry,
   thresholdMinutes = 5,
 }: ResponseTimeChartProps) {
   const t = useTranslations('Dashboard.responseTimeChart')
@@ -78,8 +84,12 @@ export function ResponseTimeChart({
       </header>
 
       <div className="p-5">
-        {loading || !data ? (
-          <Skeleton className="h-[260px] w-full" />
+        {loading ? (
+          <SkeletonRegion label="Loading response times">
+            <Skeleton className="h-[260px] w-full" />
+          </SkeletonRegion>
+        ) : error || !data ? (
+          <ErrorState className="h-[260px]" onRetry={onRetry} />
         ) : !hasData ? (
           <EmptyState
             icon={Clock}

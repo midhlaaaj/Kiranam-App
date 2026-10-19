@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/whatsapp/use-auth";
 import type { Contact, ContactNote, Tag } from "@/types/whatsapp";
 import { Button } from "@/components/whatsapp/ui/button";
 import { ScrollArea } from "@/components/whatsapp/ui/scroll-area";
+import { Skeleton, SkeletonRegion } from "@/components/whatsapp/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,54 +51,64 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
   const [tags, setTags] = useState<(Tag & { contact_tag_id: string })[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [kiranam, setKiranam] = useState<KiranamContext | null | undefined>(undefined);
+  // Id of the contact whose notes/tags/Kiranam details have been loaded. Until it
+  // matches the open contact we show skeletons instead of the previous contact's
+  // data (or a misleading "No tags").
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
 
   const fetchContactData = useCallback(async () => {
     if (!contact) return;
-    const supabase = createClient();
-    const [notesRes, tagsRes, allTagsRes, linkRes] = await Promise.all([
-      supabase.from("contact_notes").select("*").eq("contact_id", contact.id).order("created_at", { ascending: false }),
-      supabase.from("contact_tags").select("id, tag_id, tags(*)").eq("contact_id", contact.id),
-      supabase.from("tags").select("*").order("name"),
-      supabase.from("contacts").select("kiranam_profile_id").eq("id", contact.id).maybeSingle(),
-    ]);
+    try {
+      const supabase = createClient();
+      const [notesRes, tagsRes, allTagsRes, linkRes] = await Promise.all([
+        supabase.from("contact_notes").select("*").eq("contact_id", contact.id).order("created_at", { ascending: false }),
+        supabase.from("contact_tags").select("id, tag_id, tags(*)").eq("contact_id", contact.id),
+        supabase.from("tags").select("*").order("name"),
+        supabase.from("contacts").select("kiranam_profile_id").eq("id", contact.id).maybeSingle(),
+      ]);
 
-    if (notesRes.data) setNotes(notesRes.data);
-    if (allTagsRes.data) setAllTags(allTagsRes.data as Tag[]);
-    if (tagsRes.data) {
-      setTags(
-        tagsRes.data
-          .filter((ct: Record<string, unknown>) => ct.tags)
-          .map((ct: Record<string, unknown>) => ({ ...(ct.tags as Tag), contact_tag_id: ct.id as string })),
-      );
-    }
+      if (notesRes.data) setNotes(notesRes.data);
+      if (allTagsRes.data) setAllTags(allTagsRes.data as Tag[]);
+      if (tagsRes.data) {
+        setTags(
+          tagsRes.data
+            .filter((ct: Record<string, unknown>) => ct.tags)
+            .map((ct: Record<string, unknown>) => ({ ...(ct.tags as Tag), contact_tag_id: ct.id as string })),
+        );
+      }
 
-    // Kiranam context for synced contacts: who they are to the charity.
-    const profileId = (linkRes.data?.kiranam_profile_id as string | null) ?? null;
-    if (!profileId) {
-      setKiranam(null);
-      return;
+      // Kiranam context for synced contacts: who they are to the charity.
+      const profileId = (linkRes.data?.kiranam_profile_id as string | null) ?? null;
+      if (!profileId) {
+        setKiranam(null);
+        return;
+      }
+      const [profileRes, commitmentRes, giftRes] = await Promise.all([
+        supabase.from("profiles").select("role").eq("id", profileId).maybeSingle(),
+        supabase.from("commitments").select("monthly_amount, autopay_enabled").eq("contributor_id", profileId).maybeSingle(),
+        supabase
+          .from("contributions")
+          .select("amount, created_at")
+          .eq("contributor_id", profileId)
+          .eq("status", "success")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      setKiranam({
+        profileId,
+        role: (profileRes.data?.role as string | undefined) ?? null,
+        monthlyAmount: commitmentRes.data ? Number(commitmentRes.data.monthly_amount) : null,
+        autopay: commitmentRes.data ? Boolean(commitmentRes.data.autopay_enabled) : null,
+        lastGift: giftRes.data ? { amount: Number(giftRes.data.amount), at: giftRes.data.created_at as string } : null,
+      });
+    } finally {
+      // Also on failure, so a failed request ends in the (empty) real UI
+      // rather than skeletons forever.
+      setLoadedFor(contact.id);
     }
-    const [profileRes, commitmentRes, giftRes] = await Promise.all([
-      supabase.from("profiles").select("role").eq("id", profileId).maybeSingle(),
-      supabase.from("commitments").select("monthly_amount, autopay_enabled").eq("contributor_id", profileId).maybeSingle(),
-      supabase
-        .from("contributions")
-        .select("amount, created_at")
-        .eq("contributor_id", profileId)
-        .eq("status", "success")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
-    setKiranam({
-      profileId,
-      role: (profileRes.data?.role as string | undefined) ?? null,
-      monthlyAmount: commitmentRes.data ? Number(commitmentRes.data.monthly_amount) : null,
-      autopay: commitmentRes.data ? Boolean(commitmentRes.data.autopay_enabled) : null,
-      lastGift: giftRes.data ? { amount: Number(giftRes.data.amount), at: giftRes.data.created_at as string } : null,
-    });
   }, [contact]);
 
   useEffect(() => {
@@ -161,6 +172,7 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
     );
   }
 
+  const ready = loadedFor === contact.id;
   const displayName = contact.name || contact.phone;
   const optedOut = contact.whatsapp_consent === false;
   const addableTags = allTags.filter((tg) => !tags.some((x) => x.id === tg.id));
@@ -219,7 +231,14 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
             )}
           </div>
 
-          {kiranam !== undefined && (
+          {!ready ? (
+            <SkeletonRegion label="Loading Kiranam details" className="rounded-lg border border-border p-3">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-3 h-5 w-24 rounded-full" />
+              <Skeleton className="mt-2 h-3 w-40" />
+              <Skeleton className="mt-2 h-3 w-32" />
+            </SkeletonRegion>
+          ) : kiranam !== undefined && (
             <section className="rounded-lg border border-border p-3">
               <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("kiranam")}</h4>
               {kiranam === null ? (
@@ -282,7 +301,12 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
               )}
             </div>
             <div className="mt-2 flex flex-wrap gap-1">
-              {tags.length === 0 ? (
+              {!ready ? (
+                <SkeletonRegion label="Loading tags" className="flex gap-1">
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </SkeletonRegion>
+              ) : tags.length === 0 ? (
                 <p className="px-1 text-xs text-muted-foreground">{t("noTags")}</p>
               ) : (
                 tags.map((tag) => (
@@ -325,8 +349,14 @@ export function ContactSidebar({ contact }: ContactSidebarProps) {
                 {t("addNote")}
               </Button>
 
+              {!ready && (
+                <SkeletonRegion label="Loading notes" className="mt-3 space-y-2">
+                  <Skeleton className="h-14 w-full rounded-lg" />
+                  <Skeleton className="h-14 w-full rounded-lg" />
+                </SkeletonRegion>
+              )}
               <ul className="mt-3 space-y-2">
-                {notes.map((note) => (
+                {ready && notes.map((note) => (
                   <li key={note.id} className="rounded-lg bg-muted px-3 py-2">
                     <p className="whitespace-pre-wrap text-sm text-foreground">{note.note_text}</p>
                     <p className="mt-1 text-xs sm:text-[11px] text-muted-foreground">{format(new Date(note.created_at), "d MMM yyyy, h:mm a")}</p>

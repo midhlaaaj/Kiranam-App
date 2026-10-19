@@ -14,11 +14,15 @@ import type { ComponentType } from 'react'
 import type { ActivityItem, ActivityKind } from '@/lib/whatsapp/dashboard/types'
 import { cn } from '@/lib/whatsapp/utils'
 import { EmptyState } from './empty-state'
-import { Skeleton } from './skeleton'
+import { ErrorState } from './error-state'
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton'
 
 interface ActivityFeedProps {
   items: ActivityItem[] | null
   loading: boolean
+  /** The request failed (items stay null). */
+  error?: boolean
+  onRetry?: () => void
 }
 
 const PAGE_SIZES = [5, 10, 20, 50] as const
@@ -40,7 +44,7 @@ const KIND_THEME: Record<ActivityKind, KindTheme> = {
 
 import { useTranslations } from 'next-intl'
 
-export function ActivityFeed({ items, loading }: ActivityFeedProps) {
+export function ActivityFeed({ items, loading, error, onRetry }: ActivityFeedProps) {
   const t = useTranslations('Dashboard.activityFeed')
   // Start at 5 — a quick scan of the most recent events without
   // dominating vertical real estate. User expands explicitly via the
@@ -68,11 +72,15 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
         </Link>
       </header>
 
-      {loading || !items ? (
-        <div className="space-y-2 p-5">
+      {loading ? (
+        <SkeletonRegion label="Loading activity" className="space-y-2 p-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-10 w-full" />
           ))}
+        </SkeletonRegion>
+      ) : error || !items ? (
+        <div className="p-5">
+          <ErrorState onRetry={onRetry} />
         </div>
       ) : items.length === 0 ? (
         <div className="p-5">

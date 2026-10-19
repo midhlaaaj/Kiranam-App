@@ -1,5 +1,6 @@
 'use client';
 
+import { Skeleton, SkeletonCard, SkeletonRegion, SkeletonTable } from '@/components/whatsapp/ui/skeleton';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/whatsapp/supabase/client';
@@ -305,19 +306,32 @@ export default function BroadcastDetailPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6" aria-busy="true" aria-label="Loading broadcast">
-        <div className="h-9 w-72 animate-pulse rounded-lg bg-muted" />
+      <SkeletonRegion label="Loading broadcast" className="space-y-6">
+        {/* Header: back button, title + status, actions */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-4">
+            <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+            <div className="min-w-0 space-y-2">
+              <Skeleton className="h-8 w-64 max-w-full" />
+              <Skeleton className="h-4 w-48 max-w-full" />
+            </div>
+          </div>
+          <Skeleton className="h-9 w-28 rounded-lg" />
+        </div>
+        {/* Six stat cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl bg-muted/70" />
+            <SkeletonCard key={i} className="p-4" />
           ))}
         </div>
-        <div className="h-64 animate-pulse rounded-xl bg-muted/70" />
-      </div>
+        {/* Recipients table */}
+        <SkeletonTable rows={6} cols={7} />
+      </SkeletonRegion>
     );
   }
 
-  if (error || !broadcast) {
+  // Only a failed first load blanks the page — a failed background refresh keeps what's shown.
+  if (!broadcast) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
         <p className="text-sm text-destructive">{error ?? t('notFound')}</p>

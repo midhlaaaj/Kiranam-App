@@ -48,6 +48,7 @@ import { deleteAccountMedia } from "@/lib/whatsapp/storage/upload-media";
 import { TemplatePicker } from "./template-picker";
 import { AiThreadBanner } from "./ai-thread-banner";
 import { buildReplyPreview } from "./reply-quote";
+import { MessageThreadSkeleton } from "./inbox-skeleton";
 import { toast } from "sonner";
 
 interface ReplyDraft {
@@ -176,6 +177,12 @@ export function MessageThread({
   const { user, accountId } = useAuth();
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
+  // Conversation whose first page of messages has finished loading (or failed).
+  // Until it matches the open one we show the skeleton, which also removes the
+  // one-frame "No messages yet" flash when switching threads.
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -301,13 +308,18 @@ export function MessageThread({
 
       if (error) {
         console.error("Failed to fetch messages:", error);
+        setLoadError(true);
       } else {
+        setLoadError(false);
         setHasOlder((data ?? []).length === PAGE_SIZE);
         stickToBottomRef.current = true;
         onMessagesLoadedRef.current([...(data ?? [])].reverse());
       }
 
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+        setLoadedFor(conversationId);
+      }
     })();
 
     return () => {
@@ -317,7 +329,7 @@ export function MessageThread({
     // the realtime channel reconnects or the tab regains focus —
     // realtime is best-effort and any message events sent while the WS
     // was disconnected or throttled are otherwise lost.
-  }, [conversationId, resyncToken]);
+  }, [conversationId, resyncToken, reloadKey]);
 
   // Reactions fetch — pulls the current state from the DB. Kept separate
   // from the channel subscription below so a `resyncToken` bump just
@@ -1167,9 +1179,18 @@ export function MessageThread({
             </button>
           </div>
         )}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        {(loading && messages.length === 0) || loadedFor !== conversation?.id ? (
+          <MessageThreadSkeleton />
+        ) : loadError && messages.length === 0 ? (
+          <div role="alert" className="flex flex-col items-center justify-center gap-2 py-12">
+            <p className="text-sm font-medium text-foreground">Couldn&apos;t load messages</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((k) => k + 1)}
+              className="text-xs font-semibold text-foreground underline underline-offset-2"
+            >
+              Try again
+            </button>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">

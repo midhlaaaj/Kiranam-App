@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { parsePhoneNumberFromString } from 'libphonenumber-js/min';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, ArrowRight, Check, FileUp, Filter, Loader2, Tags, Upload, UserCheck, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, FileUp, Filter, Tags, Upload, UserCheck, Users } from 'lucide-react';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { CustomField, Tag } from '@/types/whatsapp';
 import { Button } from '@/components/whatsapp/ui/button';
@@ -18,6 +18,7 @@ import {
 } from '@/lib/whatsapp/broadcast-audience';
 import { AudienceSummary } from './audience-summary';
 import { ContactPicker } from './contact-picker';
+import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 
 type AudienceType = AudienceConfig['type'];
 
@@ -98,7 +99,8 @@ function parseCsv(text: string, fileName: string): CsvResult | { error: 'parse' 
 
 export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step2Props) {
   const t = useTranslations('Broadcasts.wizard');
-  const [tags, setTags] = useState<Tag[]>([]);
+  // null until the first fetch lands, so the empty message never flashes while loading.
+  const [tags, setTags] = useState<Tag[] | null>(null);
   const [customFields, setCustomFields] = useState<CustomField[] | null>(null);
   // Restored from the wizard's audience when coming Back to this step.
   const [csv, setCsv] = useState<CsvResult | null>(() =>
@@ -231,7 +233,14 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
         <fieldset className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           <legend className="sr-only">{t('selectAudience.selectTags')}</legend>
           <p className="mb-3 text-sm font-medium text-foreground">{t('selectAudience.selectTags')}</p>
-          {tags.length === 0 ? (
+          {tags === null ? (
+            <SkeletonRegion label="Loading tags" className="flex flex-wrap gap-2">
+            <Skeleton className="h-8 w-24 rounded-full" />
+            <Skeleton className="h-8 w-20 rounded-full" />
+            <Skeleton className="h-8 w-28 rounded-full" />
+            <Skeleton className="h-8 w-16 rounded-full" />
+          </SkeletonRegion>
+          ) : tags.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('selectAudience.noTagsFound')}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -252,7 +261,11 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
       {audience.type === 'custom_field' && (
         <div className="rounded-lg border border-border bg-card shadow-elevation-md p-4">
           {customFields === null ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading fields" />
+            <SkeletonRegion label="Loading fields" className="flex flex-wrap items-end gap-2">
+              <Skeleton className="h-9 w-full sm:w-40 sm:flex-1" />
+              <Skeleton className="h-9 w-full sm:w-32" />
+              <Skeleton className="h-9 w-full sm:w-40 sm:flex-1" />
+            </SkeletonRegion>
           ) : customFields.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t('selectAudience.errorLoadFields')}</p>
           ) : (
@@ -385,7 +398,14 @@ export function Step2SelectAudience({ audience, onUpdate, onNext, onBack }: Step
         <legend className="sr-only">{t('selectAudience.excludeTags')}</legend>
         <p className="text-sm font-medium text-foreground">{t('selectAudience.excludeTags')}</p>
         <p className="mb-3 mt-0.5 text-xs text-muted-foreground">{t('selectAudience.excludeHint')}</p>
-        {tags.length === 0 ? (
+        {tags === null ? (
+          <SkeletonRegion label="Loading tags" className="flex flex-wrap gap-2">
+            <Skeleton className="h-8 w-24 rounded-full" />
+            <Skeleton className="h-8 w-20 rounded-full" />
+            <Skeleton className="h-8 w-28 rounded-full" />
+            <Skeleton className="h-8 w-16 rounded-full" />
+          </SkeletonRegion>
+        ) : tags.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t('selectAudience.noTagsFound')}</p>
         ) : (
           <div className="flex flex-wrap gap-2">

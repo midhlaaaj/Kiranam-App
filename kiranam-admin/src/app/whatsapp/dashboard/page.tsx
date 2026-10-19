@@ -24,8 +24,9 @@ import type {
 } from '@/lib/whatsapp/dashboard/types'
 
 import { MetricCard } from '@/components/whatsapp/dashboard/metric-card'
-import { SkeletonCard } from '@/components/whatsapp/dashboard/skeleton'
+import { SkeletonCard } from '@/components/whatsapp/ui/skeleton'
 import { UsageCard } from '@/components/whatsapp/dashboard/usage-card'
+import { LimitsCard } from '@/components/whatsapp/dashboard/limits-card'
 import { QuickActions } from '@/components/whatsapp/dashboard/quick-actions'
 import { ConversationsChart } from '@/components/whatsapp/dashboard/conversations-chart'
 import { ResponseTimeChart } from '@/components/whatsapp/dashboard/response-time-chart'
@@ -50,12 +51,15 @@ export default function DashboardPage() {
     90: null,
   })
   const [seriesLoading, setSeriesLoading] = useState(true)
+  const [seriesError, setSeriesError] = useState<Record<RangeDays, boolean>>({ 7: false, 30: false, 90: false })
 
   const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(null)
   const [responseTimeLoading, setResponseTimeLoading] = useState(true)
+  const [responseTimeError, setResponseTimeError] = useState(false)
 
   const [activity, setActivity] = useState<ActivityItem[] | null>(null)
   const [activityLoading, setActivityLoading] = useState(true)
+  const [activityError, setActivityError] = useState(false)
 
   const [metricsError, setMetricsError] = useState(false)
   const retryMetrics = useCallback(() => {
@@ -65,6 +69,45 @@ export default function DashboardPage() {
       .then((m) => setMetrics(m))
       .catch(() => setMetricsError(true))
       .finally(() => setMetricsLoading(false))
+  }, [])
+
+  const fetchSeries = useCallback((r: RangeDays) => {
+    setSeriesLoading(true)
+    setSeriesError((prev) => ({ ...prev, [r]: false }))
+    loadConversationsSeries(createClient(), r)
+      .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
+      .catch((err) => {
+        console.error('[dashboard] series failed:', err)
+        setSeriesError((prev) => ({ ...prev, [r]: true }))
+      })
+      .finally(() => setSeriesLoading(false))
+  }, [])
+
+  const fetchResponseTime = useCallback(() => {
+    setResponseTimeLoading(true)
+    setResponseTimeError(false)
+    loadResponseTime(createClient())
+      .then((r) => setResponseTime(r))
+      .catch((err) => {
+        console.error('[dashboard] response time failed:', err)
+        setResponseTimeError(true)
+      })
+      .finally(() => setResponseTimeLoading(false))
+  }, [])
+
+  const fetchActivity = useCallback(() => {
+    setActivityLoading(true)
+    setActivityError(false)
+    // Fetch up to 50 so the biggest page-size option in the feed
+    // (50 rows) is already in memory — switching sizes then becomes
+    // a pure client-side slice with no extra round trip.
+    loadActivity(createClient(), 50)
+      .then((a) => setActivity(a))
+      .catch((err) => {
+        console.error('[dashboard] activity failed:', err)
+        setActivityError(true)
+      })
+      .finally(() => setActivityLoading(false))
   }, [])
 
   const loadAll = useCallback(() => {
@@ -86,20 +129,26 @@ export default function DashboardPage() {
 
     void loadConversationsSeries(db, 30)
       .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
-      .catch((err) => console.error('[dashboard] series failed:', err))
+      .catch((err) => {
+        console.error('[dashboard] series failed:', err)
+        setSeriesError((prev) => ({ ...prev, 30: true }))
+      })
       .finally(() => setSeriesLoading(false))
 
     void loadResponseTime(db)
       .then((r) => setResponseTime(r))
-      .catch((err) => console.error('[dashboard] response time failed:', err))
+      .catch((err) => {
+        console.error('[dashboard] response time failed:', err)
+        setResponseTimeError(true)
+      })
       .finally(() => setResponseTimeLoading(false))
 
-    // Fetch up to 50 so the biggest page-size option in the feed
-    // (50 rows) is already in memory — switching sizes then becomes
-    // a pure client-side slice with no extra round trip.
     void loadActivity(db, 50)
       .then((a) => setActivity(a))
-      .catch((err) => console.error('[dashboard] activity failed:', err))
+      .catch((err) => {
+        console.error('[dashboard] activity failed:', err)
+        setActivityError(true)
+      })
       .finally(() => setActivityLoading(false))
   }, [])
 
@@ -115,14 +164,9 @@ export default function DashboardPage() {
     (r: RangeDays) => {
       setRange(r)
       if (series[r] !== null) return
-      setSeriesLoading(true)
-      const db = createClient()
-      loadConversationsSeries(db, r)
-        .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
-        .catch((err) => console.error('[dashboard] series failed:', err))
-        .finally(() => setSeriesLoading(false))
+      fetchSeries(r)
     },
-    [series],
+    [series, fetchSeries],
   )
 
   return (
@@ -136,7 +180,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metricsError ? (
           <div role="alert" className="flex flex-col items-start gap-2 rounded-lg border border-border bg-card shadow-elevation-md p-4 sm:col-span-2 xl:col-span-4">
             <p className="text-sm text-foreground">{t('metricsError')}</p>
@@ -145,7 +189,14 @@ export default function DashboardPage() {
             </Button>
           </div>
         ) : metricsLoading || !metrics ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+          <>
+            <span role="status" className="sr-only">
+              Loading metrics
+            </span>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </>
         ) : (
           <>
             <MetricCard
@@ -197,8 +248,12 @@ export default function DashboardPage() {
             />
           </>
         )}
-        {/* Own fetch/loading cycle, independent of the metrics above. */}
+      </div>
+
+      {/* Own fetch/loading cycles, independent of the metrics above. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <UsageCard />
+        <LimitsCard />
       </div>
 
       {/* Quick actions */}
@@ -210,15 +265,22 @@ export default function DashboardPage() {
       <ConversationsChart
         series={series}
         loading={seriesLoading}
+        error={seriesError[range]}
+        onRetry={() => fetchSeries(range)}
         range={range}
         onRangeChange={handleRangeChange}
       />
 
       {/* Response time */}
-      <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />
+      <ResponseTimeChart
+        data={responseTime}
+        loading={responseTimeLoading}
+        error={responseTimeError}
+        onRetry={fetchResponseTime}
+      />
 
       {/* Activity feed */}
-      <ActivityFeed items={activity} loading={activityLoading} />
+      <ActivityFeed items={activity} loading={activityLoading} error={activityError} onRetry={fetchActivity} />
     </div>
   )
 }

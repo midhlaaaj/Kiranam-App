@@ -76,6 +76,7 @@ import {
 import { InviteMemberDialog } from './invite-member-dialog';
 import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
+import { Skeleton, SkeletonList, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 
 interface Member {
   user_id: string;
@@ -134,6 +135,7 @@ export function MembersTab() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
@@ -149,6 +151,7 @@ export function MembersTab() {
 
   const loadEverything = useCallback(async () => {
     try {
+      setLoadError(false);
       const [mres, ires] = await Promise.all([
         fetch('/api/whatsapp/account/members', { cache: 'no-store' }),
         canManageMembers
@@ -159,6 +162,7 @@ export function MembersTab() {
       if (!mres.ok) {
         const payload = await mres.json().catch(() => ({}));
         toast.error(payload.error || 'Failed to load members');
+        setLoadError(true);
         return;
       }
       const mdata = (await mres.json()) as { members: Member[] };
@@ -177,6 +181,7 @@ export function MembersTab() {
       }
     } catch (err) {
       console.error('[MembersTab] load error:', err);
+      setLoadError(true);
       toast.error('Could not reach the server');
     } finally {
       setLoading(false);
@@ -285,8 +290,29 @@ export function MembersTab() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-primary" />
+      <SkeletonRegion label="Loading members" className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+          <Skeleton className="h-9 w-36 max-w-full rounded-lg" />
+        </div>
+        <Skeleton className="h-4 w-64 max-w-full" />
+        <SkeletonList rows={4} />
+      </SkeletonRegion>
+    );
+  }
+
+  // The first load failed and there is nothing to show — say so rather than
+  // rendering an empty roster.
+  if (loadError && members.length === 0) {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card py-12 text-center">
+        <p className="text-sm text-foreground">Could not load members.</p>
+        <Button variant="outline" onClick={() => void loadEverything()}>
+          Try again
+        </Button>
       </div>
     );
   }
