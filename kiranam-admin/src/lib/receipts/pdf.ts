@@ -153,5 +153,22 @@ export async function buildReceiptPdf(data: ReceiptData): Promise<Uint8Array> {
   const org = 'Karunya Kiranam · An initiative of Health Care Foundation';
   text(org, (PAGE_W - regular.widthOfTextAtSize(org, 9)) / 2, y - 62, 9, regular, FAINT);
 
+  // 80G approval line, wrapped to the content width.
+  const approval =
+    'Health Care Foundation is approved under Section 80G of the Income Tax Act, 1961 (Approval No. AAATH8790C28KC02, valid for assessment years 2027-28 to 2031-32). Contributions may be eligible for deduction subject to the provisions of the Act.';
+  let lineY = y - 82;
+  let current = '';
+  for (const word of approval.split(' ')) {
+    const next = current ? `${current} ${word}` : word;
+    if (regular.widthOfTextAtSize(next, 8) > contentW && current) {
+      text(current, (PAGE_W - regular.widthOfTextAtSize(current, 8)) / 2, lineY, 8, regular, FAINT);
+      lineY -= 12;
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) text(current, (PAGE_W - regular.widthOfTextAtSize(current, 8)) / 2, lineY, 8, regular, FAINT);
+
   return doc.save();
 }

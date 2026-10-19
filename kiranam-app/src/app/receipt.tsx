@@ -105,6 +105,7 @@ export default function ReceiptScreen() {
         </div>
 
         <div class="footer">This is a computer-generated receipt for your contribution to Kiranam.</div>
+        <div class="footer" style="margin-top: 8px;">Health Care Foundation is approved under Section 80G of the Income Tax Act, 1961 (Approval No. AAATH8790C28KC02, valid for assessment years 2027-28 to 2031-32). Contributions may be eligible for deduction subject to the provisions of the Act.</div>
       </body>
     </html>
   `;

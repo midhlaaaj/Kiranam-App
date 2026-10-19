@@ -72,7 +72,7 @@ export default function TermsPage() {
           You&apos;re solely responsible for the accuracy of the payment
           information you provide and for any charges or fees your bank or
           card issuer applies. Nothing in the Services is financial, tax, or
-          investment advice. Contributions are not represented as eligible for tax deduction unless a receipt we issue expressly states so.
+          investment advice. Health Care Foundation is approved under Section 80G of the Income Tax Act, 1961 (Approval No. AAATH8790C28KC02, valid for assessment years 2027-28 to 2031-32), so contributions may be eligible for a tax deduction, subject to the conditions and limits of the Act. We don't give tax advice; please consult your tax adviser.
         </Section>
 
         <Section title="6. Coordinators">
