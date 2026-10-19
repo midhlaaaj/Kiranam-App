@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs } from 'expo-router/js-tabs';
 import { LayoutDashboard, Users, Compass, Gift, User } from 'lucide-react-native';
 import { AnimatedTabBar } from '@/components/AnimatedTabBar';
 

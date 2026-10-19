@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, StatusBar, Platform, Animated, Easing, RefreshControl, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -12,7 +13,7 @@ import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
 function SkeletonBlock({ style }: { style: any }) {
-  const opacity = useRef(new Animated.Value(0.35)).current;
+  const [opacity] = useState(() => new Animated.Value(0.35));
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -29,6 +30,7 @@ function SkeletonBlock({ style }: { style: any }) {
 }
 
 export default function HomeScreen() {
+  const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const {
     userName,
@@ -104,7 +106,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
       >
@@ -116,8 +118,7 @@ export default function HomeScreen() {
             <Text style={styles.userName}>{userName}</Text>
           </View>
           <TouchableOpacity 
-            style={styles.bellButton} 
-            onPress={() => router.push('/notifications')}
+            style={styles.bellButton} accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push('/notifications')}
             activeOpacity={0.7}
           >
             <Bell size={20} color="#0C0C0D" />
@@ -320,6 +321,7 @@ export default function HomeScreen() {
                     />
                     <TouchableOpacity
                       style={styles.shareIconButton}
+ accessibilityRole="button" accessibilityLabel="Share"
                       onPress={() => handleShareEvent(item)}
                       activeOpacity={0.8}
                       hitSlop={8}
@@ -338,6 +340,7 @@ export default function HomeScreen() {
                     <ImageIcon size={18} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
                     <TouchableOpacity
                       style={styles.shareIconButton}
+ accessibilityRole="button" accessibilityLabel="Share"
                       onPress={() => handleShareEvent(item)}
                       activeOpacity={0.8}
                       hitSlop={8}
@@ -417,7 +420,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 110, // Margin to prevent clipping behind absolute navigation bar
   },
   header: {
     flexDirection: 'row',
@@ -437,7 +439,6 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
     letterSpacing: -0.5,
@@ -483,12 +484,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   commitmentTitle: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 12,
-    fontWeight: '700',
     color: 'rgba(255,255,255,0.55)',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
   },
   activeBadge: {
     flexDirection: 'row',
@@ -506,14 +506,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#4ADE80',
   },
   activeBadgeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 12,
-    fontWeight: '700',
     color: '#4ADE80',
   },
   commitmentAmount: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 40,
     color: '#FFFFFF',
     letterSpacing: -0.8,
@@ -522,7 +520,6 @@ const styles = StyleSheet.create({
   },
   commitmentUnit: {
     fontFamily: 'Inter-Medium',
-    fontWeight: '500',
     fontSize: 15,
     color: 'rgba(255,255,255,0.5)',
   },
@@ -550,7 +547,6 @@ const styles = StyleSheet.create({
   },
   paidBadgeButtonText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 15,
     color: '#FFFFFF',
   },
@@ -560,7 +556,6 @@ const styles = StyleSheet.create({
   },
   payAgainLinkText: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 13,
     color: 'rgba(255,255,255,0.75)',
     textDecorationLine: 'underline',
@@ -580,7 +575,6 @@ const styles = StyleSheet.create({
   autopayActiveText: {
     flexShrink: 1,
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 13,
     color: '#FFFFFF',
     textAlign: 'center',
@@ -615,11 +609,10 @@ const styles = StyleSheet.create({
   },
   setupCardTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 13,
     color: '#0C0C0D',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
     marginBottom: 14,
   },
   setupStepRow: {
@@ -638,7 +631,6 @@ const styles = StyleSheet.create({
   },
   setupStepLabel: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
   },
@@ -654,15 +646,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
     letterSpacing: -0.3,
   },
   seeAllText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 13,
-    fontWeight: '700',
     color: '#EC2028',
   },
   campaignListContainer: {
@@ -693,7 +683,6 @@ const styles = StyleSheet.create({
   },
   campaignCardTitle: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 13,
     color: '#0C0C0D',
     lineHeight: 18,
@@ -719,7 +708,6 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 11.5,
     color: '#0C0C0D',
   },
@@ -753,7 +741,6 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 14,
     color: '#0C0C0D',
     marginBottom: 3,
@@ -808,7 +795,6 @@ const styles = StyleSheet.create({
   },
   eventTitle: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 13,
     color: '#0C0C0D',
     letterSpacing: -0.2,
@@ -864,13 +850,12 @@ const styles = StyleSheet.create({
   },
   failedTextSymbol: {
     color: '#EC2028',
-    fontWeight: '800',
+    fontFamily: 'Inter-ExtraBold',
     fontSize: 12,
   },
   paymentDate: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     fontSize: 14,
-    fontWeight: '500',
     color: '#0C0C0D',
     marginBottom: 2,
   },
@@ -882,7 +867,6 @@ const styles = StyleSheet.create({
   },
   paymentAmount: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 14.5,
     color: '#0C0C0D',
   },
@@ -901,12 +885,11 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#7A756E',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
     marginBottom: 8,
   },
   totalBlockValue: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 20,
     color: '#0C0C0D',
     letterSpacing: -0.4,

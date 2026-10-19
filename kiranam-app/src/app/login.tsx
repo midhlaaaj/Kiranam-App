@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Localization from 'expo-localization';
 import { useApp } from '@/context/AppContext';
@@ -61,11 +63,11 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bottomOffset={20}>
         {/* Back Button */}
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Back">
           <ArrowLeft size={20} color="#0C0C0D" />
         </TouchableOpacity>
 
@@ -109,7 +111,7 @@ export default function LoginScreen() {
               }}
               error={error}
               containerStyle={{ marginBottom: 0 }}
-              inputStyle={{ fontWeight: '700' }}
+              inputStyle={{ fontFamily: 'Inter-Bold', fontWeight: '700' }}
               wrapperStyle={styles.phoneInputWrapper}
             />
           </View>
@@ -146,9 +148,9 @@ export default function LoginScreen() {
             By continuing, you agree to Kiranam&apos;s Terms &amp; Privacy Policy.
           </Text>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -160,13 +162,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F9F8F6',
@@ -193,7 +195,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   inputLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 12,
     fontWeight: '600',
     color: '#7A756E',
@@ -251,7 +253,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   volunteerLinkText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 13.5,
     fontWeight: '700',
     color: '#0C0C0D',

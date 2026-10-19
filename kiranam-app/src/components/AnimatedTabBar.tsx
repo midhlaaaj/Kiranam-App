@@ -5,11 +5,21 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACTIVE_COLOR = '#EC2028';
 const INACTIVE_COLOR = '#9A968F';
+
+const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_MARGIN = 16;
+
+// Bottom padding tab screens need so their last row isn't hidden behind the
+// floating bar: bar height + its margin + the system nav inset + breathing room.
+export function useTabBarPadding() {
+  const insets = useSafeAreaInsets();
+  return TAB_BAR_HEIGHT + TAB_BAR_MARGIN + 16 + insets.bottom;
+}
 
 interface ItemLayout {
   x: number;
@@ -41,7 +51,7 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
   }));
 
   return (
-    <View style={[styles.tabBar, { bottom: 16 + insets.bottom }]}>
+    <View style={[styles.tabBar, { bottom: TAB_BAR_MARGIN + insets.bottom }]}>
       <Animated.View style={[styles.indicator, indicatorStyle]} />
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -115,6 +125,9 @@ function TabBarButton({
       onLayout={onLayout}
       onPress={onPress}
       activeOpacity={0.7}
+      accessibilityRole="tab"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: isFocused }}
     >
       <Animated.View style={[styles.iconContainer, bounceStyle]}>
         {renderIcon(isFocused ? ACTIVE_COLOR : INACTIVE_COLOR)}
@@ -122,7 +135,8 @@ function TabBarButton({
       <Text
         style={[styles.label, isFocused && styles.labelActive]}
         numberOfLines={1}
-        ellipsizeMode="tail"
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
       >
         {label}
       </Text>
@@ -135,12 +149,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    height: 64,
+    height: TAB_BAR_HEIGHT,
     borderRadius: 32,
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
@@ -165,9 +179,8 @@ const styles = StyleSheet.create({
     height: 22,
   },
   label: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 10,
-    fontWeight: '600',
     color: INACTIVE_COLOR,
     marginTop: 3,
     textAlign: 'center',

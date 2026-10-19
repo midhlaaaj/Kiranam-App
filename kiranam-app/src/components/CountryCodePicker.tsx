@@ -23,11 +23,11 @@ export function CountryCodePicker({ visible, selectedIso2, onSelect, onClose }: 
   }, [query]);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <Modal visible={visible} animationType="slide" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.header}>
           <Text style={styles.title}>Select Country</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
             <X size={18} color="#7A756E" />
           </TouchableOpacity>
         </View>
@@ -134,13 +134,13 @@ const styles = StyleSheet.create({
   },
   name: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     fontSize: 14.5,
     fontWeight: '500',
     color: '#0C0C0D',
   },
   dialCode: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 14,
     fontWeight: '600',
     color: '#7A756E',

@@ -62,12 +62,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 12,
-    fontWeight: '600',
     color: '#7A756E',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
     marginBottom: 8,
   },
   underlineLabel: {
@@ -118,9 +117,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   prefixText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 16,
-    fontWeight: '700',
     color: '#0C0C0D',
   },
   input: {

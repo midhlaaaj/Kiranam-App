@@ -22,13 +22,16 @@ export async function markRejectionAcknowledged(uid: string, applicationId: stri
 }
 
 async function getLatestApplication(uid: string) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('volunteer_applications')
     .select('id, status')
     .eq('profile_id', uid)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  // Throw rather than treating a failed lookup as "no application" — callers
+  // catch and offer a retry instead of silently routing to the wrong place.
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -66,11 +69,12 @@ export async function resolveApprovedVolunteerRoute(uid: string): Promise<Href> 
   // since asking before an admin has actually approved them doesn't make
   // sense. Gated on real data (not a one-time flag) so it naturally stops
   // appearing the moment they've actually set one.
-  const { data: commitment } = await supabase
+  const { data: commitment, error: commitmentError } = await supabase
     .from('commitments')
     .select('id')
     .eq('contributor_id', uid)
     .maybeSingle();
+  if (commitmentError) throw new Error(commitmentError.message);
 
   if (!commitment) {
     return { pathname: '/choose-amount', params: { onboarding: '1', role: 'volunteer' } };
@@ -84,7 +88,8 @@ export async function resolveApprovedVolunteerRoute(uid: string): Promise<Href> 
 // above: this exact profile-role/application-status branch used to be
 // copy-pasted across both call sites.
 export async function resolvePostAuthRoute(uid: string): Promise<Href> {
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', uid).single();
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle();
+  if (profileError) throw new Error(profileError.message);
   const application = await getLatestApplication(uid);
 
   // The role is what grants access, not the application row: coordinators
@@ -110,11 +115,12 @@ export async function resolvePostAuthRoute(uid: string): Promise<Href> {
  * entered, then carry on normally; saving updates their existing profile, so
  * nothing already attached to the account is lost. */
 export async function resolveEntryRoute(uid: string): Promise<Href> {
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('full_name, role, terms_accepted_at')
     .eq('id', uid)
-    .single();
+    .maybeSingle();
+  if (profileError) throw new Error(profileError.message);
 
   // Admins sign in to the admin panel, never through this onboarding — and
   // saving it would overwrite their role.
@@ -126,4 +132,19 @@ export async function resolveEntryRoute(uid: string): Promise<Href> {
     };
   }
   return resolvePostAuthRoute(uid);
+}
+
+/** Re-reads whether this account's role is already 'volunteer'. Used by the
+ * pending screen to tell "still under review" apart from "approved, role not
+ * applied yet". */
+export async function fetchIsVolunteerRole(uid: string): Promise<boolean> {
+  const { data, error } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.role === 'volunteer';
+}
+
+/** Whether the latest application has been approved by an admin. */
+export async function fetchApplicationStatus(uid: string): Promise<string | null> {
+  const application = await getLatestApplication(uid);
+  return application?.status ?? null;
 }

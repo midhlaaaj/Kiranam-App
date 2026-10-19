@@ -1,3 +1,4 @@
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, StatusBar, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -7,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
 
 export default function HistoryScreen() {
+  const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const { payments, notifications, refreshUserData } = useApp();
   const [refreshing, setRefreshing] = useState(false);
@@ -54,8 +56,7 @@ export default function HistoryScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Payment History</Text>
         <TouchableOpacity 
-          style={styles.bellButton} 
-          onPress={() => router.push('/notifications')}
+          style={styles.bellButton} accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push('/notifications')}
           activeOpacity={0.7}
         >
           <Bell size={20} color="#0C0C0D" />
@@ -68,7 +69,7 @@ export default function HistoryScreen() {
       <FlatList
         data={payments}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => (
@@ -130,16 +131,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
     letterSpacing: -0.6,
   },
   bellButton: {
     position: 'relative',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F9F8F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -157,7 +157,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 110,
   },
   paymentRow: {
     flexDirection: 'row',
@@ -189,7 +188,7 @@ const styles = StyleSheet.create({
   },
   failedTextSymbol: {
     color: '#EC2028',
-    fontWeight: '800',
+    fontFamily: 'Inter-ExtraBold',
     fontSize: 14,
   },
   paymentDetails: {
@@ -197,7 +196,6 @@ const styles = StyleSheet.create({
   },
   paymentLabel: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
     marginBottom: 3,
@@ -209,7 +207,7 @@ const styles = StyleSheet.create({
   },
   failedDateText: {
     color: '#EC2028',
-    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
   },
   paymentRight: {
     flexDirection: 'row',
@@ -218,7 +216,6 @@ const styles = StyleSheet.create({
   },
   paymentAmount: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 15,
     color: '#0C0C0D',
   },
@@ -249,7 +246,6 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
     letterSpacing: -0.2,

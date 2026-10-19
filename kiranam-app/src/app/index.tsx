@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { supabase } from '@/lib/supabase';
 import { extractReferralCodeFromText, stashPendingReferralCode } from '@/utils/referral';
@@ -34,7 +35,10 @@ async function checkClipboardForReferralCode() {
 
 export default function SplashScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [checkingSession, setCheckingSession] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   // If a session is already saved on-device, skip the "Get Started" splash
   // entirely and land the user straight in — same destination logic as
@@ -44,20 +48,29 @@ export default function SplashScreen() {
     let cancelled = false;
 
     (async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // No account yet on this device is exactly the "fresh install"
-        // case a deferred referral link needs to survive — an existing,
-        // signed-in user already went through this at their own signup.
-        await checkClipboardForReferralCode();
-        if (!cancelled) setCheckingSession(false);
-        return;
-      }
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          // No account yet on this device is exactly the "fresh install"
+          // case a deferred referral link needs to survive — an existing,
+          // signed-in user already went through this at their own signup.
+          await checkClipboardForReferralCode();
+          if (!cancelled) setCheckingSession(false);
+          return;
+        }
 
-      const uid = session.user.id;
-      const dest = await resolveEntryRoute(uid);
-      if (cancelled) return;
-      router.replace(dest);
+        const uid = session.user.id;
+        const dest = await resolveEntryRoute(uid);
+        if (cancelled) return;
+        router.replace(dest);
+      } catch {
+        // Offline or a Supabase error: don't strand the user on a spinner,
+        // and don't guess a destination — offer a retry instead.
+        if (!cancelled) {
+          setLoadError(true);
+          setCheckingSession(false);
+        }
+      }
     })();
 
     return () => {
@@ -67,13 +80,19 @@ export default function SplashScreen() {
     // would re-check the session and could re-navigate mid-flow. expo-router's
     // router reference is stable across renders anyway.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [attempt]);
+
+  const handleRetry = () => {
+    setLoadError(false);
+    setCheckingSession(true);
+    setAttempt((n) => n + 1);
+  };
 
   const tagline = "Every contribution, big or small, brings a family closer to hope.";
   const getStarted = "Get Started";
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }]}>
       {/* Android's status bar has its own opaque background by default,
           unlike iOS (always transparent-over-content) — without this it
           shows a visible seam against the full-bleed gradient below. */}
@@ -85,14 +104,14 @@ export default function SplashScreen() {
         locations={[0, 0.32, 0.68, 1]}
         start={{ x: 0.33, y: 0.03 }}
         end={{ x: 0.67, y: 0.97 }}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
       {/* Soft radial-style highlight, upper-left */}
       <LinearGradient
         colors={['rgba(255,140,140,0.5)', 'rgba(255,140,140,0)']}
         start={{ x: 0.3, y: -0.1 }}
         end={{ x: 0.75, y: 0.7 }}
-        style={[StyleSheet.absoluteFillObject, styles.highlight]}
+        style={[StyleSheet.absoluteFill, styles.highlight]}
       />
 
       <View style={styles.content}>
@@ -104,6 +123,11 @@ export default function SplashScreen() {
       <View style={styles.bottomContainer}>
         {checkingSession ? (
           <ActivityIndicator color="#FFFFFF" />
+        ) : loadError ? (
+          <>
+            <Text style={styles.errorText}>Couldn&apos;t load your account. Check your connection and try again.</Text>
+            <Button title="Try again" onPress={handleRetry} />
+          </>
         ) : (
           <Button
             title={getStarted}
@@ -121,8 +145,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#3D0709',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 80,
-    paddingBottom: 44,
   },
   highlight: {
     height: '65%',
@@ -159,5 +181,13 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     width: '100%',
+  },
+  errorText: {
+    fontFamily: 'Inter',
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+    marginBottom: 16,
   },
 });

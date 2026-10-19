@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Linking, StatusBar, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Linking, StatusBar, Alert } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp, ContributorNote } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
@@ -35,7 +36,6 @@ export default function VolunteerContributorDetailScreen() {
   useEffect(() => {
     if (!member) return;
     let cancelled = false;
-    setNotesLoading(true);
     fetchContributorNotes(member.id).then(({ notes: fetched, error }) => {
       if (cancelled) return;
       if (error) console.error('Failed to load notes:', error);
@@ -50,7 +50,6 @@ export default function VolunteerContributorDetailScreen() {
   useEffect(() => {
     if (!member) return;
     let cancelled = false;
-    setHistoryLoading(true);
     supabase
       .from('contributions')
       .select('amount, status, created_at')
@@ -84,7 +83,7 @@ export default function VolunteerContributorDetailScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Back">
             <ArrowLeft size={20} color="#0C0C0D" />
           </TouchableOpacity>
         </View>
@@ -96,14 +95,28 @@ export default function VolunteerContributorDetailScreen() {
   const meta = statusMeta(member.status);
   const digitsOnly = member.phone.replace(/\s+/g, '');
 
-  const handleCall = () => Linking.openURL(`tel:${digitsOnly}`);
-  const handleWhatsApp = () => Linking.openURL(`https://wa.me/${digitsOnly.replace('+', '')}`);
+  const hasValidPhone = digitsOnly.replace(/\D/g, '').length >= 8;
+  const openLink = async (url: string, failureTitle: string) => {
+    if (!hasValidPhone) {
+      Alert.alert('No phone number', 'This contributor has no valid phone number on file.');
+      return;
+    }
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) throw new Error('unsupported');
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(failureTitle, 'Please check that the app is available on this device.');
+    }
+  };
+  const handleCall = () => openLink(`tel:${digitsOnly}`, "Couldn't start the call");
+  const handleWhatsApp = () => openLink(`https://wa.me/${digitsOnly.replace('+', '')}`, "Couldn't open WhatsApp");
   // Opens WhatsApp with a pre-filled reminder so the volunteer sends it
   // themselves — the app has no server-side WhatsApp sending capability
   // of its own (that lives in the comm center's admin tooling).
   const handleRemind = () => {
     const message = `Hi ${member.name}, this is a friendly reminder about your Kiranam contribution. Thank you for your support!`;
-    Linking.openURL(`https://wa.me/${digitsOnly.replace('+', '')}?text=${encodeURIComponent(message)}`);
+    openLink(`https://wa.me/${digitsOnly.replace('+', '')}?text=${encodeURIComponent(message)}`, "Couldn't open WhatsApp");
   };
   const handleAddNote = async () => {
     if (!noteDraft.trim() || !member) return;
@@ -123,14 +136,14 @@ export default function VolunteerContributorDetailScreen() {
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Back">
           <ArrowLeft size={20} color="#0C0C0D" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Contributor</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" bottomOffset={20}>
         {/* Identity block */}
         <View style={styles.identityBlock}>
           <View style={styles.avatar}>
@@ -242,7 +255,7 @@ export default function VolunteerContributorDetailScreen() {
         ) : (
           <Text style={styles.noNotesText}>No notes yet.</Text>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <RecordContributionModal
         visible={isRecordModalVisible}
@@ -269,9 +282,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F9F8F6',
@@ -337,7 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   statusPillText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -388,7 +401,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   sectionHeader: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
     fontWeight: '700',
     color: '#B0ADA8',

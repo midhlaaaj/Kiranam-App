@@ -1,3 +1,4 @@
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
@@ -5,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useApp, Campaign } from '@/context/AppContext';
 import { Card } from '@/components/Card';
+import { EmptyState } from '@/components/EmptyState';
 import { SegmentedToggle } from '@/components/SegmentedToggle';
 import { Bell, Heart, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,6 +15,7 @@ import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
 export default function CampaignsScreen() {
+  const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const { campaigns, notifications, refreshCampaigns } = useApp();
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed'>('active');
@@ -41,8 +44,7 @@ export default function CampaignsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Campaigns</Text>
         <TouchableOpacity 
-          style={styles.bellButton} 
-          onPress={() => router.push('/notifications')}
+          style={styles.bellButton} accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push('/notifications')}
           activeOpacity={0.7}
         >
           <Bell size={20} color="#0C0C0D" />
@@ -66,7 +68,7 @@ export default function CampaignsScreen() {
       <FlatList
         data={filteredCampaigns}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => (
@@ -85,6 +87,7 @@ export default function CampaignsScreen() {
                   />
                   <TouchableOpacity
                     style={styles.shareIconButton}
+ accessibilityRole="button" accessibilityLabel="Share"
                     onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
@@ -103,6 +106,7 @@ export default function CampaignsScreen() {
                   <Heart size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
                   <TouchableOpacity
                     style={styles.shareIconButton}
+ accessibilityRole="button" accessibilityLabel="Share"
                     onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
@@ -124,9 +128,11 @@ export default function CampaignsScreen() {
           </TouchableOpacity>
         )}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No {selectedTab} campaigns available.</Text>
-          </View>
+          <EmptyState
+            icon={<Heart size={28} color="#C7C3BD" />}
+            title={`No ${selectedTab} campaigns right now`}
+            subtitle={selectedTab === 'active' ? 'Check back soon — new campaigns are added regularly.' : 'No completed campaigns yet.'}
+          />
         }
       />
     </SafeAreaView>
@@ -148,16 +154,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
     letterSpacing: -0.6,
   },
   bellButton: {
     position: 'relative',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F9F8F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -175,7 +180,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 110, // Avoid clipping behind pill tab bar
     gap: 16,
   },
   campaignCard: {
@@ -216,7 +220,6 @@ const styles = StyleSheet.create({
   },
   campaignTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',
     letterSpacing: -0.2,
@@ -241,18 +244,7 @@ const styles = StyleSheet.create({
     color: '#7A756E',
   },
   boldText: {
-    fontWeight: '700',
     color: '#0C0C0D',
-    fontFamily: 'Inter',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#7A756E',
+    fontFamily: 'Inter-Bold',
   },
 });

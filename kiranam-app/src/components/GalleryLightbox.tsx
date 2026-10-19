@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, StyleSheet, TouchableOpacity, FlatList, Dimensions, Text } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Modal, View, StyleSheet, TouchableOpacity, FlatList, useWindowDimensions, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react-native';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface GalleryLightboxProps {
   visible: boolean;
@@ -15,12 +14,27 @@ interface GalleryLightboxProps {
 // Full-screen photo viewer: swipe or use the arrow buttons to move between
 // photos, tap the X (or the backdrop) to close.
 export function GalleryLightbox({ visible, images, initialIndex, onClose }: GalleryLightboxProps) {
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={onClose}
+    >
+      {/* Modal children only mount while visible, so LightboxContent starts
+          from `initialIndex` on every open without an effect to reset it. */}
+      <LightboxContent images={images} initialIndex={initialIndex} onClose={onClose} />
+    </Modal>
+  );
+}
+
+function LightboxContent({ images, initialIndex, onClose }: Omit<GalleryLightboxProps, 'visible'>) {
   const [index, setIndex] = useState(initialIndex);
   const listRef = useRef<FlatList<string>>(null);
-
-  useEffect(() => {
-    if (visible) setIndex(initialIndex);
-  }, [visible, initialIndex]);
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const goTo = (next: number) => {
     if (next < 0 || next >= images.length) return;
@@ -29,7 +43,6 @@ export function GalleryLightbox({ visible, images, initialIndex, onClose }: Gall
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         {/* The FlatList renders first, so it paints (and hit-tests) below
             the controls below it — with a horizontal, paging FlatList
@@ -49,18 +62,25 @@ export function GalleryLightbox({ visible, images, initialIndex, onClose }: Gall
             setIndex(next);
           }}
           renderItem={({ item }) => (
-            <View style={styles.slide}>
+            <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
               <Image source={{ uri: item }} style={styles.image} contentFit="contain" />
             </View>
           )}
         />
 
-        <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.8} hitSlop={10}>
+        <TouchableOpacity
+          style={[styles.closeButton, { top: insets.top + 12 }]}
+          onPress={onClose}
+          activeOpacity={0.8}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
           <X size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
         {images.length > 1 && (
-          <Text style={styles.counter}>{index + 1} / {images.length}</Text>
+          <Text style={[styles.counter, { top: insets.top + 22 }]}>{index + 1} / {images.length}</Text>
         )}
 
         {images.length > 1 && (
@@ -71,6 +91,8 @@ export function GalleryLightbox({ visible, images, initialIndex, onClose }: Gall
               activeOpacity={0.8}
               disabled={index === 0}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Previous photo"
             >
               <ChevronLeft size={22} color="#FFFFFF" />
             </TouchableOpacity>
@@ -80,13 +102,14 @@ export function GalleryLightbox({ visible, images, initialIndex, onClose }: Gall
               activeOpacity={0.8}
               disabled={index === images.length - 1}
               hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Next photo"
             >
               <ChevronRight size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </>
         )}
       </View>
-    </Modal>
   );
 }
 
@@ -98,35 +121,31 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 56,
     right: 20,
     zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   counter: {
     position: 'absolute',
-    top: 66,
     left: 0,
     right: 0,
     textAlign: 'center',
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 13,
     color: 'rgba(255,255,255,0.7)',
     zIndex: 10,
   },
   slide: {
-    width: SCREEN_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
   },
   image: {
-    width: SCREEN_WIDTH,
+    width: '100%',
     height: '100%',
   },
   navButton: {

@@ -26,3 +26,7 @@ Thumbs.db
 
 # Secrets
 SEND SMS HOOK*.txt
+
+# Supabase CLI state
+supabase/.temp/
+**/supabase/.temp/

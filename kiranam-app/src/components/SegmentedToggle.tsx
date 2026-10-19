@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, LayoutChangeEvent } from 'react-native';
 
 const CONTAINER_PADDING = 3;
@@ -14,7 +14,7 @@ interface SegmentedToggleProps<T extends string> {
 // between segments.
 export function SegmentedToggle<T extends string>({ options, value, onChange }: SegmentedToggleProps<T>) {
   const [containerWidth, setContainerWidth] = useState(0);
-  const translateX = useRef(new Animated.Value(0)).current;
+  const [translateX] = useState(() => new Animated.Value(0));
   const activeIndex = Math.max(0, options.findIndex((o) => o.value === value));
   const segmentWidth = containerWidth > 0 ? (containerWidth - CONTAINER_PADDING * 2) / options.length : 0;
 
@@ -48,6 +48,8 @@ export function SegmentedToggle<T extends string>({ options, value, onChange }: 
           style={styles.segment}
           onPress={() => onChange(option.value)}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityState={{ selected: value === option.value }}
         >
           <Text style={[styles.segmentText, value === option.value ? styles.segmentTextActive : null]}>
             {option.label}
@@ -77,14 +79,15 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
+    minHeight: 44,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 21,
   },
   segmentText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    fontWeight: '600',
     color: '#7A756E',
   },
   segmentTextActive: {

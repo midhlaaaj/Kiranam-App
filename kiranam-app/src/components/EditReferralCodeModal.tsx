@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { validateReferralCode } from '@/utils/validators';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -16,16 +17,21 @@ interface EditReferralCodeModalProps {
 }
 
 export function EditReferralCodeModal({ visible, onClose, currentCode, onSave }: EditReferralCodeModalProps) {
+  const insets = useSafeAreaInsets();
   const [code, setCode] = useState(currentCode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  // Reload the saved code each time the sheet opens (adjusting state while
+  // rendering, keyed on the visibility change, rather than in an effect).
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setCode(currentCode);
       setError('');
     }
-  }, [visible, currentCode]);
+  }
 
   const handleChange = (text: string) => {
     // Keep it constrained to what the backend will normalize to, so the
@@ -55,12 +61,12 @@ export function EditReferralCodeModal({ visible, onClose, currentCode, onSave }:
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <KeyboardAwareScrollView
             style={styles.sheetScroll}
-            contentContainerStyle={styles.sheetContent}
+            contentContainerStyle={[styles.sheetContent, { paddingBottom: 24 + insets.bottom }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bottomOffset={20}

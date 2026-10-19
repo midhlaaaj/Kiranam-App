@@ -2,8 +2,9 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, StatusBar, Modal, Alert, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp, NotificationRecord } from '@/context/AppContext';
-import { ArrowLeft, CreditCard, Flag, Info, Check, MoreVertical, Trash2, CheckCheck, ChevronRight } from 'lucide-react-native';
+import { CreditCard, Flag, Info, Check, MoreVertical, Trash2, CheckCheck, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenHeader } from '@/components/ScreenHeader';
 
 export default function NotificationsScreen() {
   const router = useRouter();
@@ -75,17 +76,23 @@ export default function NotificationsScreen() {
       <StatusBar barStyle="dark-content" />
       
       {/* Header bar */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={20} color="#0C0C0D" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <TouchableOpacity style={styles.clearButton} onPress={() => setMenuVisible(true)} activeOpacity={0.7}>
-          <MoreVertical size={18} color="#7A756E" />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Notifications"
+        right={
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={() => setMenuVisible(true)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            accessibilityRole="button"
+            accessibilityLabel="More options"
+          >
+            <MoreVertical size={18} color="#7A756E" />
+          </TouchableOpacity>
+        }
+      />
 
-      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+      <Modal visible={menuVisible} transparent statusBarTranslucent navigationBarTranslucent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
         <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setMenuVisible(false)}>
           <View style={styles.menuSheet}>
             <TouchableOpacity style={styles.menuItem} onPress={handleMarkAllRead} activeOpacity={0.7}>
@@ -185,29 +192,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#EEF0F1',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    marginBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9F8F6',
-  },
-  headerTitle: {
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    fontSize: 24,
-    color: '#0C0C0D',
-    letterSpacing: -0.6,
-  },
   clearButton: {
     width: 40,
     height: 40,
@@ -276,7 +260,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0C0C0D',
   },
   filterText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 14,
     fontWeight: '600',
     color: '#7A756E',

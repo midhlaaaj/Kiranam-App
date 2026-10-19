@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
-import { ArrowLeft, Lock } from 'lucide-react-native';
+import { Lock } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { formatMoney } from '@/utils/format';
 import { friendlyError } from '@/utils/errors';
 
@@ -13,7 +14,7 @@ export default function SecurePaymentScreen() {
   const params = useLocalSearchParams();
   const { makeRazorpayPayment } = useApp();
 
-  const amount = params.amount ? parseInt(params.amount as string, 10) : 500;
+  const amount = params.amount ? parseInt(params.amount as string, 10) : NaN;
   const label = (params.label as string) || 'Monthly Contribution';
   const campaignId = params.campaignId as string | undefined;
   // Set only by the "Pay again" flow (Home/Dashboard), which already
@@ -25,6 +26,7 @@ export default function SecurePaymentScreen() {
   const [loading, setLoading] = useState(false);
 
   const handlePayNow = async () => {
+    if (!Number.isFinite(amount) || amount <= 0) return;
     setLoading(true);
     try {
       const record = await makeRazorpayPayment(amount, label, campaignId, allowRepeat);
@@ -48,18 +50,15 @@ export default function SecurePaymentScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={20} color="#0C0C0D" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Secure Payment</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Secure Payment" />
 
       <View style={styles.content}>
         {/* Amount Summary */}
         <Text style={styles.amountLabel}>Amount to pay</Text>
-        <Text style={styles.amountText}>{formatMoney(amount)}</Text>
+        <Text style={styles.amountText}>{Number.isFinite(amount) && amount > 0 ? formatMoney(amount) : '—'}</Text>
+        {!(Number.isFinite(amount) && amount > 0) && (
+          <Text style={styles.invalidText}>No amount selected. Go back and choose an amount.</Text>
+        )}
         
         <View style={styles.securedRow}>
           <Lock size={12} color="#7A756E" />
@@ -69,9 +68,10 @@ export default function SecurePaymentScreen() {
         {/* Action Button */}
         <View style={styles.buttonContainer}>
           <Button
-            title={loading ? "Processing..." : `Pay ${formatMoney(amount)} Now`}
+            title={loading ? "Processing..." : Number.isFinite(amount) && amount > 0 ? `Pay ${formatMoney(amount)} Now` : 'Pay Now'}
             onPress={handlePayNow}
             loading={loading}
+            disabled={!Number.isFinite(amount) || amount <= 0}
           />
         </View>
       </View>
@@ -83,31 +83,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF0F1',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    marginBottom: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9F8F6',
-  },
-  headerTitle: {
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    fontSize: 18,
-    color: '#0C0C0D',
-  },
-  placeholder: {
-    width: 40,
   },
   content: {
     flex: 1,
@@ -126,6 +101,13 @@ const styles = StyleSheet.create({
     fontSize: 46,
     color: '#0C0C0D',
     letterSpacing: -1,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  invalidText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#BA1A1A',
     textAlign: 'center',
     marginBottom: 10,
   },

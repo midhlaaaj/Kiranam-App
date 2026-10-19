@@ -5,20 +5,24 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
 import { GalleryLightbox } from '@/components/GalleryLightbox';
+import { DetailNotFound } from '@/components/DetailNotFound';
 import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
 import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
 export default function CampaignDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const { campaigns } = useApp();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const campaignId = params.id as string | undefined;
-  const campaign = campaigns.find(c => c.id === campaignId) || campaigns[0];
+  // Only fall back to the first campaign when no id was given — a stale or
+  // deleted id must not silently show (and let someone donate to) another one.
+  const campaign = campaignId ? campaigns.find(c => c.id === campaignId) : campaigns[0];
 
   const handleShare = () => {
     if (!campaign) return;
@@ -37,12 +41,23 @@ export default function CampaignDetailScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.share]);
 
-  if (!campaign) return null;
+  if (!campaign) {
+    return (
+      <DetailNotFound
+        loading={campaigns.length === 0}
+        title="Campaign not found"
+        message="This campaign may have ended or been removed."
+      />
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 92 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         
         {/* Cover Image Header */}
         <TouchableOpacity
@@ -56,10 +71,23 @@ export default function CampaignDetailScreen() {
               bleed through a transparent Modal's backdrop. */}
           {lightboxIndex === null && (
             <>
-              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
                 <ArrowLeft size={20} color="#0C0C0D" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.shareButtonIcon} onPress={handleShare} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.shareButtonIcon}
+                onPress={handleShare}
+                activeOpacity={0.8}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Share"
+              >
                 <Share2 size={18} color="#0C0C0D" />
               </TouchableOpacity>
             </>
@@ -90,9 +118,7 @@ export default function CampaignDetailScreen() {
           <Text style={styles.percentText}>{campaign.pct}% funded</Text>
 
           {/* Narrative Text */}
-          <Text style={styles.storyText}>
-            Harsh winters leave hundreds of families without adequate warmth. Your contribution funds thick woollen blankets, distributed directly to elderly residents and children across rural Kerala communities identified by our on-ground coordinators.
-          </Text>
+          {!!campaign.description && <Text style={styles.storyText}>{campaign.description}</Text>}
 
           {/* Horizontal Gallery slider */}
           {campaign.galleryUrls.length > 0 && (
@@ -122,7 +148,7 @@ export default function CampaignDetailScreen() {
       />
 
       {/* Sticky Bottom Actions Container */}
-      <View style={styles.stickyFooter}>
+      <View style={[styles.stickyFooter, { paddingBottom: 20 + insets.bottom }]}>
         <Button
           title="Donate Now"
           onPress={() => router.push({
@@ -141,7 +167,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF0F1',
   },
   scrollContent: {
-    paddingBottom: 110,
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
   coverImageArea: {
     width: '100%',
@@ -155,7 +183,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: 12,
     left: 20,
     width: 40,
     height: 40,
@@ -172,7 +200,7 @@ const styles = StyleSheet.create({
   },
   shareButtonIcon: {
     position: 'absolute',
-    top: 50,
+    top: 12,
     right: 20,
     width: 40,
     height: 40,
@@ -200,11 +228,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   detailsContainer: {
-    padding: 26,
+    padding: 22,
   },
   title: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
     letterSpacing: -0.6,
@@ -214,12 +241,12 @@ const styles = StyleSheet.create({
   raisedContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
+    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 10,
   },
   raisedText: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 24,
     color: '#0C0C0D',
     letterSpacing: -0.4,
@@ -243,9 +270,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#EC2028',
   },
   percentText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 13,
-    fontWeight: '600',
     color: '#7A756E',
     marginBottom: 16,
   },
@@ -258,7 +284,6 @@ const styles = StyleSheet.create({
   },
   galleryTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',
     letterSpacing: -0.2,
@@ -281,8 +306,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 20,
-    paddingHorizontal: 26,
+    paddingTop: 20,
+    paddingHorizontal: 22,
     borderTopWidth: 1,
     borderTopColor: '#F1EEEA',
     shadowColor: '#000000',

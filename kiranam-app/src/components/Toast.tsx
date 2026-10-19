@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AlertCircle, X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ToastProps {
   message: string | null;
@@ -12,8 +13,9 @@ interface ToastProps {
 // placement users already expect, but styled like the rest of the app
 // (Card's 26px radius, Button's red shadow) instead of a bare system toast.
 export const Toast: React.FC<ToastProps> = ({ message, onDismiss }) => {
-  const translateY = useRef(new Animated.Value(80)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [translateY] = useState(() => new Animated.Value(80));
+  const [opacity] = useState(() => new Animated.Value(0));
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (message) {
@@ -31,7 +33,7 @@ export const Toast: React.FC<ToastProps> = ({ message, onDismiss }) => {
 
   return (
     <Animated.View
-      style={[styles.container, { transform: [{ translateY }], opacity }]}
+      style={[styles.container, { bottom: 24 + insets.bottom, transform: [{ translateY }], opacity }]}
       pointerEvents="box-none"
     >
       <View style={styles.card}>
@@ -41,7 +43,13 @@ export const Toast: React.FC<ToastProps> = ({ message, onDismiss }) => {
         <Text style={styles.message} numberOfLines={3}>
           {message}
         </Text>
-        <TouchableOpacity onPress={onDismiss} hitSlop={10} style={styles.dismissButton}>
+        <TouchableOpacity
+          onPress={onDismiss}
+          hitSlop={6}
+          style={styles.dismissButton}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss"
+        >
           <X size={16} color="#B0ADA8" strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
@@ -54,7 +62,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 24,
   },
   card: {
     flexDirection: 'row',
@@ -82,15 +89,16 @@ const styles = StyleSheet.create({
   },
   message: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 13.5,
     lineHeight: 18,
-    fontWeight: '600',
     color: '#0C0C0D',
   },
   dismissButton: {
-    width: 24,
-    height: 24,
+    width: 44,
+    height: 44,
+    marginVertical: -12,
+    marginRight: -8,
     alignItems: 'center',
     justifyContent: 'center',
   },

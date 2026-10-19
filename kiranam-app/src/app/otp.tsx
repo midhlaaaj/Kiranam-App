@@ -5,14 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StatusBar,
   LayoutAnimation,
   UIManager,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useApp } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/Button';
@@ -143,40 +143,49 @@ export default function OtpScreen() {
   const handleVerify = async () => {
     if (!isOtpFilled) return;
     setVerifying(true);
-    const code = otp.join('');
-    const { error: verifyError } = await verifyOtpCode(phone, code);
-    if (verifyError) {
-      setVerifying(false);
-      setError(friendlyError(verifyError));
-      return;
-    }
+    try {
+      const code = otp.join('');
+      const { error: verifyError } = await verifyOtpCode(phone, code);
+      if (verifyError) {
+        setError(friendlyError(verifyError));
+        return;
+      }
 
-    // Existing accounts (e.g. re-login, or admin-registered contributors
-    // claiming their login) already have a full_name set by a previous
-    // registration — skip "Tell us about yourself" and go straight in.
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id;
-    if (!uid) {
-      setVerifying(false);
-      setError('Something went wrong. Please try again.');
-      return;
-    }
-    const dest = await resolveEntryRoute(uid);
-    setVerifying(false);
+      // Existing accounts (e.g. re-login, or admin-registered contributors
+      // claiming their login) already have a full_name set by a previous
+      // registration — skip "Tell us about yourself" and go straight in.
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) {
+        setError('Something went wrong. Please try again.');
+        return;
+      }
+      const dest = await resolveEntryRoute(uid);
 
-    // `replace` alone only swaps the current (otp) entry — splash and the
-    // mobile-number screen pushed before it stay underneath, so hardware
-    // back from home would land a signed-in user back on the phone-entry
-    // screen. dismissAll() first collapses the stack to its root before
-    // replace() swaps that root entry, leaving nothing to go back to.
-    router.dismissAll();
-    // A brand-new account has no role yet: carry the one picked on the
-    // login screen forward to registration.
-    if (typeof dest === 'object' && 'pathname' in dest && dest.pathname === '/register') {
-      router.replace({ pathname: '/register', params: { ...(dest.params as object), ...(!(dest.params as any)?.claim ? { role } : {}) } });
-      return;
+      // `replace` alone only swaps the current (otp) entry — splash and the
+      // mobile-number screen pushed before it stay underneath, so hardware
+      // back from home would land a signed-in user back on the phone-entry
+      // screen. dismissAll() first collapses the stack to its root before
+      // replace() swaps that root entry, leaving nothing to go back to. It
+      // can throw when the stack is already a single entry, which is fine —
+      // there is nothing to collapse then.
+      try {
+        router.dismissAll();
+      } catch {
+        // Single-entry stack.
+      }
+      // A brand-new account has no role yet: carry the one picked on the
+      // login screen forward to registration.
+      if (typeof dest === 'object' && 'pathname' in dest && dest.pathname === '/register') {
+        router.replace({ pathname: '/register', params: { ...(dest.params as object), ...(!(dest.params as any)?.claim ? { role } : {}) } });
+        return;
+      }
+      router.replace(dest);
+    } catch (e) {
+      setError(friendlyError(e instanceof Error ? e.message : 'Something went wrong. Please try again.'));
+    } finally {
+      setVerifying(false);
     }
-    router.replace(dest);
   };
 
   const formatTime = (seconds: number) => {
@@ -186,14 +195,11 @@ export default function OtpScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bottomOffset={20}>
         {/* Back navigation */}
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Back">
           <ArrowLeft size={20} color="#0C0C0D" />
         </TouchableOpacity>
 
@@ -226,10 +232,10 @@ export default function OtpScreen() {
                   setDraftPhone(text.replace(/[^0-9]/g, ''));
                 }}
               />
-              <TouchableOpacity style={styles.cancelPhoneButton} onPress={handleCancelEditPhone} hitSlop={8}>
+              <TouchableOpacity style={styles.cancelPhoneButton} onPress={handleCancelEditPhone} hitSlop={8} accessibilityRole="button" accessibilityLabel="Cancel editing number">
                 <X size={17} color="#7A756E" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmPhoneButton} onPress={handleSavePhone} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.confirmPhoneButton} onPress={handleSavePhone} activeOpacity={0.8} hitSlop={6} accessibilityRole="button" accessibilityLabel="Save number">
                 <Check size={16} color="#FFFFFF" strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
@@ -237,7 +243,7 @@ export default function OtpScreen() {
           </>
         ) : (
           <TouchableOpacity style={styles.phoneViewPill} onPress={handleStartEditPhone} activeOpacity={0.7}>
-            <Text style={styles.phonePillText}>{phone || '+91 98765 43210'}</Text>
+            <Text style={styles.phonePillText}>{phone || 'Add number'}</Text>
             <View style={styles.editIconBg}>
               <Pencil size={12} color="#7A756E" />
             </View>
@@ -299,8 +305,8 @@ export default function OtpScreen() {
             loading={verifying}
           />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -312,13 +318,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F9F8F6',
@@ -437,7 +443,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EC2028',
   },
   resendLink: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 14,
     fontWeight: '700',
     color: '#EC2028',

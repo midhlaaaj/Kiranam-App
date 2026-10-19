@@ -1,3 +1,4 @@
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, StatusBar, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -26,6 +27,7 @@ import { formatMoney, getGreeting } from '@/utils/format';
 import { referralJoinUrl } from '@/utils/links';
 
 export default function VolunteerDashboardScreen() {
+  const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const {
     userName,
@@ -105,7 +107,7 @@ export default function VolunteerDashboardScreen() {
       <StatusBar barStyle="dark-content" />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
       >
@@ -115,7 +117,7 @@ export default function VolunteerDashboardScreen() {
             <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>{firstName}</Text>
           </View>
-          <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications')} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.bellButton} accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push('/notifications')} activeOpacity={0.7}>
             <Bell size={20} color="#0C0C0D" />
             {unreadNotificationsCount > 0 && <View style={styles.bellBadge} />}
           </TouchableOpacity>
@@ -377,11 +379,10 @@ const styles = StyleSheet.create({
   },
   setupCardTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 13,
     color: '#0C0C0D',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
     marginBottom: 14,
   },
   setupStepRow: {
@@ -400,7 +401,6 @@ const styles = StyleSheet.create({
   },
   setupStepLabel: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
   },
@@ -411,7 +411,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 110,
   },
   header: {
     flexDirection: 'row',
@@ -430,7 +429,6 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
     letterSpacing: -0.5,
@@ -468,12 +466,11 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   givingLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 12,
-    fontWeight: '700',
     color: 'rgba(255,255,255,0.55)',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
   },
   activeBadge: {
     flexDirection: 'row',
@@ -491,9 +488,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#4ADE80',
   },
   activeBadgeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 12,
-    fontWeight: '700',
     color: '#4ADE80',
   },
   givingAmountRow: {
@@ -503,14 +499,12 @@ const styles = StyleSheet.create({
   },
   updateLink: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 13,
     color: '#FFFFFF',
     textDecorationLine: 'underline',
   },
   givingAmount: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 30,
     color: '#FFFFFF',
     letterSpacing: -0.6,
@@ -518,7 +512,6 @@ const styles = StyleSheet.create({
   },
   givingUnit: {
     fontFamily: 'Inter-Medium',
-    fontWeight: '500',
     fontSize: 14,
     color: 'rgba(255,255,255,0.5)',
   },
@@ -543,7 +536,6 @@ const styles = StyleSheet.create({
   },
   paidBadgeText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 14,
     color: '#FFFFFF',
   },
@@ -553,7 +545,6 @@ const styles = StyleSheet.create({
   },
   payAgainLinkText: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 13,
     color: 'rgba(255,255,255,0.75)',
     textDecorationLine: 'underline',
@@ -572,7 +563,6 @@ const styles = StyleSheet.create({
   autopayBadgeText: {
     flexShrink: 1,
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 13,
     color: '#FFFFFF',
     textAlign: 'center',
@@ -602,9 +592,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   referralCompactLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
-    fontWeight: '700',
     color: '#B0ADA8',
     textTransform: 'uppercase',
     letterSpacing: 0.06,
@@ -612,7 +601,6 @@ const styles = StyleSheet.create({
   },
   referralCompactCode: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 18,
     color: '#0C0C0D',
     letterSpacing: 0.4,
@@ -631,7 +619,6 @@ const styles = StyleSheet.create({
   },
   referralCompactCopiedText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 14,
     color: '#22A559',
   },
@@ -662,7 +649,6 @@ const styles = StyleSheet.create({
   },
   kpiValue: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 20,
     color: '#0C0C0D',
     letterSpacing: -0.4,
@@ -681,16 +667,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
     letterSpacing: -0.3,
     marginBottom: 12,
   },
   seeAllText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 13,
-    fontWeight: '700',
     color: '#EC2028',
   },
   quickActionsContainer: {
@@ -718,7 +702,6 @@ const styles = StyleSheet.create({
   },
   quickActionTitle: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
     marginBottom: 2,
@@ -780,7 +763,6 @@ const styles = StyleSheet.create({
   },
   memberAvatarText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 12,
     color: '#FFFFFF',
   },
@@ -789,7 +771,6 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
     marginBottom: 2,
@@ -805,8 +786,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusPillText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
-    fontWeight: '700',
   },
 });

@@ -64,6 +64,9 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       activeOpacity={0.8}
       style={[styles.baseButton, getButtonStyles(), style]}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'secondary' || variant === 'outline' ? '#0C0C0D' : '#FFFFFF'} size="small" />
@@ -77,6 +80,8 @@ export const Button: React.FC<ButtonProps> = ({
 const styles = StyleSheet.create({
   baseButton: {
     width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
@@ -108,9 +113,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1EEEA',
   },
   baseText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 16,
-    fontWeight: '700',
   },
   primaryText: {
     color: '#FFFFFF',

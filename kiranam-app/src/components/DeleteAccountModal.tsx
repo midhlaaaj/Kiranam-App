@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { friendlyError } from '@/utils/errors';
 import { Button } from '@/components/Button';
 import { Input } from '@/components/Input';
@@ -22,6 +23,7 @@ interface DeleteAccountModalProps {
 // final destructive-action confirmation appear. Two deliberate speed bumps
 // for an action that can't be undone.
 export function DeleteAccountModal({ visible, onClose, onConfirmed, onDeleted, description }: DeleteAccountModalProps) {
+  const insets = useSafeAreaInsets();
   const [typed, setTyped] = useState('');
   const [deleting, setDeleting] = useState(false);
 
@@ -59,12 +61,12 @@ export function DeleteAccountModal({ visible, onClose, onConfirmed, onDeleted, d
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent navigationBarTranslucent onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <KeyboardAwareScrollView
             style={styles.sheetScroll}
-            contentContainerStyle={styles.sheetContent}
+            contentContainerStyle={[styles.sheetContent, { paddingBottom: 24 + insets.bottom }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bottomOffset={20}

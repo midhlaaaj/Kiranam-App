@@ -1,3 +1,4 @@
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar, RefreshControl } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -11,6 +12,7 @@ import { formatMoney } from '@/utils/format';
 import { referralJoinUrl } from '@/utils/links';
 
 export default function ReferralsScreen() {
+  const tabBarPadding = useTabBarPadding();
   const { myReferralCode, updateReferralCode, volunteerMembers, refreshUserData } = useApp();
   const [copied, setCopied] = useState(false);
   const [editCodeVisible, setEditCodeVisible] = useState(false);
@@ -45,7 +47,7 @@ export default function ReferralsScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
       >
@@ -152,14 +154,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
     letterSpacing: -0.6,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 110,
   },
   referralCard: {
     position: 'relative',
@@ -178,18 +178,16 @@ const styles = StyleSheet.create({
     opacity: 0.15,
   },
   referralLabel: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 12,
-    fontWeight: '700',
     color: 'rgba(255,255,255,0.55)',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
     marginBottom: 8,
     zIndex: 1,
   },
   referralCode: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 32,
     color: '#FFFFFF',
     letterSpacing: 0.5,
@@ -221,7 +219,6 @@ const styles = StyleSheet.create({
   },
   referralActionText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 13.5,
     color: '#FFFFFF',
   },
@@ -252,7 +249,6 @@ const styles = StyleSheet.create({
   },
   kpiValue: {
     fontFamily: 'Inter-ExtraBold',
-    fontWeight: '800',
     fontSize: 16,
     color: '#0C0C0D',
     letterSpacing: -0.3,
@@ -265,7 +261,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
     letterSpacing: -0.3,
@@ -302,7 +297,6 @@ const styles = StyleSheet.create({
   },
   memberAvatarText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 12,
     color: '#FFFFFF',
   },
@@ -311,7 +305,6 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 14,
     color: '#0C0C0D',
     marginBottom: 2,
@@ -327,8 +320,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   statusPillText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
-    fontWeight: '700',
   },
 });

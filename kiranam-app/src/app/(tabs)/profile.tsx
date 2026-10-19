@@ -1,5 +1,7 @@
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { ChevronRight, Pencil, HeartHandshake, Clock3 } from 'lucide-react-native';
@@ -8,15 +10,15 @@ import { DeleteAccountModal } from '@/components/DeleteAccountModal';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { formatMoney } from '@/utils/format';
 import { friendlyError } from '@/utils/errors';
+import { getInitials } from '@/utils/initials';
 
 export default function ProfileScreen() {
+  const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const {
     userName,
     phone,
-    userEmail,
     userAvatarUrl,
-    isEmailVerified,
     hasCommitment,
     commitmentAmount,
     isAutopayEnabled,
@@ -28,9 +30,7 @@ export default function ProfileScreen() {
     isVolunteer,
     signOut,
     deleteAccount,
-    updateName,
     updateProfilePhoto,
-    updateEmail,
   } = useApp();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -85,24 +85,18 @@ export default function ProfileScreen() {
     router.replace('/');
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarPadding }]} showsVerticalScrollIndicator={false}>
         
         {/* User Card Header */}
         <View style={styles.profileHeader}>
           <TouchableOpacity
             style={styles.editButton}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Edit profile photo"
             onPress={() => setEditModalVisible(true)}
             activeOpacity={0.7}
           >
@@ -118,7 +112,7 @@ export default function ProfileScreen() {
             </View>
           )}
           <Text style={styles.userName}>{userName}</Text>
-          <Text style={styles.userPhone}>{phone || '+91 98765 43210'}</Text>
+          <Text style={styles.userPhone}>{phone || 'Phone not set'}</Text>
         </View>
 
         {/* Contribution Settings */}
@@ -129,7 +123,7 @@ export default function ProfileScreen() {
               <Text style={styles.rowSubtitle}>Monthly commitment</Text>
               <Text style={styles.rowValue}>{hasCommitment ? formatMoney(commitmentAmount) : 'Not set'}</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push('/choose-amount')} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push('/choose-amount')} activeOpacity={0.7} hitSlop={12} accessibilityRole="button">
               <Text style={styles.actionLink}>{hasCommitment ? 'Update' : 'Set up'}</Text>
             </TouchableOpacity>
           </View>
@@ -159,27 +153,12 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Personal Info */}
         <Text style={styles.sectionHeader}>Personal Information</Text>
         <View style={styles.sectionCard}>
-          <View style={styles.infoField}>
-            <Text style={styles.infoFieldLabel}>Name</Text>
-            <Text style={styles.infoFieldValue}>{userName}</Text>
-          </View>
-          <View style={styles.infoField}>
-            <Text style={styles.infoFieldLabel}>Phone</Text>
-            <Text style={styles.infoFieldValue}>{phone || '+91 98765 43210'}</Text>
-          </View>
-          <View style={[styles.infoField, styles.noBorder]}>
-            <Text style={styles.infoFieldLabel}>
-              Email {userEmail && (
-                <Text style={isEmailVerified ? styles.infoFieldVerified : styles.infoFieldUnverified}>
-                  {isEmailVerified ? '· Verified' : '· Pending verification'}
-                </Text>
-              )}
-            </Text>
-            <Text style={styles.infoFieldValue}>{userEmail || 'Not set'}</Text>
-          </View>
+          <TouchableOpacity style={[styles.actionRow, styles.noBorder]} activeOpacity={0.7} onPress={() => router.push('/personal-details')}>
+            <Text style={styles.actionRowText}>Name, phone &amp; email</Text>
+            <ChevronRight size={16} color="#D8D5D0" />
+          </TouchableOpacity>
         </View>
 
         {/* Coordinator */}
@@ -211,6 +190,11 @@ export default function ProfileScreen() {
         {/* Account Options */}
         <Text style={styles.sectionHeader}>Account</Text>
         <View style={styles.sectionCard}>
+          <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={() => router.push('/about')}>
+            <Text style={styles.actionRowText}>About Kiranam</Text>
+            <ChevronRight size={16} color="#D8D5D0" />
+          </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.actionRow}
             activeOpacity={0.7}
@@ -254,10 +238,7 @@ export default function ProfileScreen() {
         onClose={() => setEditModalVisible(false)}
         currentName={userName}
         currentAvatarUrl={userAvatarUrl}
-        currentEmail={userEmail}
-        onSaveName={updateName}
         onSavePhoto={updateProfilePhoto}
-        onSaveEmail={updateEmail}
       />
     </SafeAreaView>
   );
@@ -271,7 +252,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 110, // Prevent overlapping tab bar
   },
   profileHeader: {
     alignItems: 'center',
@@ -294,7 +274,6 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
     fontSize: 12.5,
     color: '#0C0C0D',
   },
@@ -315,13 +294,11 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 24,
     color: '#FFFFFF',
   },
   userName: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
     letterSpacing: -0.4,
@@ -333,12 +310,11 @@ const styles = StyleSheet.create({
     color: '#7A756E',
   },
   sectionHeader: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
-    fontWeight: '700',
     color: '#B0ADA8',
     textTransform: 'uppercase',
-    letterSpacing: 0.08,
+    letterSpacing: 0.8,
     marginBottom: 12,
     marginTop: 12,
   },
@@ -383,13 +359,6 @@ const styles = StyleSheet.create({
   rowInfo: {
     flex: 1,
   },
-  rowTitle: {
-    fontFamily: 'Inter-SemiBold',
-    fontWeight: '600',
-    fontSize: 14,
-    color: '#0C0C0D',
-    marginBottom: 3,
-  },
   rowSubtitle: {
     fontFamily: 'Inter',
     fontSize: 12,
@@ -398,43 +367,13 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 19,
     color: '#0C0C0D',
   },
   actionLink: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 13,
-    fontWeight: '700',
     color: '#EC2028',
-  },
-  infoField: {
-    paddingVertical: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1EEEA',
-  },
-  infoFieldLabel: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    color: '#7A756E',
-    marginBottom: 4,
-  },
-  infoFieldSubText: {
-    textTransform: 'none',
-  },
-  infoFieldVerified: {
-    textTransform: 'none',
-    color: '#22A559',
-  },
-  infoFieldUnverified: {
-    textTransform: 'none',
-    color: '#B0ADA8',
-  },
-  infoFieldValue: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0C0C0D',
   },
   volunteerRowLeft: {
     flexDirection: 'row',
@@ -465,13 +404,11 @@ const styles = StyleSheet.create({
   },
   actionRowText: {
     fontFamily: 'Inter-Medium',
-    fontWeight: '500',
     fontSize: 14,
     color: '#0C0C0D',
   },
   logoutText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 14,
     color: '#EC2028',
   },
@@ -487,7 +424,6 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 14,
     color: '#FFFFFF',
   },

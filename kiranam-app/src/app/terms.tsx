@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const LAST_UPDATED = 'August 11, 2026';
+const LAST_UPDATED = 'October 19, 2026';
 
 export default function TermsScreen() {
   const router = useRouter();
@@ -74,9 +74,7 @@ export default function TermsScreen() {
           You&apos;re solely responsible for the accuracy of the payment
           information you provide and for any charges or fees your bank or card
           issuer applies. Nothing in the Services is financial, tax, or
-          investment advice. [If Kiranam holds 80G/12A registration under the
-          Income Tax Act, 1961, tax-deduction language and registration numbers
-          should be added here.]
+          investment advice. Contributions are not represented as eligible for tax deduction unless a receipt we issue expressly states so.
         </Section>
 
         <Section title="6. Coordinators">

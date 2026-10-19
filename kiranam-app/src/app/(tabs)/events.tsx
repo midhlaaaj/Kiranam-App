@@ -1,3 +1,4 @@
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { Image } from 'expo-image';
@@ -12,6 +13,7 @@ import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
 export default function EventsScreen() {
+  const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const { events, notifications, refreshEvents } = useApp();
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'past'>('upcoming');
@@ -39,8 +41,7 @@ export default function EventsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Events</Text>
         <TouchableOpacity 
-          style={styles.bellButton} 
-          onPress={() => router.push('/notifications')}
+          style={styles.bellButton} accessibilityRole="button" accessibilityLabel="Notifications" onPress={() => router.push('/notifications')}
           activeOpacity={0.7}
         >
           <Bell size={20} color="#0C0C0D" />
@@ -64,7 +65,7 @@ export default function EventsScreen() {
       <FlatList
         data={filteredEvents}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => (
@@ -83,6 +84,7 @@ export default function EventsScreen() {
                   />
                   <TouchableOpacity
                     style={styles.shareIconButton}
+ accessibilityRole="button" accessibilityLabel="Share"
                     onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
@@ -101,6 +103,7 @@ export default function EventsScreen() {
                   <ImageIcon size={22} color="rgba(255,255,255,0.7)" strokeWidth={1.5} />
                   <TouchableOpacity
                     style={styles.shareIconButton}
+ accessibilityRole="button" accessibilityLabel="Share"
                     onPress={() => handleShare(item)}
                     activeOpacity={0.8}
                     hitSlop={8}
@@ -163,16 +166,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 24,
     color: '#0C0C0D',
     letterSpacing: -0.6,
   },
   bellButton: {
     position: 'relative',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F9F8F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -190,7 +192,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 110,
     gap: 16,
   },
   eventCard: {
@@ -237,16 +238,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   pastBadgeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
-    fontWeight: '700',
     color: '#7A756E',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
   },
   eventTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',
     letterSpacing: -0.2,
@@ -280,7 +279,6 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 17,
     color: '#0C0C0D',
     letterSpacing: -0.2,

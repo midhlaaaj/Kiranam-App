@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Alert, Dimensions } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Campaign } from '@/context/AppContext';
 import { validateAmount } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
@@ -21,6 +22,7 @@ interface RecordContributionModalProps {
 type ContributionType = 'monthly' | 'campaign';
 
 export function RecordContributionModal({ visible, onClose, contributorName, campaigns, onSubmit }: RecordContributionModalProps) {
+  const insets = useSafeAreaInsets();
   const [type, setType] = useState<ContributionType>('monthly');
   const [amount, setAmount] = useState('');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
@@ -29,15 +31,18 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
 
   const activeCampaigns = campaigns.filter((c) => c.status === 'active');
 
-  useEffect(() => {
+  // Reset the form each time the sheet opens (adjusting state while rendering,
+  // keyed on the visibility change, rather than in an effect).
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setType('monthly');
       setAmount('');
       setSelectedCampaignId(activeCampaigns[0]?.id ?? null);
       setNote('');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }
 
   const handleAmountChange = (text: string) => {
     setAmount(text.replace(/[^0-9]/g, ''));
@@ -70,12 +75,12 @@ export function RecordContributionModal({ visible, onClose, contributorName, cam
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           <KeyboardAwareScrollView
             style={styles.sheetScroll}
-            contentContainerStyle={styles.sheetContent}
+            contentContainerStyle={[styles.sheetContent, { paddingBottom: 24 + insets.bottom }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bottomOffset={20}
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   label: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 12,
     fontWeight: '600',
     color: '#7A756E',

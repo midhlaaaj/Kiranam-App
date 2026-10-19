@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter } from 'expo-router';
-import { useColorScheme, StatusBar } from 'react-native';
+import { DefaultTheme, ThemeProvider, Stack, useRouter } from 'expo-router';
+import { StatusBar } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { useFonts } from 'expo-font';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { AppProvider } from '@/context/AppContext';
+import { AppProvider, useApp } from '@/context/AppContext';
 import { UpdateRequiredGate } from '@/components/UpdateRequiredGate';
 // Font imports from Google Fonts packages
 import {
@@ -21,7 +20,6 @@ import {
 // arrives while someone's actively using the app is silently swallowed.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
     shouldShowBanner: true,
@@ -32,10 +30,47 @@ Notifications.setNotificationHandler({
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+// Tapping a push notification (app backgrounded, or cold-launched from one)
+// navigates to whatever deep_link the notify() call attached — the same field
+// the in-app notifications list already uses. Lives inside AppProvider so the
+// link is only followed once a session exists; a tap that arrives before
+// sign-in resolves is held and replayed, and a signed-out tap is dropped so
+// index.tsx's own routing decides where the user lands.
+function NotificationLinkHandler() {
   const router = useRouter();
+  const { isLoggedIn, isVolunteer } = useApp();
+  const pendingLink = React.useRef<string | null>(null);
 
+  const follow = React.useCallback(
+    (link: string) => {
+      const target = isVolunteer && link.startsWith('/(tabs)/profile') ? '/(volunteer-tabs)/profile' : link;
+      router.push(target as any);
+    },
+    [router, isVolunteer]
+  );
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const deepLink = response.notification.request.content.data?.deep_link;
+      if (typeof deepLink !== 'string' || !deepLink) return;
+      if (isLoggedIn) follow(deepLink);
+      else pendingLink.current = deepLink;
+    });
+    return () => subscription.remove();
+  }, [isLoggedIn, follow]);
+
+  useEffect(() => {
+    if (isLoggedIn && pendingLink.current) {
+      const link = pendingLink.current;
+      pendingLink.current = null;
+      follow(link);
+    }
+  }, [isLoggedIn, follow]);
+
+  return null;
+}
+
+export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     'Inter': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
@@ -50,19 +85,6 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  // Tapping a push notification (app backgrounded, or cold-launched from
-  // one) navigates to whatever deep_link the notify() call attached —
-  // the same field the in-app notifications list already uses.
-  useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const deepLink = response.notification.request.content.data?.deep_link;
-      if (typeof deepLink === 'string' && deepLink) {
-        router.push(deepLink as any);
-      }
-    });
-    return () => subscription.remove();
-  }, [router]);
-
   if (!fontsLoaded && !fontError) {
     return null;
   }
@@ -71,15 +93,13 @@ export default function RootLayout() {
     <KeyboardProvider>
       <UpdateRequiredGate>
         <AppProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
+          <ThemeProvider value={DefaultTheme}>
+            <NotificationLinkHandler />
+            <StatusBar barStyle="dark-content" />
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="join" />
               <Stack.Screen name="login" />
-              <Stack.Screen name="password" />
-              <Stack.Screen name="forgot-password" />
-              <Stack.Screen name="reset-password" />
               <Stack.Screen name="register" />
               <Stack.Screen name="pending" />
               <Stack.Screen name="(tabs)" />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Clipboard, TouchableOpacity, ScrollView, StatusBar, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Alert } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -13,20 +14,30 @@ import { KIRANAM_LOGO_DATA_URI, HCF_LOGO_DATA_URI, HCF_SEAL_DATA_URI } from '@/c
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { userName, userEmail, phone, isVolunteer } = useApp();
+  const { userName, userEmail, phone, isVolunteer, payments } = useApp();
 
-  const txnId = (params.id as string) || 'TXN9284KLM2';
-  const amount = params.amount ? parseInt(params.amount as string, 10) : 500;
-  const dateStr = (params.date as string) || 'Jul 9, 2026, 10:42 AM';
-  const label = (params.label as string) || 'Monthly Contribution';
+  // The post-payment flow passes every field; a push-notification deep link
+  // only carries the id, so the rest is filled in from the payment history.
+  const txnId = (params.id as string) || '';
+  const record = payments.find((p) => p.id === txnId);
+  const amountParam = params.amount ? parseInt(params.amount as string, 10) : NaN;
+  const amount = Number.isFinite(amountParam) ? amountParam : record?.amount;
+  const dateStr = (params.date as string) || record?.date;
+  const label = (params.label as string) || record?.label;
+  const homeRoute = isVolunteer ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home';
+  const receiptMissing = !txnId || amount === undefined || !dateStr || !label;
 
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
-  const handleCopyTxn = () => {
-    Clipboard.setString(txnId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyTxn = async () => {
+    try {
+      await Clipboard.setStringAsync(txnId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      Alert.alert('Could not copy', 'Please try again.');
+    }
   };
 
   const receiptHtml = `
@@ -81,7 +92,7 @@ export default function ReceiptScreen() {
           <tr><td class="label">Name</td><td class="value">${userName || '-'}</td></tr>
           <tr><td class="label">Email</td><td class="value">${userEmail || '-'}</td></tr>
           <tr><td class="label">Mobile Number</td><td class="value">${phone || '-'}</td></tr>
-          <tr class="amount-row"><td class="label">Amount</td><td class="value">${formatMoney(amount)}</td></tr>
+          <tr class="amount-row"><td class="label">Amount</td><td class="value">${formatMoney(amount ?? 0)}</td></tr>
           <tr><td class="label">Transaction ID</td><td class="value">${txnId}</td></tr>
           <tr><td class="label">Date</td><td class="value">${dateStr}</td></tr>
         </table>
@@ -99,6 +110,7 @@ export default function ReceiptScreen() {
   `;
 
   const handleDownloadReceipt = async () => {
+    if (receiptMissing) return;
     setDownloading(true);
     try {
       const { uri } = await Print.printToFileAsync({ html: receiptHtml });
@@ -119,11 +131,24 @@ export default function ReceiptScreen() {
   // successful payment — see kiranam-admin's /api/receipts/send — so this
   // screen no longer emails it itself.
 
+  if (receiptMissing) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.notFound}>
+          <Text style={styles.notFoundTitle}>Receipt not found</Text>
+          <Text style={styles.notFoundText}>We couldn&apos;t find the details for this payment. You can find it under your contribution history.</Text>
+          <Button title="Back to Home" onPress={() => router.replace(homeRoute)} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+
         {/* Success Circle animation */}
         <View style={styles.successContainer}>
           <View style={styles.successGlow}>
@@ -136,8 +161,8 @@ export default function ReceiptScreen() {
 
         {/* Details Card */}
         <View style={styles.detailsCard}>
-          <Text style={styles.amountDisplay}>{formatMoney(amount)}</Text>
-          
+          <Text style={styles.amountDisplay}>{formatMoney(amount ?? 0)}</Text>
+
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>For</Text>
             <Text style={styles.detailValue} numberOfLines={1}>{label}</Text>
@@ -173,7 +198,7 @@ export default function ReceiptScreen() {
           />
           <Button
             title="Back to Home"
-            onPress={() => router.replace(isVolunteer ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home')}
+            onPress={() => router.replace(homeRoute)}
             variant="outline"
           />
         </View>
@@ -187,6 +212,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#EEF0F1',
+  },
+  notFound: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 14,
+  },
+  notFoundTitle: {
+    fontFamily: 'Inter-Bold',
+    fontWeight: '700',
+    fontSize: 22,
+    color: '#0C0C0D',
+    textAlign: 'center',
+  },
+  notFoundText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    lineHeight: 21,
+    color: '#7A756E',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   scrollContent: {
     paddingHorizontal: 22,
@@ -262,7 +308,7 @@ const styles = StyleSheet.create({
     color: '#7A756E',
   },
   detailValue: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 13,
     fontWeight: '600',
     color: '#0C0C0D',
@@ -284,7 +330,7 @@ const styles = StyleSheet.create({
   },
   copiedFeedback: {
     textAlign: 'center',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 12,
     color: '#22A559',
     fontWeight: '600',

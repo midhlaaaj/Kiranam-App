@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const LAST_UPDATED = 'August 11, 2026';
+const LAST_UPDATED = 'October 19, 2026';
 
 export default function PrivacyPolicyScreen() {
   const router = useRouter();
@@ -41,8 +41,10 @@ export default function PrivacyPolicyScreen() {
           {'Information you give us directly:'}
           {'\n'}
           {'•'} Account details: your full name, phone number, email address,
-          password (stored as a salted hash — we never store it in plain text),
-          and an optional profile photo.{'\n\n'}
+          and an optional profile photo. The phone number is also the WhatsApp
+          number we send your one-time login code to.{'\n\n'}
+          {'•'} A referral code, if you were invited by a coordinator — either
+          entered by you or recovered automatically (see below).{'\n\n'}
           {'•'} Coordinator application details: your motivation, availability,
           skills, and anything else you submit in that application.{'\n\n'}
           {'•'} Your communication preferences and consent choices (e.g. WhatsApp
@@ -57,8 +59,13 @@ export default function PrivacyPolicyScreen() {
           {'•'} Coordinator activity records: contributor assignments and status
           updates recorded within the app.{'\n\n'}
           {'•'} Device and technical information: device model, OS version, app
-          version, unique installation identifiers, IP address, and crash or
-          performance diagnostics.{'\n\n'}
+          version, unique installation identifiers, and IP address. We don&apos;t use
+          a crash-reporting or analytics SDK.{'\n\n'}
+          {'•'} One-time clipboard read: the first time the app opens after
+          install, it reads the clipboard once to look for a Kiranam referral
+          code so your invite can be applied. Nothing else on the clipboard is
+          kept, and the text is never uploaded unless it is a referral
+          code.{'\n\n'}
           {'•'} A push-notification device token (via Firebase Cloud Messaging and
           Expo&apos;s push service) so we can deliver notifications you haven&apos;t
           opted out of.{'\n\n'}
@@ -125,7 +132,7 @@ export default function PrivacyPolicyScreen() {
         <Section title="7. Data security">
           We use reasonable technical and organizational safeguards appropriate to
           the sensitivity of the data we process, including encryption in transit
-          (TLS), salted-hash password storage, role-based access controls, and
+          (TLS), role-based access controls, and
           row-level security on our database. No method of transmission or storage
           is 100% secure, and we can&apos;t guarantee absolute security. If we
           become aware of a personal data breach likely to affect you, we&apos;ll

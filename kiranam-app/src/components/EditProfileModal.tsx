@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Alert, Image, Dimensions } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
-import { validateRequired, validateEmail } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { Button } from '@/components/Button';
-import { Input } from '@/components/Input';
 import { X, Camera } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.85;
 
@@ -15,27 +14,20 @@ interface EditProfileModalProps {
   onClose: () => void;
   currentName: string;
   currentAvatarUrl: string;
-  currentEmail: string;
-  onSaveName: (name: string) => Promise<{ error: string | null }>;
   onSavePhoto: (localUri: string) => Promise<{ error: string | null; url?: string }>;
-  onSaveEmail: (email: string) => Promise<{ error: string | null }>;
 }
 
-export function EditProfileModal({ visible, onClose, currentName, currentAvatarUrl, currentEmail, onSaveName, onSavePhoto, onSaveEmail }: EditProfileModalProps) {
-  const [name, setName] = useState(currentName);
-  const [email, setEmail] = useState(currentEmail);
-  const [emailError, setEmailError] = useState('');
+export function EditProfileModal({ visible, onClose, currentName, currentAvatarUrl, onSavePhoto }: EditProfileModalProps) {
+  const insets = useSafeAreaInsets();
   const [previewUri, setPreviewUri] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (visible) {
-      setName(currentName);
-      setEmail(currentEmail);
-      setEmailError('');
-      setPreviewUri('');
-    }
-  }, [visible, currentName, currentEmail]);
+  // A staged-but-unsaved photo is discarded whenever the sheet closes, so it
+  // always reopens showing the current photo.
+  const handleClose = () => {
+    setPreviewUri('');
+    onClose();
+  };
 
   const getInitials = (value: string) =>
     value.split(' ').filter(Boolean).map((part) => part[0]).join('').toUpperCase().slice(0, 2);
@@ -46,33 +38,41 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
   };
 
   const handleTakePhoto = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Allow camera access to take a profile picture.');
-      return;
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission needed', 'Allow camera access to take a profile picture.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      stagePickedPhoto(result);
+    } catch {
+      Alert.alert('Camera unavailable', 'We could not open the camera on this device.');
     }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    stagePickedPhoto(result);
   };
 
   const handleChooseFromLibrary = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Allow photo library access to change your profile picture.');
-      return;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission needed', 'Allow photo library access to change your profile picture.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      stagePickedPhoto(result);
+    } catch {
+      Alert.alert('Photos unavailable', 'We could not open your photo library.');
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    stagePickedPhoto(result);
   };
 
   const handlePickPhoto = () => {
@@ -84,57 +84,26 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
   };
 
   const handleSave = async () => {
-    const trimmedName = name.trim();
-    const trimmedEmail = email.trim();
-    const nameError = validateRequired(name, 'Name');
-    if (nameError) {
-      Alert.alert('Name required', 'Please enter your name.');
-      return;
-    }
-    // Email is optional (it can be added later, per the Getting Started
-    // checklist), so only validate format when something's actually typed.
-    const emailValidationError = trimmedEmail ? validateEmail(trimmedEmail) : null;
-    if (emailValidationError) {
-      setEmailError(emailValidationError);
-      return;
-    }
-    setEmailError('');
+    if (!previewUri) return;
     setSaving(true);
-
-    if (previewUri) {
-      const { error: photoError } = await onSavePhoto(previewUri);
-      if (photoError) {
-        setSaving(false);
-        Alert.alert('Could not update photo', friendlyError(photoError));
+    try {
+      const { error } = await onSavePhoto(previewUri);
+      if (error) {
+        Alert.alert('Could not update photo', friendlyError(error));
         return;
       }
+      handleClose();
+    } catch (e) {
+      Alert.alert('Could not update photo', friendlyError(e instanceof Error ? e.message : 'Something went wrong.'));
+    } finally {
+      setSaving(false);
     }
-
-    // Only calls onSaveEmail when the address actually changed — it kicks
-    // off a real confirmation-email send, which shouldn't refire just
-    // because the user re-saved their name/photo with the same email.
-    if (trimmedEmail && trimmedEmail !== currentEmail) {
-      const { error: emailSaveError } = await onSaveEmail(trimmedEmail);
-      if (emailSaveError) {
-        setSaving(false);
-        Alert.alert('Could not update email', friendlyError(emailSaveError));
-        return;
-      }
-    }
-
-    const { error } = await onSaveName(trimmedName);
-    setSaving(false);
-    if (error) {
-      Alert.alert('Could not save changes', friendlyError(error));
-      return;
-    }
-    onClose();
   };
 
   const displayUri = previewUri || currentAvatarUrl;
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent navigationBarTranslucent onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <View style={styles.sheet}>
           {/* react-native-keyboard-controller's KeyboardAwareScrollView,
@@ -147,63 +116,59 @@ export function EditProfileModal({ visible, onClose, currentName, currentAvatarU
               is actually focused. */}
           <KeyboardAwareScrollView
             style={styles.sheetScroll}
-            contentContainerStyle={styles.sheetContent}
+            contentContainerStyle={[styles.sheetContent, { paddingBottom: 24 + insets.bottom }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             bottomOffset={20}
           >
             <View style={styles.header}>
-              <Text style={styles.title}>Edit Profile</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+              <Text style={styles.title}>Profile Photo</Text>
+              <TouchableOpacity
+                onPress={handleClose}
+                style={styles.closeButton}
+                activeOpacity={0.7}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+              >
                 <X size={18} color="#7A756E" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.avatarSection}>
-              <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8} style={styles.avatarWrap}>
+              <TouchableOpacity
+                onPress={handlePickPhoto}
+                activeOpacity={0.8}
+                style={styles.avatarWrap}
+                accessibilityRole="button"
+                accessibilityLabel="Change profile photo"
+              >
                 {displayUri ? (
                   <Image source={{ uri: displayUri }} style={styles.avatarImage} />
                 ) : (
                   <View style={styles.avatarFallback}>
-                    <Text style={styles.avatarFallbackText}>{getInitials(name)}</Text>
+                    <Text style={styles.avatarFallbackText}>{getInitials(currentName)}</Text>
                   </View>
                 )}
                 <View style={styles.cameraBadge}>
                   <Camera size={14} color="#FFFFFF" />
                 </View>
               </TouchableOpacity>
-              <Text style={styles.avatarHint}>{previewUri ? 'Tap Save Changes to apply' : 'Tap to change photo'}</Text>
+              <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.7} hitSlop={8}>
+                <Text style={styles.changePhotoText}>{previewUri ? 'Choose a different photo' : 'Change photo'}</Text>
+              </TouchableOpacity>
+              {!!previewUri && <Text style={styles.avatarHint}>Tap Save Photo to apply</Text>}
             </View>
 
-            <Input
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Your name"
-            />
-
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setEmailError('');
-              }}
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              error={emailError}
-            />
-
             <Button
-              title="Save Changes"
+              title="Save Photo"
               onPress={handleSave}
               loading={saving}
+              disabled={!previewUri}
               style={styles.saveButton}
             />
 
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose} activeOpacity={0.7}>
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </KeyboardAwareScrollView>
@@ -294,6 +259,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: '#FFFFFF',
+  },
+  changePhotoText: {
+    fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#EC2028',
+    marginTop: 2,
   },
   avatarHint: {
     fontFamily: 'Inter',

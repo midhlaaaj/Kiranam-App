@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useApp } from '@/context/AppContext';
-import { checkFreshRejection, resolvePostAuthRoute } from '@/utils/volunteerRouting';
+import { checkFreshRejection, resolvePostAuthRoute, fetchApplicationStatus } from '@/utils/volunteerRouting';
 
 export default function PendingScreen() {
   const router = useRouter();
   const { signOut, hasCommitment } = useApp();
   const [checking, setChecking] = useState(false);
+  const insets = useSafeAreaInsets();
   const [notYetApproved, setNotYetApproved] = useState(false);
+  const [approvedAwaitingRole, setApprovedAwaitingRole] = useState(false);
+  const [checkError, setCheckError] = useState(false);
 
   // This screen is reached via router.replace (see otp.tsx/index.tsx), so
   // there's nothing sensible in the back stack for a hardware/gesture back
@@ -35,32 +39,40 @@ export default function PendingScreen() {
   const handleContinue = async () => {
     setChecking(true);
     setNotYetApproved(false);
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id;
-    if (!uid) {
-      setChecking(false);
-      setNotYetApproved(true);
-      return;
-    }
+    setApprovedAwaitingRole(false);
+    setCheckError(false);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) {
+        router.replace('/');
+        return;
+      }
 
-    if (hasCommitment) {
-      const rejectedRoute = await checkFreshRejection(uid);
-      setChecking(false);
-      router.replace(rejectedRoute ?? '/(tabs)/home');
-      return;
-    }
+      if (hasCommitment) {
+        const rejectedRoute = await checkFreshRejection(uid);
+        router.replace(rejectedRoute ?? '/(tabs)/home');
+        return;
+      }
 
-    const dest = await resolvePostAuthRoute(uid);
-    setChecking(false);
-    if (dest === '/pending') {
-      setNotYetApproved(true);
-    } else {
-      router.replace(dest);
+      const dest = await resolvePostAuthRoute(uid);
+      if (dest === '/pending') {
+        // Approved by an admin but the coordinator role hasn't been applied
+        // to the profile yet — say so, instead of "still under review".
+        if ((await fetchApplicationStatus(uid)) === 'approved') setApprovedAwaitingRole(true);
+        else setNotYetApproved(true);
+      } else {
+        router.replace(dest);
+      }
+    } catch {
+      setCheckError(true);
+    } finally {
+      setChecking(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
         {/* Pending review circular icon indicator */}
@@ -80,6 +92,14 @@ export default function PendingScreen() {
 
         {notYetApproved && (
           <Text style={styles.notApprovedText}>Still under review — check back soon.</Text>
+        )}
+        {approvedAwaitingRole && (
+          <Text style={styles.notApprovedText}>
+            Your application is approved — we&apos;re finishing setting up your coordinator access. Try again in a moment.
+          </Text>
+        )}
+        {checkError && (
+          <Text style={styles.notApprovedText}>Couldn&apos;t check your status. Check your connection and try again.</Text>
         )}
 
         {/* Back Link */}

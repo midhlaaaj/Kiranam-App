@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
@@ -17,25 +18,32 @@ import { PartyPopper } from 'lucide-react-native';
 export default function VolunteerWelcomeScreen() {
   const router = useRouter();
   const { userName } = useApp();
+  const insets = useSafeAreaInsets();
   const [continuing, setContinuing] = useState(false);
 
   const handleContinue = async () => {
     setContinuing(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id;
-    if (!uid) {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) {
+        router.replace('/');
+        return;
+      }
+      await markVolunteerWelcomeSeen(uid);
+      const dest = await resolveApprovedVolunteerRoute(uid);
+      router.replace(dest);
+    } catch {
+      Alert.alert('Something went wrong', 'Please check your connection and try again.');
+    } finally {
       setContinuing(false);
-      return;
     }
-    await markVolunteerWelcomeSeen(uid);
-    const dest = await resolveApprovedVolunteerRoute(uid);
-    router.replace(dest);
   };
 
   const firstName = userName.split(' ')[0];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
         <View style={styles.iconOuterRing}>

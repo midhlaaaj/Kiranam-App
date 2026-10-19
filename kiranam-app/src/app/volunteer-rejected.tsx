@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { XCircle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -19,47 +20,58 @@ export default function VolunteerRejectedScreen() {
   const { hasCommitment } = useApp();
   const [reason, setReason] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
   const [continuing, setContinuing] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id;
-      if (!uid) return;
-      const { data: application } = await supabase
-        .from('volunteer_applications')
-        .select('id, rejection_reason')
-        .eq('profile_id', uid)
-        .eq('status', 'rejected')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      setApplicationId(application?.id ?? null);
-      setReason(application?.rejection_reason ?? null);
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData.user?.id;
+        if (!uid) return;
+        const { data: application } = await supabase
+          .from('volunteer_applications')
+          .select('id, rejection_reason')
+          .eq('profile_id', uid)
+          .eq('status', 'rejected')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setApplicationId(application?.id ?? null);
+        setReason(application?.rejection_reason ?? null);
+      } catch {
+        // The admin's note is a nice-to-have; the screen works without it.
+      }
     })();
   }, []);
 
   const handleContinue = async () => {
     setContinuing(true);
-    const { data: userData } = await supabase.auth.getUser();
-    const uid = userData.user?.id;
-    if (uid && applicationId) {
-      await markRejectionAcknowledged(uid, applicationId);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (uid && applicationId) {
+        await markRejectionAcknowledged(uid, applicationId);
+      }
+      router.replace(
+        hasCommitment
+          ? '/(tabs)/home'
+          // Without `onboarding: '1'`, choose-amount's Save button treats this
+          // as "editing an existing commitment" and does router.back() — which
+          // lands back on whatever was still under volunteer-rejected in the
+          // stack (the mobile-number screen), not home. Marking it onboarding
+          // routes Save (and Skip) to home instead, same as a fresh signup.
+          : { pathname: '/choose-amount', params: { onboarding: '1', role: 'contributor' } }
+      );
+    } catch {
+      Alert.alert('Something went wrong', 'Please try again.');
+    } finally {
+      setContinuing(false);
     }
-    router.replace(
-      hasCommitment
-        ? '/(tabs)/home'
-        // Without `onboarding: '1'`, choose-amount's Save button treats this
-        // as "editing an existing commitment" and does router.back() — which
-        // lands back on whatever was still under volunteer-rejected in the
-        // stack (the mobile-number screen), not home. Marking it onboarding
-        // routes Save (and Skip) to home instead, same as a fresh signup.
-        : { pathname: '/choose-amount', params: { onboarding: '1', role: 'contributor' } }
-    );
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.content}>
         <View style={styles.iconOuterRing}>

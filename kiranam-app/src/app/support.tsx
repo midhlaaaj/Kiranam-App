@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Linking, StatusBar } from 'react-native';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Search, ChevronRight, MessageSquare, Mail } from 'lucide-react-native';
+import { Search, ChevronRight, MessageSquare, Mail } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenHeader } from '@/components/ScreenHeader';
 
 interface FaqItem {
   id: number;
@@ -11,7 +11,6 @@ interface FaqItem {
 }
 
 export default function SupportScreen() {
-  const router = useRouter();
   const [openFaqId, setOpenFaqId] = useState<number | null>(0); // Default open 0 as in mockup
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -33,27 +32,30 @@ export default function SupportScreen() {
   const WHATSAPP_NUMBER = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP_NUMBER;
   const SUPPORT_EMAIL = 'support@kiranam.online';
 
-  const handleWhatsApp = () => {
-    if (!WHATSAPP_NUMBER) return;
+  const handleWhatsApp = async () => {
+    if (!WHATSAPP_NUMBER) {
+      Alert.alert('WhatsApp support unavailable', `Please email us at ${SUPPORT_EMAIL} instead.`);
+      return;
+    }
     const url = `https://wa.me/${WHATSAPP_NUMBER}`;
-    Linking.canOpenURL(url).then(supported => {
-      if (supported) {
-        Linking.openURL(url);
-      } else {
-        Alert.alert('WhatsApp not installed', `Message us on WhatsApp at +${WHATSAPP_NUMBER}, or use email support instead.`);
-      }
-    });
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) throw new Error('unsupported');
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('WhatsApp not installed', `Message us on WhatsApp at +${WHATSAPP_NUMBER}, or use email support instead.`);
+    }
   };
 
-  const handleEmail = () => {
+  const handleEmail = async () => {
     const email = `mailto:${SUPPORT_EMAIL}`;
-    Linking.canOpenURL(email).then(supported => {
-      if (supported) {
-        Linking.openURL(email);
-      } else {
-        Alert.alert('No email app found', `Reach us directly at ${SUPPORT_EMAIL}.`);
-      }
-    });
+    try {
+      const supported = await Linking.canOpenURL(email);
+      if (!supported) throw new Error('unsupported');
+      await Linking.openURL(email);
+    } catch {
+      Alert.alert('No email app found', `Reach us directly at ${SUPPORT_EMAIL}.`);
+    }
   };
 
   const filteredFaqs = faqs.filter(f => f.q.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -63,13 +65,7 @@ export default function SupportScreen() {
       <StatusBar barStyle="dark-content" />
       
       {/* Header bar */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={20} color="#0C0C0D" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Support</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader title="Support" />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
@@ -119,12 +115,10 @@ export default function SupportScreen() {
         <View style={styles.supportCTA}>
           <Text style={styles.ctaTitle}>Still need help?</Text>
           
-          {!!WHATSAPP_NUMBER && (
-            <TouchableOpacity style={styles.waButton} onPress={handleWhatsApp} activeOpacity={0.8}>
-              <MessageSquare size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.waButtonText}>Chat with us on WhatsApp</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.waButton} onPress={handleWhatsApp} activeOpacity={0.8}>
+            <MessageSquare size={16} color="#FFFFFF" strokeWidth={2.5} />
+            <Text style={styles.waButtonText}>Chat with us on WhatsApp</Text>
+          </TouchableOpacity>
           
           <TouchableOpacity style={styles.mailButton} onPress={handleEmail} activeOpacity={0.8}>
             <Mail size={16} color="#FFFFFF" strokeWidth={2.2} />
@@ -142,32 +136,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#EEF0F1',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    marginBottom: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9F8F6',
-  },
-  headerTitle: {
-    fontFamily: 'Inter-Bold',
-    fontWeight: '700',
-    fontSize: 24,
-    color: '#0C0C0D',
-    letterSpacing: -0.6,
-  },
-  placeholder: {
-    width: 40,
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
@@ -184,13 +152,13 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 14,
     color: '#0C0C0D',
     fontWeight: '600',
   },
   sectionHeader: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
     fontWeight: '700',
     color: '#B0ADA8',

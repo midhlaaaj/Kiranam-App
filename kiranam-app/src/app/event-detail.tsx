@@ -4,21 +4,33 @@ import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { GalleryLightbox } from '@/components/GalleryLightbox';
+import { DetailNotFound } from '@/components/DetailNotFound';
 import { ArrowLeft, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { shareWithCoverImage } from '@/utils/share';
 import { APP_JOIN_URL } from '@/utils/links';
 
 export default function EventDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const { events } = useApp();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const eventId = params.id as string | undefined;
-  const event = events.find(e => e.id === eventId) || events[0];
+  // Only fall back to the first event when no id was given — a stale or
+  // deleted id must not silently show a different event.
+  const event = eventId ? events.find(e => e.id === eventId) : events[0];
 
-  if (!event) return null;
+  if (!event) {
+    return (
+      <DetailNotFound
+        loading={events.length === 0}
+        title="Event not found"
+        message="This event may have ended or been removed."
+      />
+    );
+  }
 
   const handleShare = () => {
     shareWithCoverImage(
@@ -28,9 +40,12 @@ export default function EventDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         
         {/* Cover Image Header */}
         <TouchableOpacity
@@ -46,10 +61,23 @@ export default function EventDetailScreen() {
               reliable; not rendering them at all is. */}
           {lightboxIndex === null && (
             <>
-              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
                 <ArrowLeft size={20} color="#0C0C0D" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.shareButtonIcon} onPress={handleShare} activeOpacity={0.8}>
+              <TouchableOpacity
+                style={styles.shareButtonIcon}
+                onPress={handleShare}
+                activeOpacity={0.8}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Share"
+              >
                 <Share2 size={18} color="#0C0C0D" />
               </TouchableOpacity>
             </>
@@ -131,7 +159,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF0F1',
   },
   scrollContent: {
-    paddingBottom: 40,
+    width: '100%',
+    maxWidth: 560,
+    alignSelf: 'center',
   },
   coverImageArea: {
     width: '100%',
@@ -145,7 +175,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: 12,
     left: 20,
     width: 40,
     height: 40,
@@ -162,7 +192,7 @@ const styles = StyleSheet.create({
   },
   shareButtonIcon: {
     position: 'absolute',
-    top: 50,
+    top: 12,
     right: 20,
     width: 40,
     height: 40,
@@ -201,16 +231,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   statusBadgeText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
-    fontWeight: '700',
     color: '#7A756E',
     textTransform: 'uppercase',
-    letterSpacing: 0.04,
+    letterSpacing: 0.4,
   },
   title: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 23,
     color: '#0C0C0D',
     letterSpacing: -0.6,
@@ -235,9 +263,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   metaText: {
-    fontFamily: 'Inter',
+    flex: 1,
+    fontFamily: 'Inter-SemiBold',
     fontSize: 14,
-    fontWeight: '600',
     color: '#0C0C0D',
   },
   descText: {
@@ -249,7 +277,6 @@ const styles = StyleSheet.create({
   },
   galleryTitle: {
     fontFamily: 'Inter-Bold',
-    fontWeight: '700',
     fontSize: 16,
     color: '#0C0C0D',
     letterSpacing: -0.2,

@@ -1,3 +1,4 @@
+import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, Alert, Linking, StatusBar, RefreshControl } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -10,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type FilterTab = 'all' | 'active' | 'due' | 'overdue' | 'inactive';
 
 export default function ContributorsScreen() {
+  const tabBarPadding = useTabBarPadding();
   const router = useRouter();
   const params = useLocalSearchParams();
   const { volunteerMembers, refreshUserData } = useApp();
@@ -41,12 +43,17 @@ export default function ContributorsScreen() {
   // is the only honest way to offer a "remind" action here.
   const handleRemind = async (member: VolunteerMember) => {
     const digits = member.phone.replace(/\D/g, '');
+    if (digits.length < 8) {
+      Alert.alert('No phone number', 'This contributor has no valid phone number on file.');
+      return;
+    }
     const message = `Hi ${member.name}, this is a friendly reminder about your Kiranam contribution. Thank you for your support!`;
     const url = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      Linking.openURL(url);
-    } else {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) throw new Error('unsupported');
+      await Linking.openURL(url);
+    } catch {
       Alert.alert("Couldn't open WhatsApp", 'Please make sure WhatsApp is installed.');
     }
   };
@@ -106,7 +113,7 @@ export default function ContributorsScreen() {
       <FlatList
         data={filteredMembers}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#EC2028" colors={['#EC2028']} />}
         renderItem={({ item }) => {
@@ -201,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0C0C0D',
   },
   filterText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 14,
     fontWeight: '600',
     color: '#7A756E',
@@ -211,7 +218,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 20,
-    paddingBottom: 110,
     gap: 12,
   },
   memberCard: {
@@ -273,7 +279,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   statusPillText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     fontSize: 11.5,
     fontWeight: '700',
   },

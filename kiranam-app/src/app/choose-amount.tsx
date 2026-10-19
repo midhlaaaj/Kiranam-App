@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, TextInput, StatusBar, Keyboard, InputAccessoryView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, TextInput, StatusBar, Keyboard, InputAccessoryView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/Button';
@@ -8,6 +8,7 @@ import { formatMoney } from '@/utils/format';
 import { friendlyError } from '@/utils/errors';
 import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 const MIN_AMOUNT = 30;
 
@@ -154,22 +155,19 @@ export default function ChooseAmountScreen() {
   };
 
   const handleSkip = () => {
-    router.replace('/(tabs)/home');
+    router.replace(onboardingRole === 'volunteer' ? '/(volunteer-tabs)/dashboard' : '/(tabs)/home');
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right', 'bottom']}>
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          
+        <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" bottomOffset={20}>
+
           {/* Back button (or Skip, when reached as part of onboarding — there's
               nothing meaningful to go "back" to in that case) */}
           {isOnboarding ? (
-            <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <TouchableOpacity style={styles.skipButton} onPress={handleSkip} hitSlop={8}>
               <Text style={styles.skipButtonText}>Skip for now</Text>
             </TouchableOpacity>
           ) : (
@@ -180,8 +178,8 @@ export default function ChooseAmountScreen() {
 
           {/* Titles */}
           <Text style={styles.title}>
-            {campaignTitle 
-              ? `Support Campaign:\n${campaignTitle}` 
+            {campaignTitle
+              ? `Support Campaign:\n${campaignTitle}`
               : "Choose your monthly\ncontribution"}
           </Text>
           <Text style={styles.subtitle}>
@@ -223,8 +221,8 @@ export default function ChooseAmountScreen() {
           </View>
 
           {/* Custom Amount Expander Box */}
-          <TouchableOpacity 
-            style={[styles.customBox, isCustomOpen ? styles.activeCustomBox : null]} 
+          <TouchableOpacity
+            style={[styles.customBox, isCustomOpen ? styles.activeCustomBox : null]}
             onPress={handleCustomBoxPress}
             activeOpacity={0.9}
           >
@@ -270,7 +268,7 @@ export default function ChooseAmountScreen() {
               />
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
         {Platform.OS === 'ios' && (
           <InputAccessoryView nativeID={customAmountAccessoryId}>
             <View style={styles.accessoryBar}>
@@ -281,7 +279,7 @@ export default function ChooseAmountScreen() {
           </InputAccessoryView>
         )}
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -300,9 +298,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F9F8F6',
@@ -315,7 +313,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   skipButtonText: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 14,
     fontWeight: '600',
     color: '#7A756E',
@@ -337,7 +335,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   remainingHint: {
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     fontSize: 12.5,
     fontWeight: '600',
     color: '#B0752E',

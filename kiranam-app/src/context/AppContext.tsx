@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef, useMemo } from 'react';
 import { AppState, Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system';
@@ -317,19 +317,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [volunteerMembers, setVolunteerMembers] = useState<VolunteerMember[]>([]);
 
-  const [totalContributed, setTotalContributed] = useState(0);
-  const [campaignGiving, setCampaignGiving] = useState(0);
 
   // Keep the latest userName available inside async callbacks without re-subscribing.
   const userNameRef = useRef(userName);
-  userNameRef.current = userName;
   const userEmailRef = useRef(userEmail);
-  userEmailRef.current = userEmail;
   // Lets refreshUserData stay referentially stable across token refreshes
   // (which replace `session`) instead of re-subscribing every realtime
   // channel that depends on it.
   const sessionRef = useRef(session);
-  sessionRef.current = session;
+  useEffect(() => {
+    userNameRef.current = userName;
+    userEmailRef.current = userEmail;
+    sessionRef.current = session;
+  });
 
   // Track auth session
   useEffect(() => {
@@ -712,15 +712,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, refreshUserData]);
 
-  // Recalculate giving totals when payments list updates
-  useEffect(() => {
+  // Giving totals are derived from the payments list.
+  const { totalContributed, campaignGiving } = useMemo(() => {
     const successPayments = payments.filter((p) => p.ok);
-    const total = successPayments.reduce((acc, p) => acc + p.amount, 0);
-    const campaignTotal = successPayments
-      .filter((p) => p.label !== 'Monthly Contribution')
-      .reduce((acc, p) => acc + p.amount, 0);
-    setTotalContributed(total);
-    setCampaignGiving(campaignTotal);
+    return {
+      totalContributed: successPayments.reduce((acc, p) => acc + p.amount, 0),
+      campaignGiving: successPayments
+        .filter((p) => p.label !== 'Monthly Contribution')
+        .reduce((acc, p) => acc + p.amount, 0),
+    };
   }, [payments]);
 
   const signInWithPhone = async (phoneE164: string) => {
