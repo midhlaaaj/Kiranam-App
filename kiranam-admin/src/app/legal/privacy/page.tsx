@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "How Kiranam collects, uses, and protects your information.",
 };
 
-const LAST_UPDATED = "August 11, 2026";
+const LAST_UPDATED = "October 19, 2026";
 
 export default function PrivacyPolicyPage() {
   return (
@@ -33,8 +33,13 @@ export default function PrivacyPolicyPage() {
           <ul className="mt-2 list-disc space-y-2 pl-5">
             <li>
               Account details: your full name, phone number, email address,
-              password (stored as a salted hash — we never store it in plain
-              text), and an optional profile photo.
+              and an optional profile photo. The phone number is also the
+              WhatsApp number we send your one-time login code to.
+            </li>
+            <li>
+              A referral code, if you were invited by a coordinator — either
+              entered by you or recovered automatically from the clipboard
+              once, the first time the app opens after install.
             </li>
             <li>
               Coordinator application details: your motivation, availability,
@@ -63,8 +68,8 @@ export default function PrivacyPolicyPage() {
             </li>
             <li>
               Device and technical information: device/browser type, OS
-              version, app version, unique identifiers, IP address, and crash
-              or performance diagnostics.
+              version, app version, unique identifiers, and IP address. We don&apos;t use a
+              crash-reporting or analytics SDK.
             </li>
             <li>
               A push-notification device token (via Firebase Cloud Messaging
@@ -135,8 +140,7 @@ export default function PrivacyPolicyPage() {
         <Section title="7. Data security">
           We use reasonable technical and organizational safeguards
           appropriate to the sensitivity of the data we process, including
-          encryption in transit (TLS), salted-hash password storage,
-          role-based access controls, and row-level security on our database.
+          encryption in transit (TLS), role-based access controls, and row-level security on our database.
           No method of transmission or storage is 100% secure, and we
           can&apos;t guarantee absolute security. If we become aware of a
           personal data breach likely to affect you, we&apos;ll notify you and

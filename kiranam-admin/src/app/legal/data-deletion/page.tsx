@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "How to request deletion of your Kiranam data, including data collected via WhatsApp.",
 };
 
-const LAST_UPDATED = "October 6, 2026";
+const LAST_UPDATED = "October 19, 2026";
 
 export default function DataDeletionPage() {
   return (
@@ -25,8 +25,16 @@ export default function DataDeletionPage() {
             Privacy Policy
           </a>{" "}
           (accounting and tax law require us to keep contribution/payment records
-          for a period even after account deletion). No separate request is needed
-          — the in-app action is immediate and self-service.
+          for up to 8 years even after account deletion). No separate request is needed
+          — the in-app action is immediate and self-service. Steps: (1) open the
+          app and sign in, (2) go to the Profile tab, (3) tap{" "}
+          <strong>Delete Account</strong>, (4) confirm in the dialog. If you can no
+          longer access the app, email{" "}
+          <a href="mailto:support@kiranam.online" className="underline">
+            support@kiranam.online
+          </a>{" "}
+          from your registered email or phone number and we&apos;ll delete it for
+          you within 30 days.
         </Section>
 
         <Section title="2. If you've only messaged us on WhatsApp">
@@ -56,7 +64,7 @@ export default function DataDeletionPage() {
           conversation history, coordinator or contribution records tied to your
           account, and consent/preference records. It does not remove information
           we&apos;re legally required to retain (e.g. financial records for tax and
-          accounting purposes, as described in our Privacy Policy §6), or
+          accounting purposes, typically up to 8 years, as described in our Privacy Policy §6), or
           information already shared with a third-party processor (Razorpay for
           payments, Meta for WhatsApp delivery) under their own retention rules.
         </Section>
