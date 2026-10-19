@@ -179,16 +179,20 @@ export async function registerContributor(_prevState: RegisterState, formData: F
 
   // Autopay defaults off — a manually-registered contributor has no payment
   // method on file yet, so autopay can't actually run for them until they
-  // (or an admin) sets one up. monthly_amount is left out entirely when the
-  // admin doesn't have it yet — the commitments table defaults it to ₹500
-  // and it can be set later once the real commitment is known.
-  const { error: commitmentError } = await supabaseAdmin.from('commitments').insert({
-    contributor_id: contributorId,
-    ...(monthlyAmount !== null ? { monthly_amount: monthlyAmount } : {}),
-    autopay_enabled: false,
-  });
-  if (commitmentError) {
-    return { error: 'Contributor was created, but saving their commitment failed. Please add it manually.' };
+  // (or an admin) sets one up. No commitments row at all when the admin
+  // doesn't have an amount yet: monthly_amount is NOT NULL with a ₹500
+  // column default, so inserting without it would show a made-up ₹500 in the
+  // list. Without a row the list shows "—" and the app treats the contributor
+  // as having no commitment yet; the real one is created once it's known.
+  if (monthlyAmount !== null) {
+    const { error: commitmentError } = await supabaseAdmin.from('commitments').insert({
+      contributor_id: contributorId,
+      monthly_amount: monthlyAmount,
+      autopay_enabled: false,
+    });
+    if (commitmentError) {
+      return { error: 'Contributor was created, but saving their commitment failed. Please add it manually.' };
+    }
   }
 
   if (volunteerId) {

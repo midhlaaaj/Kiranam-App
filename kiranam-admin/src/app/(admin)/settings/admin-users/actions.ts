@@ -6,12 +6,16 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
+import { isSuperAdminEmail } from '@/lib/superAdmins';
 
 export async function revokeAdmin(targetId: string) {
   const admin = await verifyAdmin();
   if (targetId === admin.id) throw new Error("You can't revoke your own admin access.");
+  if (!isSuperAdminEmail(admin.email)) throw new Error('Only owner admins can remove other admins.');
 
   const supabase = await createClient();
+  const { data: targetProfile } = await supabase.from('profiles').select('email').eq('id', targetId).maybeSingle();
+  if (isSuperAdminEmail(targetProfile?.email)) throw new Error("This admin is an owner and can't be removed.");
   const label = await lookupLabel('profiles', targetId);
   const { data: target } = await supabase.from('profiles').select('phone').eq('id', targetId).maybeSingle();
   const { error } = await supabase.from('profiles').update({ role: 'contributor' }).eq('id', targetId);

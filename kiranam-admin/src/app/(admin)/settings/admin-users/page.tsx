@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { MailPlus, ShieldCheck } from 'lucide-react';
 import { verifyAdmin } from '@/lib/dal';
+import { isSuperAdminEmail } from '@/lib/superAdmins';
 import { createClient } from '@/lib/supabase/server';
 import { revokeAdmin } from './actions';
 import { revokeInvite } from '../actions';
@@ -138,6 +139,7 @@ async function AdminsTable() {
   const supabase = await createClient();
   const { data } = await supabase.rpc('admin_directory');
   const admins = (data || []) as AdminRow[];
+  const canRemoveAdmins = isSuperAdminEmail(currentAdmin.email);
 
   return (
     <div className={tableWrapClass}>
@@ -165,6 +167,7 @@ async function AdminsTable() {
                     <span className="inline-flex items-center gap-2">
                       {a.full_name || 'Unnamed'}
                       {isSelf && <span className={badgeClass('neutral')}>You</span>}
+                      {isSuperAdminEmail(a.email) && <span className={badgeClass('neutral')}>Owner</span>}
                     </span>
                   </td>
                   <td className={`${tableCellClass} text-kiranam-muted`}>{a.email}</td>
@@ -182,6 +185,12 @@ async function AdminsTable() {
                     {isSelf ? (
                       <span className="text-xs text-kiranam-muted" title="Ask another admin to remove your access.">
                         Can’t remove yourself
+                      </span>
+                    ) : isSuperAdminEmail(a.email) ? (
+                      <span className="text-xs text-kiranam-muted">Owner</span>
+                    ) : !canRemoveAdmins ? (
+                      <span className="text-xs text-kiranam-muted" title="Only owner admins can remove admins.">
+                        —
                       </span>
                     ) : (
                       <ConfirmSubmitButton
