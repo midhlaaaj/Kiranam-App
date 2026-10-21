@@ -18,7 +18,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Karunya Kiranam — Health Care Foundation",
   description:
-    "Every contribution, big or small, brings a family closer to hope. Get the Karunya Kiranam app by Health Care Foundation.",
+    "Empowering lives, inspiring smiles. Get the Karunya Kiranam app by Health Care Foundation.",
 };
 
 export default function LandingPage() {
@@ -29,7 +29,7 @@ export default function LandingPage() {
       <main className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center sm:px-6">
         <Image
           src="/kiranam-icon.png"
-          alt="Karunya Kiranam logo"
+          alt="Healthcare Foundation logo"
           width={112}
           height={112}
           priority
@@ -39,7 +39,7 @@ export default function LandingPage() {
         <h1 className={`${styles.title} ${styles.rise} ${styles.d1} mt-9`}>Karunya Kiranam</h1>
         <div className={`${styles.divider} mt-6`} aria-hidden="true" />
         <p className={`${styles.tagline} ${styles.rise} ${styles.d2} mt-6 max-w-md text-lg leading-relaxed sm:text-xl`}>
-          Every contribution, big or small, brings a family closer to hope.
+          Empowering lives, inspiring smiles
         </p>
 
         <div className={`${styles.rise} ${styles.d3} mt-11 flex w-full max-w-xs flex-col gap-3 sm:w-auto sm:max-w-none sm:flex-row`}>

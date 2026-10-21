@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
+import { HcfMark } from '@/components/HcfMark';
 import { supabase } from '@/lib/supabase';
 import { extractReferralCodeFromText, stashPendingReferralCode } from '@/utils/referral';
 import { resolveEntryRoute } from '@/utils/volunteerRouting';
@@ -88,7 +89,7 @@ export default function SplashScreen() {
     setAttempt((n) => n + 1);
   };
 
-  const tagline = "Every contribution, big or small, brings a family closer to hope.";
+  const tagline = "Empowering lives, inspiring smiles";
   const getStarted = "Get Started";
 
   return (
@@ -115,6 +116,7 @@ export default function SplashScreen() {
       />
 
       <View style={styles.content}>
+        <HcfMark size={104} />
         <Text style={styles.brand}>Karunya Kiranam</Text>
         <View style={styles.divider} />
         <Text style={styles.tagline}>{tagline}</Text>
@@ -156,6 +158,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   brand: {
+    marginTop: 28,
     fontFamily: 'Inter-ExtraBold',
     fontWeight: '800',
     fontSize: 34,
