@@ -204,12 +204,6 @@ export default function RegisterScreen() {
         )}
 
         {/* Consent checkboxes */}
-        <View style={styles.whatsappNotice}>
-          <Text style={styles.whatsappNoticeText}>
-            Kiranam uses WhatsApp to send your login codes, payment receipts, reminders and important updates. WhatsApp
-            consent is required to use the app.
-          </Text>
-        </View>
         <View style={styles.consentGroup}>
           <TouchableOpacity
             style={styles.checkboxRow}
@@ -312,18 +306,6 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '700',
     color: '#EC2028',
-  },
-  whatsappNotice: {
-    backgroundColor: '#FFF4E5',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 12,
-  },
-  whatsappNoticeText: {
-    fontFamily: 'Inter',
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: '#7A4B00',
   },
   consentGroup: {
     marginTop: 4,

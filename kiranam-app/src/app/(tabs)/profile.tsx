@@ -315,8 +315,8 @@ const styles = StyleSheet.create({
     color: '#B0ADA8',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 12,
-    marginTop: 12,
+    marginBottom: 8,
+    marginTop: 4,
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1EEEA',
     paddingHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 12,
     // Subtle shadow
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },

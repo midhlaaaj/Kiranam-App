@@ -1,6 +1,6 @@
 import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Share, StatusBar, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, StatusBar, RefreshControl, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
@@ -220,26 +220,26 @@ export default function VolunteerDashboardScreen() {
         )}
 
         {/* Contribution stats — pending/overdue workload for assigned contributors */}
-        <FlatList
-          data={[
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.kpiList}
+          contentContainerStyle={styles.kpiListContainer}
+        >
+          {[
             { key: 'assigned', label: 'Assigned Contributors', value: volunteerMembers.length.toString(), Icon: Users },
             { key: 'pending', label: 'Pending Contributions', value: pendingCount.toString(), Icon: Clock3 },
             { key: 'overdue', label: 'Overdue Contributions', value: overdueCount.toString(), Icon: AlertCircle },
-          ]}
-          keyExtractor={(item) => item.key}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.kpiListContainer}
-          renderItem={({ item }) => (
-            <View style={styles.kpiCard}>
+          ].map((item) => (
+            <View key={item.key} style={styles.kpiCard}>
               <View style={styles.kpiIconBg}>
                 <item.Icon size={18} color="#EC2028" />
               </View>
               <Text style={styles.kpiValue}>{item.value}</Text>
               <Text style={styles.kpiLabel}>{item.label}</Text>
             </View>
-          )}
-        />
+          ))}
+        </ScrollView>
 
         {/* Referral Code — compact ticket-style card, redesigned away from
             the previous full dark hero card, sitting right above Quick Actions */}
@@ -579,6 +579,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 24,
+    flexShrink: 0,
   },
   referralCompactIconBox: {
     width: 42,
@@ -622,9 +623,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#22A559',
   },
+  kpiList: {
+    flexGrow: 0,
+    flexShrink: 0,
+    marginTop: 16,
+    marginBottom: 16,
+  },
   kpiListContainer: {
     paddingRight: 20,
-    paddingBottom: 24,
     gap: 12,
   },
   kpiCard: {
