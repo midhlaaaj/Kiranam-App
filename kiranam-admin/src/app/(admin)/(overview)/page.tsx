@@ -4,12 +4,14 @@ import { Clock3, HeartHandshake, Megaphone, Users, Wallet, ChevronLeft, ChevronR
 import { createClient } from '@/lib/supabase/server';
 import { PageHeading } from '@/components/PageHeading';
 import { StatCard } from '@/components/StatCard';
-import { ContributionsChart } from '@/components/charts/ContributionsChart';
-import { CampaignProgressChart } from '@/components/charts/CampaignProgressChart';
-import { VolunteerGrowthChart } from '@/components/charts/VolunteerGrowthChart';
-import { ContributorGrowthChart } from '@/components/charts/ContributorGrowthChart';
+import {
+  CampaignProgressChart,
+  ContributionsChart,
+  ContributorGrowthChart,
+  StatusBreakdownChart,
+  VolunteerGrowthChart,
+} from '@/components/charts/lazy';
 import { ContributorGrowthFilter } from '@/components/ContributorGrowthFilter';
-import { StatusBreakdownChart } from '@/components/charts/StatusBreakdownChart';
 import { deriveContributorStatus } from '@/lib/volunteerStats';
 import { bucketKey, bucketLabel, getBucketsForPage, type Granularity } from '@/lib/timeBuckets';
 import { cardClass, formatMoney } from '@/lib/ui';

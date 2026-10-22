@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeading } from '@/components/PageHeading';
 import { EmptyState } from '@/components/EmptyState';
 import { Pagination } from '@/components/Pagination';
-import { ContributionsChart } from '@/components/charts/ContributionsChart';
+import { ContributionsChart } from '@/components/charts/lazy';
 import { ManualContributionButton } from './ManualContributionButton';
 import { Skeleton, SkeletonChart, SkeletonTable } from '@/components/Skeleton';
 import {

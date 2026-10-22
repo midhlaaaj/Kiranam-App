@@ -25,10 +25,10 @@
  */
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { GitFork, List } from "lucide-react";
 
 import { FlowBuilder } from "./flow-builder";
-import { FlowCanvas } from "./flow-canvas";
 import { FlowEditorProvider } from "./flow-editor-state";
 import { EditorHeader } from "./header";
 import { ValidationPanel } from "./validation-panel";
@@ -36,6 +36,12 @@ import { NODE_META, nodeColors, type NodeType } from "./shared";
 import { cn } from "@/lib/whatsapp/utils";
 import type { FlowRow, FlowNodeRow } from "@/lib/whatsapp/flows/types";
 import { useTranslations } from "next-intl";
+
+// xyflow + dagre are ~85 KB gzipped and only needed once the canvas view is shown.
+const FlowCanvas = dynamic(() => import("./flow-canvas").then((m) => m.FlowCanvas), {
+  ssr: false,
+  loading: () => <div className="absolute inset-0 animate-pulse bg-muted/40" />,
+});
 
 /**
  * Below this viewport width we force list view and hide the toggle.
