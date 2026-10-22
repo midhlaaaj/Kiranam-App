@@ -114,7 +114,8 @@ async function loadLegacyAggregates(granularity: Granularity): Promise<Aggregate
     supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'volunteer'),
     supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('contributions').select('amount, created_at').eq('status', 'success'),
-    supabase.from('campaigns').select('title, raised, goal'),
+    // Newest first, matching the campaign lists; the SQL path returns the same order (see below).
+    supabase.from('campaigns').select('title, raised, goal').order('created_at', { ascending: false }),
     supabase.from('profiles').select('created_at').eq('role', 'volunteer').order('created_at', { ascending: true }),
     supabase.from('contributor_assignments').select('contributor_id'),
     // Fetched alongside everything else (and filtered below) rather than as
@@ -179,7 +180,8 @@ async function loadSqlAggregates(granularity: Granularity): Promise<Aggregates |
     activeCampaigns: Number(data.active_campaigns),
     totalRaised: Number(data.total_raised),
     contribBuckets: new Map((data.contribution_buckets as { key: string; total: number }[]).map((b) => [b.key, Number(b.total)])),
-    campaigns: data.campaigns,
+    // dashboard_overview returns campaigns oldest first; the chart lists newest first.
+    campaigns: [...data.campaigns].reverse(),
     volunteerMonthly: toCountMap(data.volunteer_monthly as KeyCount[]),
     statusCounts: {
       Active: Number(data.status_counts.Active),
