@@ -18,7 +18,23 @@ import { cardClass, formatMoney } from '@/lib/ui';
 import { PillTabs } from '@/components/PillTabs';
 import { SkeletonChart, SkeletonStatRow } from '@/components/Skeleton';
 
-async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?: string, cgTo?: string) {
+// One-line toggle: `true` reads the dashboard aggregates from the SQL functions
+// in migration 039 (exact, small payload); `false` uses the original path that
+// pulls whole tables into the page. The SQL path also falls back to the original
+// automatically (with a warning) if the functions aren't deployed yet or fail.
+const USE_SQL_AGGREGATES = true;
+
+// Buckets are keyed in the server's local time (see timeBuckets.ts), so the
+// database is asked to bucket in that same zone.
+const serverTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+type KeyCount = { key: string; count: number };
+
+function toCountMap(rows: KeyCount[]) {
+  return new Map(rows.map((r) => [r.key, Number(r.count)]));
+}
+
+async function loadLegacyContributorCounts(granularity: Granularity) {
   const supabase = await createClient();
   const { data } = await supabase
     .from('profiles')
@@ -26,14 +42,33 @@ async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?
     .eq('role', 'contributor').not('phone', 'is', null)
     .order('created_at', { ascending: true });
 
-  const isCustom = Boolean(cgFrom && cgTo);
-  const granularity: Granularity = isCustom ? 'daily' : cgGranularity;
-
   const counts = new Map<string, number>();
   (data || []).forEach((p) => {
     const key = bucketKey(new Date(p.created_at), granularity);
     counts.set(key, (counts.get(key) || 0) + 1);
   });
+  return counts;
+}
+
+async function loadContributorCounts(granularity: Granularity) {
+  if (USE_SQL_AGGREGATES) {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc('dashboard_contributor_growth', {
+      p_granularity: granularity,
+      p_tz: serverTimeZone(),
+    });
+    if (!error && Array.isArray(data)) return toCountMap(data as KeyCount[]);
+    console.warn('[dashboard] dashboard_contributor_growth failed, using the original query:', error?.message);
+  }
+  return loadLegacyContributorCounts(granularity);
+}
+
+async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?: string, cgTo?: string) {
+  const isCustom = Boolean(cgFrom && cgTo);
+  const granularity: Granularity = isCustom ? 'daily' : cgGranularity;
+
+  const counts = await loadContributorCounts(granularity);
+
 
   let cumulative = 0;
   let series = Array.from(counts.entries())
@@ -48,7 +83,19 @@ async function getContributorGrowth(cgGranularity: 'weekly' | 'monthly', cgFrom?
   return series.map(({ label, total }) => ({ label, total }));
 }
 
-async function getDashboard(granularity: Granularity, page: number) {
+type Aggregates = {
+  pendingApplications: number;
+  contributors: number;
+  volunteers: number;
+  activeCampaigns: number;
+  totalRaised: number;
+  contribBuckets: Map<string, number>;
+  campaigns: { title: string; raised: number | string; goal: number | string }[];
+  volunteerMonthly: Map<string, number>;
+  statusCounts: { Active: number; Due: number; Overdue: number; Inactive: number };
+};
+
+async function loadLegacyAggregates(granularity: Granularity): Promise<Aggregates> {
   const supabase = await createClient();
 
   const [
@@ -82,6 +129,71 @@ async function getDashboard(granularity: Granularity, page: number) {
     const key = bucketKey(new Date(c.created_at), granularity);
     contribBuckets.set(key, (contribBuckets.get(key) || 0) + Number(c.amount));
   });
+
+  const monthlyCounts = new Map<string, number>();
+  (volunteers.data || []).forEach((v) => {
+    const key = bucketKey(new Date(v.created_at), 'monthly');
+    monthlyCounts.set(key, (monthlyCounts.get(key) || 0) + 1);
+  });
+
+
+  const contributorIds = [...new Set((assignments.data || []).map((a) => a.contributor_id))];
+  const commitmentByContributor = new Map((allCommitments.data || []).map((c) => [c.contributor_id, c]));
+  const statusCounts = { Active: 0, Due: 0, Overdue: 0, Inactive: 0 };
+  contributorIds.forEach((id) => {
+    const commitment = commitmentByContributor.get(id);
+    const status = deriveContributorStatus(commitment);
+    if (status === 'active') statusCounts.Active += 1;
+    else if (status === 'due') statusCounts.Due += 1;
+    else if (status === 'overdue') statusCounts.Overdue += 1;
+    else statusCounts.Inactive += 1;
+  });
+
+  return {
+    pendingApplications: pendingApplications.count ?? 0,
+    contributors: contributors.count ?? 0,
+    volunteers: volunteersCount.count ?? 0,
+    activeCampaigns: activeCampaigns.count ?? 0,
+    totalRaised,
+    contribBuckets,
+    campaigns: campaigns.data || [],
+    volunteerMonthly: monthlyCounts,
+    statusCounts,
+  };
+}
+
+async function loadSqlAggregates(granularity: Granularity): Promise<Aggregates | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('dashboard_overview', {
+    p_granularity: granularity,
+    p_tz: serverTimeZone(),
+  });
+  if (error || !data) {
+    console.warn('[dashboard] dashboard_overview failed, using the original queries:', error?.message);
+    return null;
+  }
+  return {
+    pendingApplications: Number(data.pending_applications),
+    contributors: Number(data.contributors),
+    volunteers: Number(data.volunteers),
+    activeCampaigns: Number(data.active_campaigns),
+    totalRaised: Number(data.total_raised),
+    contribBuckets: new Map((data.contribution_buckets as { key: string; total: number }[]).map((b) => [b.key, Number(b.total)])),
+    campaigns: data.campaigns,
+    volunteerMonthly: toCountMap(data.volunteer_monthly as KeyCount[]),
+    statusCounts: {
+      Active: Number(data.status_counts.Active),
+      Due: Number(data.status_counts.Due),
+      Overdue: Number(data.status_counts.Overdue),
+      Inactive: Number(data.status_counts.Inactive),
+    },
+  };
+}
+
+async function getDashboard(granularity: Granularity, page: number) {
+  const agg = (USE_SQL_AGGREGATES ? await loadSqlAggregates(granularity) : null) ?? (await loadLegacyAggregates(granularity));
+  const { totalRaised, contribBuckets, statusCounts } = agg;
+
 
   // Generate 12 consecutive buckets based on page offset
   const keys = getBucketsForPage(granularity, page);
@@ -123,41 +235,25 @@ async function getDashboard(granularity: Granularity, page: number) {
     }
   }
 
-  const campaignProgress = (campaigns.data || []).map((c) => ({
+  const campaignProgress = agg.campaigns.map((c) => ({
     title: c.title,
-    pct: c.goal > 0 ? Math.min(100, Math.round((Number(c.raised) / Number(c.goal)) * 100)) : 0,
+    pct: Number(c.goal) > 0 ? Math.min(100, Math.round((Number(c.raised) / Number(c.goal)) * 100)) : 0,
   }));
 
-  const monthlyCounts = new Map<string, number>();
-  (volunteers.data || []).forEach((v) => {
-    const key = bucketKey(new Date(v.created_at), 'monthly');
-    monthlyCounts.set(key, (monthlyCounts.get(key) || 0) + 1);
-  });
   let cumulative = 0;
-  const volunteerGrowth = Array.from(monthlyCounts.entries())
+  const volunteerGrowth = Array.from(agg.volunteerMonthly.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, count]) => {
       cumulative += count;
       return { label: bucketLabel(key, 'monthly'), total: cumulative };
     });
 
-  const contributorIds = [...new Set((assignments.data || []).map((a) => a.contributor_id))];
-  const commitmentByContributor = new Map((allCommitments.data || []).map((c) => [c.contributor_id, c]));
-  const statusCounts = { Active: 0, Due: 0, Overdue: 0, Inactive: 0 };
-  contributorIds.forEach((id) => {
-    const commitment = commitmentByContributor.get(id);
-    const status = deriveContributorStatus(commitment);
-    if (status === 'active') statusCounts.Active += 1;
-    else if (status === 'due') statusCounts.Due += 1;
-    else if (status === 'overdue') statusCounts.Overdue += 1;
-    else statusCounts.Inactive += 1;
-  });
-
   return {
-    pendingApplications: pendingApplications.count ?? 0,
-    contributors: contributors.count ?? 0,
-    volunteers: volunteersCount.count ?? 0,
-    activeCampaigns: activeCampaigns.count ?? 0,
+    pendingApplications: agg.pendingApplications,
+    contributors: agg.contributors,
+    volunteers: agg.volunteers,
+    activeCampaigns: agg.activeCampaigns,
+
     totalRaised,
     contributionsOverTime,
     totalInPeriod,
