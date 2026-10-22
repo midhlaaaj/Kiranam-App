@@ -14,6 +14,7 @@ import {
 import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { cn } from '@/lib/utils';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
+import { downscaleImageFile } from '@/lib/resizeImage';
 
 const fieldLabelClass = 'text-sm font-medium text-kiranam-ink';
 
@@ -61,6 +62,16 @@ function ProfileCard({
   const [removeAvatar, setRemoveAvatar] = useState(false);
 
   const [state, formAction, pending] = useActionState(async (prev: ProfileState, formData: FormData) => {
+    // Shrink a newly picked photo before it's uploaded (a phone photo is several MB for a
+    // 64px avatar). Any failure just uploads the original, which the server still validates.
+    const picked = formData.get('avatar');
+    if (picked instanceof File && picked.size > 0) {
+      try {
+        formData.set('avatar', await downscaleImageFile(picked));
+      } catch {
+        // keep the original file
+      }
+    }
     const result = await updateProfile(prev, formData);
     if (result.message) {
       toast.success(result.message);
