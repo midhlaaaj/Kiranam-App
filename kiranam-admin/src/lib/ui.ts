@@ -28,7 +28,9 @@ export const cardClass = 'rounded-lg border border-kiranam-border bg-kiranam-sur
 
 export const fileInputClass = `${inputClass} cursor-pointer file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-kiranam-surface-alt file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kiranam-ink`;
 
-export const tableWrapClass = `${cardClass} overflow-x-auto`;
+// `relative` so absolutely positioned bits inside the table (sr-only header
+// labels, menus) are clipped by the scroll box instead of widening the page.
+export const tableWrapClass = `${cardClass} relative overflow-x-auto`;
 
 export const tableHeadRowClass =
   'border-b border-kiranam-border text-left text-xs font-semibold uppercase tracking-wide text-kiranam-muted';
