@@ -46,7 +46,7 @@ export function CoordinatorsTableClient({ coordinators, emptyTitle, emptyDescrip
                   <button
                     type="button"
                     onClick={() => setSelectedId(v.id)}
-                    className="cursor-pointer font-semibold text-kiranam-ink hover:text-kiranam-primary hover:underline"
+                    className="-my-2 cursor-pointer py-2 text-left font-semibold text-kiranam-ink hover:text-kiranam-primary hover:underline"
                   >
                     {v.full_name || 'Unnamed'}
                   </button>

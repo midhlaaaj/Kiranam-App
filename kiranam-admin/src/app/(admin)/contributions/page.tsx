@@ -292,7 +292,7 @@ async function ContributionsResults({ filters, page }: { filters: Filters; page:
                     </time>
                   </td>
                   <td className={tableCellClass}>
-                    <Link href={`/contributors/${c.contributor_id}`} className="font-semibold text-kiranam-ink underline-offset-2 hover:underline">
+                    <Link href={`/contributors/${c.contributor_id}`} className="-my-2 inline-block py-2 font-semibold text-kiranam-ink underline-offset-2 hover:underline">
                       {c.profiles?.full_name || 'Unknown'}
                     </Link>
                     <p className="text-xs tabular-nums text-kiranam-muted">{c.profiles?.phone}</p>

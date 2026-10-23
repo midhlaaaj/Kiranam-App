@@ -33,7 +33,9 @@ export const tableWrapClass = `${cardClass} overflow-x-auto`;
 export const tableHeadRowClass =
   'border-b border-kiranam-border text-left text-xs font-semibold uppercase tracking-wide text-kiranam-muted';
 
-export const tableCellClass = 'px-5 py-3';
+// Tighter on phones: 20px of padding per side squeezed 3-column tables into
+// four-line rows on a 360px screen.
+export const tableCellClass = 'px-3 py-3 sm:px-5';
 
 export const tableCellNumClass = `${tableCellClass} tabular-nums`;
 

@@ -10,7 +10,7 @@ export function ChartTypeToggle({ value, onChange }: { value: ChartKind; onChang
         onClick={() => onChange('line')}
         aria-pressed={value === 'line'}
         aria-label="Line chart"
-        className={`cursor-pointer rounded-full p-1.5 transition duration-200 ease-out ${
+        className={`relative cursor-pointer rounded-full p-1.5 transition duration-200 ease-out after:absolute after:-inset-x-0.5 after:-inset-y-1.5 ${
           value === 'line' ? 'bg-kiranam-surface text-kiranam-primary shadow-elevation-sm' : 'text-kiranam-muted hover:text-kiranam-ink'
         }`}
       >
@@ -21,7 +21,7 @@ export function ChartTypeToggle({ value, onChange }: { value: ChartKind; onChang
         onClick={() => onChange('bar')}
         aria-pressed={value === 'bar'}
         aria-label="Bar chart"
-        className={`cursor-pointer rounded-full p-1.5 transition duration-200 ease-out ${
+        className={`relative cursor-pointer rounded-full p-1.5 transition duration-200 ease-out after:absolute after:-inset-x-0.5 after:-inset-y-1.5 ${
           value === 'bar' ? 'bg-kiranam-surface text-kiranam-primary shadow-elevation-sm' : 'text-kiranam-muted hover:text-kiranam-ink'
         }`}
       >

@@ -38,7 +38,7 @@ const KIND_THEME: Record<ActivityKind, KindTheme> = {
   message: { icon: MessageSquare, badge: 'bg-blue-500/10 text-blue-400' },
   contact: { icon: UserPlus, badge: 'bg-primary/10 text-primary' },
   deal: { icon: Briefcase, badge: 'bg-primary/10 text-primary' },
-  broadcast: { icon: Radio, badge: 'bg-amber-500/10 text-amber-400' },
+  broadcast: { icon: Radio, badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400' },
   automation: { icon: Zap, badge: 'bg-rose-500/10 text-rose-400' },
 }
 
@@ -146,7 +146,7 @@ export function ActivityFeed({ items, loading, error, onRetry }: ActivityFeedPro
                     onClick={() => setPageSize(size)}
                     disabled={disabled}
                     className={cn(
-                      'rounded-md px-2 py-1 font-medium tabular-nums transition-colors',
+                      'relative rounded-md px-2 py-1 font-medium tabular-nums transition-colors after:absolute after:-inset-x-0.5 after:-inset-y-1.5',
                       pageSize === size
                         ? 'bg-secondary text-secondary-foreground'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground',
