@@ -22,7 +22,7 @@ export function referralShareMessage(code: string): string {
   return (
     `Join me on Karunya Kiranam, a Health Care Foundation initiative that brings care and support to people in need. ` +
     `Download the app and start contributing to Karunya Kiranam: ${referralLink(code)}\n\n` +
-    `My referral code is ${code}. It's filled in for you when you sign up from this link, or you can enter it under "Have a referral code?".`
+    `When you sign up, tap "Have a referral code?" and enter ${code}.`
   );
 }
 
