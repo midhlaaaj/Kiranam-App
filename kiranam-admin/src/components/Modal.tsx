@@ -27,18 +27,25 @@ export function Modal({
       if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    // Keep the page behind from scrolling while the popup is open (on phones a
+    // swipe inside the popup otherwise drags the page underneath).
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open, onClose]);
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4"
       onClick={onClose}
     >
       <div
-        className={`flex w-full max-w-lg max-h-[calc(100dvh-2rem)] flex-col ${cardClass} p-6`}
+        className={`flex w-full max-w-lg max-h-[calc(100dvh-1.5rem)] flex-col ${cardClass} p-5 sm:max-h-[calc(100dvh-2rem)] sm:p-6`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -58,7 +65,7 @@ export function Modal({
             <X size={18} strokeWidth={2.25} />
           </button>
         </div>
-        <div className="overflow-y-auto">{children}</div>
+        <div className="min-h-0 overflow-y-auto overscroll-contain">{children}</div>
       </div>
     </div>
   );

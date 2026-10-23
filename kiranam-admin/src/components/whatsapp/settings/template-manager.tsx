@@ -841,7 +841,7 @@ export function TemplateManager() {
           else closeDialog();
         }}
       >
-        <DialogContent className="bg-popover border-border sm:max-w-5xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="bg-popover border-border sm:max-w-5xl max-h-[92dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">
               {editingId ? t('dialogEditTitle') : t('dialogNewTitle')}
