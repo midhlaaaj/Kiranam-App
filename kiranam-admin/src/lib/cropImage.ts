@@ -26,6 +26,7 @@ export async function getCroppedImageFile(
   outputWidth: number,
   outputHeight: number,
   fileName: string,
+  format: UploadImageFormat = 'jpeg',
 ): Promise<File> {
   const image = await loadImage(imageSrc);
   const canvas = document.createElement('canvas');
@@ -46,9 +47,39 @@ export async function getCroppedImageFile(
     outputHeight,
   );
 
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-  if (!blob) throw new Error('Failed to export cropped image.');
-
+  const blob = await encodeCanvas(canvas, format);
+  const ext = blob.type === 'image/webp' ? 'webp' : 'jpg';
   const baseName = fileName.replace(/\.[^./\\]+$/, '') || 'image';
-  return new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
+  return new File([blob], `${baseName}.${ext}`, { type: blob.type });
+}
+
+/**
+ * Upload format for a cropped photo.
+ * - 'webp': ~25–35% smaller than JPEG at the same visual quality; shown by every
+ *   current browser, iOS 14+ and Android. Use it wherever the photo is only
+ *   displayed in the app and admin.
+ * - 'jpeg': for photos that also leave the app — campaign photos can become
+ *   the cover, which goes out as the WhatsApp announcement's header image
+ *   (Meta accepts only JPEG/PNG there) and in emails (Outlook can't show WebP).
+ */
+export type UploadImageFormat = 'webp' | 'jpeg';
+
+// 0.82 is visually indistinguishable from 0.9 at these sizes and noticeably
+// smaller for both formats.
+const QUALITY = 0.82;
+
+function toBlob(canvas: HTMLCanvasElement, type: string): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, QUALITY));
+}
+
+/** Encodes as `format`, falling back to JPEG when the browser can't produce
+ * WebP (it then silently returns a PNG, which would be larger, not smaller). */
+export async function encodeCanvas(canvas: HTMLCanvasElement, format: UploadImageFormat): Promise<Blob> {
+  if (format === 'webp') {
+    const webp = await toBlob(canvas, 'image/webp');
+    if (webp && webp.type === 'image/webp') return webp;
+  }
+  const jpeg = await toBlob(canvas, 'image/jpeg');
+  if (!jpeg) throw new Error('Failed to export image.');
+  return jpeg;
 }

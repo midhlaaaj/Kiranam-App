@@ -5,6 +5,7 @@ import { GripVertical, Star, Trash2 } from 'lucide-react';
 import { ImageCropField, COVER_CROP } from '@/components/ImageCropField';
 import { ImageLightbox } from '@/components/ImageLightbox';
 import { cn } from '@/lib/utils';
+import type { UploadImageFormat } from '@/lib/cropImage';
 
 interface Item {
   key: string;
@@ -26,7 +27,15 @@ const nextKey = () => `m${++counter}`;
  *   media_order  JSON array — "u:<saved url>" or "n:<index into media_files>"
  *   media_files  the new, cropped files (in the order they appear)
  */
-export function MediaManager({ initialUrls = [] }: { initialUrls?: string[] }) {
+export function MediaManager({
+  initialUrls = [],
+  imageFormat = 'jpeg',
+}: {
+  initialUrls?: string[];
+  /** Campaign photos stay JPEG (the cover is sent on WhatsApp/email); event
+   * photos use WebP. See UploadImageFormat. */
+  imageFormat?: UploadImageFormat;
+}) {
   const [items, setItems] = useState<Item[]>(() => initialUrls.map((url) => ({ key: nextKey(), url })));
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [dragKey, setDragKey] = useState<string | null>(null);
@@ -207,6 +216,7 @@ export function MediaManager({ initialUrls = [] }: { initialUrls?: string[] }) {
         <ImageCropField
           name="media"
           crop={COVER_CROP}
+          format={imageFormat}
           multiple
           buttonLabel={items.length ? 'Add more photos' : 'Add photos'}
           onFiles={(files) =>

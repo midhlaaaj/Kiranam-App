@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import Cropper, { type Area } from 'react-easy-crop';
 import { ImageUp } from 'lucide-react';
-import { getCroppedImageFile } from '@/lib/cropImage';
+import { getCroppedImageFile, type UploadImageFormat } from '@/lib/cropImage';
 import { buttonPrimary, buttonSecondary, fileInputClass } from '@/lib/ui';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -28,6 +28,7 @@ export function ImageCropField({
   required = false,
   onFiles,
   buttonLabel,
+  format = 'jpeg',
 }: {
   name: string;
   crop: { aspect: number; outputWidth: number; outputHeight: number };
@@ -38,6 +39,8 @@ export function ImageCropField({
    * list). Renders an "add" button instead of a native file input. */
   onFiles?: (files: File[]) => void;
   buttonLabel?: string;
+  /** Encoding for the cropped upload — see UploadImageFormat. */
+  format?: UploadImageFormat;
 }) {
   const pickerRef = useRef<HTMLInputElement>(null);
   const hiddenRef = useRef<HTMLInputElement>(null);
@@ -95,6 +98,7 @@ export function ImageCropField({
         cropTarget.outputWidth,
         cropTarget.outputHeight,
         file.name,
+        format,
       );
       doneFilesRef.current = [...doneFilesRef.current, cropped];
       URL.revokeObjectURL(imageSrc);

@@ -51,7 +51,7 @@ export function CreateEventForm({ onDone }: { onDone?: () => void }) {
         <label className="mb-1.5 block text-sm font-medium text-kiranam-ink">
           Photos <span className="font-normal text-kiranam-muted">— optional · the first photo is the cover</span>
         </label>
-        <MediaManager />
+        <MediaManager imageFormat="webp" />
       </div>
 
       {state?.error && <p className="text-sm text-kiranam-danger sm:col-span-2" role="alert">{state.error}</p>}

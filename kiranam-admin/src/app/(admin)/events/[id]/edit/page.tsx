@@ -61,7 +61,7 @@ export default async function EditEventPage({ params }: { params: Promise<{ id: 
             </EditCard>
 
             <EditCard title="Photos" description="The first photo is the cover. Drag to reorder, or pick “Make cover”. Changes apply when you save.">
-              <MediaManager initialUrls={mediaUrls} />
+              <MediaManager initialUrls={mediaUrls} imageFormat="webp" />
             </EditCard>
           </>
         }
