@@ -7,6 +7,7 @@ import * as Sharing from 'expo-sharing';
 import { Button } from '@/components/Button';
 import { Check, Clipboard as CopyIcon } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useApp } from '@/context/AppContext';
 import { formatMoney } from '@/utils/format';
 import { KIRANAM_LOGO_DATA_URI, HCF_LOGO_DATA_URI, HCF_SEAL_DATA_URI } from '@/constants/receiptAssets';
@@ -25,6 +26,13 @@ export default function ReceiptScreen() {
   const dateStr = (params.date as string) || record?.date;
   const label = (params.label as string) || record?.label;
   const homeRoute = isCoordinator ? '/(coordinator-tabs)/dashboard' : '/(tabs)/home';
+  // Straight after a payment the screen underneath is the amount picker that
+  // was just paid from, so Back goes home there instead; from History or a
+  // notification it simply goes back.
+  const goBack = () => {
+    if (params.from !== 'payment' && router.canGoBack()) router.back();
+    else router.replace(homeRoute);
+  };
   const receiptMissing = !txnId || amount === undefined || !dateStr || !label;
 
   const [copied, setCopied] = useState(false);
@@ -136,6 +144,7 @@ export default function ReceiptScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         <StatusBar barStyle="dark-content" />
+        <ScreenHeader title="Receipt" onBack={goBack} />
         <View style={styles.notFound}>
           <Text style={styles.notFoundTitle}>Receipt not found</Text>
           <Text style={styles.notFoundText}>We couldn&apos;t find the details for this payment. You can find it under your contribution history.</Text>
@@ -148,6 +157,7 @@ export default function ReceiptScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" />
+      <ScreenHeader title="Receipt" onBack={goBack} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Success Circle animation */}
@@ -237,7 +247,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 22,
-    paddingTop: 30,
+    paddingTop: 12,
     paddingBottom: 24,
     alignItems: 'center',
   },

@@ -35,6 +35,7 @@ export default function SecurePaymentScreen() {
       router.replace({
         pathname: '/receipt',
         params: {
+          from: 'payment',
           id: record.id,
           amount: record.amount,
           date: record.date,
