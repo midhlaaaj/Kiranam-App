@@ -677,7 +677,7 @@ function InboxPageInner() {
           </div>
         )}
         <Sheet open={contactSheetOpen} onOpenChange={setContactSheetOpen}>
-          <SheetContent side="right" className="w-[88vw] max-w-sm p-0 lg:hidden">
+          <SheetContent side="right" className="p-0 lg:hidden data-[side=right]:w-[88vw] data-[side=right]:max-w-sm">
             <SheetTitle className="sr-only">Contact details</SheetTitle>
             <ContactSidebar contact={activeContact} />
           </SheetContent>

@@ -382,14 +382,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     <AvatarImage src={profile.avatar_url} alt="" />
                   ) : null}
                   <AvatarFallback className="bg-muted text-sm font-medium text-foreground">
-                    {profile?.full_name?.charAt(0)?.toUpperCase() ??
-                      profile?.email?.charAt(0)?.toUpperCase() ??
+                    {profile?.full_name?.trim().charAt(0).toUpperCase() ||
+                      profile?.email?.charAt(0).toUpperCase() ||
                       "U"}
                   </AvatarFallback>
                 </Avatar>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-foreground">
-                    {profile?.full_name ?? t("defaultUser")}
+                    {profile?.full_name || t("defaultUser")}
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">{profile?.email ?? ""}</span>
                 </span>

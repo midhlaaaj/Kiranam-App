@@ -42,9 +42,11 @@ export function Header({ onOpenSidebar }: HeaderProps) {
   const t = useTranslations("Header");
   const { profile, signOut } = useAuth();
 
+  // `||`, not `??`: an empty full_name ("") must fall through to the email,
+  // otherwise the avatar renders as a blank circle.
   const initial =
-    profile?.full_name?.charAt(0)?.toUpperCase() ??
-    profile?.email?.charAt(0)?.toUpperCase() ??
+    profile?.full_name?.trim().charAt(0).toUpperCase() ||
+    profile?.email?.charAt(0).toUpperCase() ||
     "U";
 
   return (
@@ -80,7 +82,11 @@ export function Header({ onOpenSidebar }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
-        <ModeToggle />
+        {/* Hidden on phones so the "Kiranam WhatsApp" wordmark isn't cut
+            off; Settings → Appearance has the same switch. */}
+        <div className="hidden sm:block">
+          <ModeToggle />
+        </div>
 
         <DropdownMenu>
         <DropdownMenuTrigger
@@ -99,7 +105,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
             </AvatarFallback>
           </Avatar>
           <span className="hidden text-sm font-medium text-foreground sm:inline">
-            {profile?.full_name ?? t("defaultUser")}
+            {profile?.full_name || t("defaultUser")}
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -109,7 +115,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         >
           <div className="px-2 py-1.5">
             <p className="truncate text-sm font-medium text-foreground">
-              {profile?.full_name ?? t("defaultUser")}
+              {profile?.full_name || t("defaultUser")}
             </p>
             <p className="truncate text-xs text-muted-foreground">
               {profile?.email ?? ""}
