@@ -260,7 +260,8 @@ export default function OtpScreen() {
           onClose={() => setPickerVisible(false)}
         />
 
-        <Text style={styles.subtitle}>A 6-digit code was sent via WhatsApp.</Text>
+        {/* Validity matches Supabase Auth → Phone → "SMS OTP Expiry" (600s). */}
+        <Text style={styles.subtitle}>A 6-digit code was sent via WhatsApp. It&apos;s valid for 10 minutes.</Text>
 
         {/* 6 code input fields */}
         <View style={styles.otpContainer}>
