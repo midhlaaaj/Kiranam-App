@@ -150,6 +150,12 @@ export function WhatsAppConfig() {
             setConnectionStatus('connected');
             setResetReason(null);
             setStatusMessage('');
+          } else if (payload.connected == null) {
+            // Meta couldn't be reached (or the check itself failed): the
+            // status is unknown, which is not the same as disconnected.
+            setConnectionStatus('unknown');
+            setResetReason(null);
+            setStatusMessage(payload.message || '');
           } else {
             setConnectionStatus('disconnected');
             setResetReason(payload.needs_reset ? 'token_corrupted' : payload.reason === 'meta_api_error' ? 'meta_api_error' : null);
@@ -157,7 +163,8 @@ export function WhatsAppConfig() {
           }
         } catch (err) {
           console.error('Health check failed:', err);
-          setConnectionStatus('disconnected');
+          setConnectionStatus('unknown');
+          setStatusMessage('');
         }
       } else {
         setConnectionStatus('disconnected');
@@ -309,6 +316,11 @@ export function WhatsAppConfig() {
             ? `Connected to ${payload.phone_info.verified_name}`
             : 'API connection successful'
         );
+      } else if (payload.connected == null) {
+        setConnectionStatus('unknown');
+        setResetReason(null);
+        setStatusMessage(payload.message || '');
+        toast.error(payload.message || "Couldn't check the connection. Try again in a moment.");
       } else {
         setConnectionStatus('disconnected');
         setResetReason(payload.needs_reset ? 'token_corrupted' : payload.reason === 'meta_api_error' ? 'meta_api_error' : null);
@@ -317,7 +329,8 @@ export function WhatsAppConfig() {
       }
     } catch (err) {
       console.error('Test connection error:', err);
-      setConnectionStatus('disconnected');
+      setConnectionStatus('unknown');
+      setStatusMessage('');
       toast.error('Connection test failed. Check network and try again.');
     } finally {
       setTesting(false);
@@ -454,18 +467,24 @@ export function WhatsAppConfig() {
           <div className="flex items-center gap-2">
             {connectionStatus === 'connected' ? (
               <CheckCircle2 className="size-4 text-primary" />
+            ) : connectionStatus === 'unknown' ? (
+              <AlertTriangle className="size-4 text-amber-500" />
             ) : (
               <XCircle className="size-4 text-red-500" />
             )}
             <AlertTitle className="text-foreground mb-0">
-              {connectionStatus === 'connected' ? t('credentialsValid') : t('notConnected')}
+              {connectionStatus === 'connected'
+                ? t('credentialsValid')
+                : connectionStatus === 'unknown'
+                  ? t('checkFailed')
+                  : t('notConnected')}
             </AlertTitle>
           </div>
           <AlertDescription className="text-muted-foreground">
             {connectionStatus === 'connected'
               ? t('connectedDesc')
               : statusMessage ||
-                t('notConnectedDesc')}
+                (connectionStatus === 'unknown' ? t('checkFailedDesc') : t('notConnectedDesc'))}
           </AlertDescription>
         </Alert>
 

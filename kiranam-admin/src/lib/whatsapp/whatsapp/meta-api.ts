@@ -27,6 +27,14 @@ interface MetaErrorResponse {
   error?: { message?: string; code?: number; type?: string }
 }
 
+/** A non-2xx reply from Meta; `status` is the HTTP status it answered with. */
+export class MetaApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+    this.name = 'MetaApiError'
+  }
+}
+
 async function throwMetaError(response: Response, fallback: string): Promise<never> {
   let message = fallback
   try {
@@ -35,7 +43,20 @@ async function throwMetaError(response: Response, fallback: string): Promise<nev
   } catch {
     // response body wasn't JSON — keep the fallback
   }
-  throw new Error(message)
+  throw new MetaApiError(message, response.status)
+}
+
+/**
+ * True when a Meta call failed for a reason that says nothing about the saved
+ * credentials: no network, a timeout, rate limiting, or Meta itself erroring.
+ * Callers must report "couldn't check" for these, never "not connected".
+ */
+export function isTransientMetaFailure(err: unknown): boolean {
+  if (err instanceof MetaApiError) return err.status === 429 || err.status >= 500
+  // fetch() rejects with a TypeError on network failure and a
+  // TimeoutError/AbortError DOMException when the signal fires.
+  if (err instanceof TypeError) return true
+  return err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')
 }
 
 // ============================================================
@@ -56,8 +77,10 @@ export async function verifyPhoneNumber(
 ): Promise<MetaPhoneInfo> {
   const { phoneNumberId, accessToken } = args
   const url = `${META_API_BASE}/${phoneNumberId}?fields=id,display_phone_number,verified_name,quality_rating`
+  // Bounded so a hung Meta request can't leave the settings page spinning.
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    signal: AbortSignal.timeout(10_000),
   })
   if (!response.ok) {
     await throwMetaError(response, `Meta API error: ${response.status}`)

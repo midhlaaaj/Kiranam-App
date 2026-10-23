@@ -199,22 +199,28 @@ function InboxPageInner() {
       // the "WhatsApp not connected" banner would show in the
       // shared inbox even though the admin had it configured.
       // Resolve account_id via the profile and query by that.
-      const { data: profile } = await supabase
+      //
+      // A failed lookup (flaky mobile network, a token refresh in flight
+      // after the phone wakes) leaves the status unknown and shows no
+      // banner: only a definite answer may say "not connected".
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("account_id")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (profileError) return;
       const accountId = profile?.account_id as string | undefined;
       if (!accountId) {
         setWhatsappConnected(false);
         return;
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("whatsapp_config")
         .select("status")
         .eq("account_id", accountId)
         .maybeSingle();
+      if (error) return;
 
       setWhatsappConnected(data?.status === "connected");
     };

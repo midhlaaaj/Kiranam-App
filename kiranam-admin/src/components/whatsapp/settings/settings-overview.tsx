@@ -23,9 +23,11 @@ interface OverviewCounts {
   customFields: number | null;
 }
 
+// `null` = the check itself failed (network, Meta unreachable), which must
+// never be shown as "not set up" or "needs reconnecting".
 interface WhatsAppStatus {
-  configured: boolean;
-  connected: boolean;
+  configured: boolean | null;
+  connected: boolean | null;
 }
 
 export function SettingsOverview({
@@ -108,9 +110,11 @@ export function SettingsOverview({
         fetch('/api/whatsapp/whatsapp/config', { cache: 'no-store' }).then((r) => r.json()),
       ]);
       if (cancelled) return;
+      const healthConnected = health.status === 'fulfilled' ? health.value?.connected : undefined;
       setWhatsapp({
-        configured: row.status === 'fulfilled' && !!row.value.data?.phone_number_id,
-        connected: health.status === 'fulfilled' && !!health.value?.connected,
+        configured:
+          row.status === 'fulfilled' && !row.value.error ? !!row.value.data?.phone_number_id : null,
+        connected: typeof healthConnected === 'boolean' ? healthConnected : null,
       });
       setWhatsappLoading(false);
     })();
@@ -140,17 +144,20 @@ export function SettingsOverview({
     {
       section: 'whatsapp',
       loading: whatsappLoading,
-      subtitle: !whatsapp?.configured ? (
-        t('notSetup')
-      ) : whatsapp.connected ? (
-        <>
-          <StatusDot tone="ok" /> {t('connected')}
-        </>
-      ) : (
-        <>
-          <StatusDot tone="muted" /> {t('needsReconnecting')}
-        </>
-      ),
+      subtitle:
+        whatsapp?.configured === false ? (
+          t('notSetup')
+        ) : whatsapp?.connected === true ? (
+          <>
+            <StatusDot tone="ok" /> {t('connected')}
+          </>
+        ) : whatsapp?.connected === false ? (
+          <>
+            <StatusDot tone="muted" /> {t('needsReconnecting')}
+          </>
+        ) : (
+          t('checkFailed')
+        ),
     },
     {
       section: 'members',

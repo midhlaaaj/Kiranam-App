@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/whatsapp/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import {
+  isTransientMetaFailure,
   registerPhoneNumber,
   subscribeWabaToApp,
   verifyPhoneNumber,
@@ -76,6 +77,7 @@ function supabaseAdmin() {
  *   { connected: false, reason: 'no_config',        message: '...' }
  *   { connected: false, reason: 'token_corrupted',  message: '...', needs_reset: true }
  *   { connected: false, reason: 'meta_api_error',   message: '...' }
+ *   { connected: null,  reason: 'check_failed',     message: '...' }  (Meta unreachable — status unknown, not "disconnected")
  */
 export async function GET() {
   try {
@@ -111,7 +113,7 @@ export async function GET() {
     if (configError) {
       console.error('Error fetching whatsapp_config:', configError)
       return NextResponse.json(
-        { connected: false, reason: 'db_error', message: 'Failed to fetch configuration' },
+        { connected: null, reason: 'check_failed', message: "Couldn't load the WhatsApp configuration just now. Try again in a moment." },
         { status: 200 }
       )
     }
@@ -165,6 +167,20 @@ export async function GET() {
       })
       return NextResponse.json({ connected: true, phone_info: phoneInfo })
     } catch (err) {
+      // Network trouble, a timeout, rate limiting or a Meta outage says
+      // nothing about the saved credentials — report "couldn't check" so the
+      // UI never claims a working connection is broken.
+      if (isTransientMetaFailure(err)) {
+        console.warn('[whatsapp/config GET] Meta check failed transiently:', err instanceof Error ? err.message : err)
+        return NextResponse.json(
+          {
+            connected: null,
+            reason: 'check_failed',
+            message: "Couldn't reach Meta to check the connection just now. Nothing has changed — try again in a moment.",
+          },
+          { status: 200 },
+        )
+      }
       const message = err instanceof Error ? err.message : 'Unknown Meta API error'
       console.error('[whatsapp/config GET] Meta API verification failed:', message)
       return NextResponse.json(
@@ -179,7 +195,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error in WhatsApp config GET:', error)
     return NextResponse.json(
-      { connected: false, reason: 'unknown', message: 'Internal server error' },
+      { connected: null, reason: 'check_failed', message: "Couldn't check the WhatsApp connection just now. Try again in a moment." },
       { status: 500 }
     )
   }
