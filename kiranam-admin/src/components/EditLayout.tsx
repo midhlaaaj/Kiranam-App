@@ -33,9 +33,12 @@ export function EditLayout({
         {badge}
         {subtitle && <p className="w-full text-sm text-kiranam-muted">{subtitle}</p>}
       </div>
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="grid gap-6">{main}</div>
-        <aside className="grid gap-4 lg:sticky lg:top-6">{aside}</aside>
+      {/* grid-cols-1 (= minmax(0,1fr)), not an implicit track: an implicit
+          track grows to its widest child, so on phones a wide table pushed the
+          whole page sideways instead of scrolling inside its card. */}
+      <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="grid min-w-0 grid-cols-1 gap-6">{main}</div>
+        <aside className="grid min-w-0 grid-cols-1 gap-4 lg:sticky lg:top-6">{aside}</aside>
       </div>
     </div>
   );

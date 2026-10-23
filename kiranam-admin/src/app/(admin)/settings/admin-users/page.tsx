@@ -43,7 +43,7 @@ function SectionHeading({ title, description }: { title: string; description?: s
 // Heading + tabs come from settings/layout.tsx.
 export default function TeamPage() {
   return (
-    <div className="grid gap-10">
+    <div className="grid grid-cols-1 gap-10">
       <section>
         <SectionHeading title="Invite an admin" />
         <InviteAdminForm />

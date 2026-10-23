@@ -3,7 +3,7 @@ import { Skeleton, SkeletonCard, SkeletonTable } from '@/components/Skeleton';
 // Invite form, pending invites, admins — each under its own heading.
 export default function Loading() {
   return (
-    <div className="grid gap-10">
+    <div className="grid grid-cols-1 gap-10">
       <section>
         <Skeleton className="mb-3 h-6 w-36" />
         <SkeletonCard lines={1} className="max-w-xl" />
