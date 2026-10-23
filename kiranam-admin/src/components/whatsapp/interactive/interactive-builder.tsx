@@ -156,7 +156,7 @@ export function InteractiveBuilder({
         </label>
 
         {!validation.ok && (
-          <p className="text-xs text-red-400">{validation.error}</p>
+          <p className="text-xs text-red-600 dark:text-red-400">{validation.error}</p>
         )}
       </div>
 
