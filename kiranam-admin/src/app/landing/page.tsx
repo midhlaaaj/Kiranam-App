@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Inter } from "next/font/google";
 import { ANDROID_STORE_URL, IOS_STORE_URL } from "@/lib/store-links";
 import styles from "./landing.module.css";
+import { StoreLink } from "./StoreLink";
 
 // Served at kiranam.online/ — proxy.ts rewrites the main domain's root here,
 // since / itself is the admin dashboard (on admin.kiranam.online).
@@ -43,7 +44,7 @@ export default function LandingPage() {
         </p>
 
         <div className={`${styles.rise} ${styles.d3} mt-11 flex w-full max-w-xs flex-col gap-3 sm:w-auto sm:max-w-none sm:flex-row`}>
-          <StoreButton href={ANDROID_STORE_URL} eyebrow="Get it on" store="Google Play" icon={<GooglePlayIcon />} />
+          <StoreButton href={ANDROID_STORE_URL} android eyebrow="Get it on" store="Google Play" icon={<GooglePlayIcon />} />
           <StoreButton href={IOS_STORE_URL} eyebrow="Download on the" store="App Store" icon={<AppleIcon />} />
         </div>
 
@@ -69,11 +70,13 @@ export default function LandingPage() {
 
 function StoreButton({
   href,
+  android = false,
   eyebrow,
   store,
   icon,
 }: {
   href: string | null;
+  android?: boolean;
   eyebrow: string;
   store: string;
   icon: React.ReactNode;
@@ -99,9 +102,9 @@ function StoreButton({
     );
   }
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={`${styles.store} ${shape}`}>
+    <StoreLink href={href} android={android} className={`${styles.store} ${shape}`}>
       {content}
-    </a>
+    </StoreLink>
   );
 }
 

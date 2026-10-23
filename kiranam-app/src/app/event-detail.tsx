@@ -8,7 +8,7 @@ import { DetailNotFound } from '@/components/DetailNotFound';
 import { ArrowLeft, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { shareWithCoverImage } from '@/utils/share';
-import { APP_JOIN_URL } from '@/utils/links';
+import { eventShareMessage } from '@/utils/links';
 
 export default function EventDetailScreen() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function EventDetailScreen() {
 
   const handleShare = () => {
     shareWithCoverImage(
-      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      eventShareMessage(event.title),
       event.coverImageUrl
     );
   };

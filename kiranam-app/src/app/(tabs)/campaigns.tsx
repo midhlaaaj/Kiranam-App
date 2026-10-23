@@ -12,7 +12,7 @@ import { Bell, Heart, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
 import { shareWithCoverImage } from '@/utils/share';
-import { APP_JOIN_URL } from '@/utils/links';
+import { campaignShareMessage } from '@/utils/links';
 
 export default function CampaignsScreen() {
   const tabBarPadding = useTabBarPadding();
@@ -33,7 +33,7 @@ export default function CampaignsScreen() {
 
   const handleShare = (campaign: Campaign) => {
     shareWithCoverImage(
-      `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: ${APP_JOIN_URL}`,
+      campaignShareMessage(campaign.title),
       campaign.coverImageUrl
     );
   };

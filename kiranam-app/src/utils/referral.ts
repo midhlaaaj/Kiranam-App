@@ -30,11 +30,12 @@ export async function clearPendingReferralCode(): Promise<void> {
 
 // Apple gives apps no install-referrer signal, so a referral code shared
 // before someone had the app installed can't reach them via a deep link —
-// it has to ride along on the clipboard instead. kiranam.online/join copies
-// the full join URL (not a bare code) before sending people to the App
-// Store, specifically so this can tell "a Kiranam referral link" apart from
+// it has to ride along on the clipboard instead. The landing page
+// (kiranam.online/?ref=…) and the older kiranam.online/join?ref=… links copy
+// the full URL (not a bare code) before sending people to the App Store,
+// specifically so this can tell "a Kiranam referral link" apart from
 // whatever else the person might happen to have copied.
-const JOIN_LINK_RE = /kiranam\.online\/join\?[^"'\s]*\bref=([A-Za-z0-9]{4,20})/i;
+const JOIN_LINK_RE = /kiranam\.online\/(?:join)?\?[^"'\s]*\bref=([A-Za-z0-9]{4,20})/i;
 
 export function extractReferralCodeFromText(text: string): string | null {
   const match = text.match(JOIN_LINK_RE);

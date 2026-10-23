@@ -10,7 +10,7 @@ import { Bell, Heart, Calendar, MapPin, Image as ImageIcon, Share2, ShieldCheck,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney, getGreeting } from '@/utils/format';
 import { shareWithCoverImage } from '@/utils/share';
-import { APP_JOIN_URL } from '@/utils/links';
+import { eventShareMessage } from '@/utils/links';
 
 function SkeletonBlock({ style }: { style: any }) {
   const [opacity] = useState(() => new Animated.Value(0.35));
@@ -66,7 +66,7 @@ export default function HomeScreen() {
 
   const handleShareEvent = (event: EventRecord) => {
     shareWithCoverImage(
-      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      eventShareMessage(event.title),
       event.coverImageUrl
     );
   };

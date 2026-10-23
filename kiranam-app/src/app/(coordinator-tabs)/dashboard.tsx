@@ -24,7 +24,7 @@ import {
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney, getGreeting } from '@/utils/format';
-import { referralJoinUrl } from '@/utils/links';
+import { referralShareMessage } from '@/utils/links';
 
 export default function CoordinatorDashboardScreen() {
   const tabBarPadding = useTabBarPadding();
@@ -89,7 +89,7 @@ export default function CoordinatorDashboardScreen() {
 
   const handleShare = () => {
     Share.share({
-      message: `Join me on Kiranam and make a difference! Use my referral code ${myReferralCode} when you sign up: ${referralJoinUrl(myReferralCode)}`,
+      message: referralShareMessage(myReferralCode),
     });
   };
 

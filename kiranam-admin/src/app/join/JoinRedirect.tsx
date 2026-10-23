@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ANDROID_STORE_URL, IOS_STORE_URL } from "@/lib/store-links";
+import { androidStoreUrl, IOS_STORE_URL } from "@/lib/store-links";
 
 function detectPlatform(): "ios" | "android" | "other" {
   if (typeof navigator === "undefined") return "other";
@@ -9,15 +9,6 @@ function detectPlatform(): "ios" | "android" | "other" {
   if (/iPad|iPhone|iPod/.test(ua)) return "ios";
   if (/Android/.test(ua)) return "android";
   return "other";
-}
-
-// Builds the Play Store URL with the referrer query param the Play Install
-// Referrer API hands back to the app after a fresh install — this is a
-// free, first-party mechanism (no Branch/AppsFlyer needed) for carrying a
-// referral code through an Android install.
-function androidStoreUrl(ref: string | null): string {
-  if (!ref) return ANDROID_STORE_URL;
-  return `${ANDROID_STORE_URL}&referrer=${encodeURIComponent(`ref_${ref}`)}`;
 }
 
 // Read synchronously off the URL rather than in an effect + setState —

@@ -2,6 +2,7 @@ import { useTabBarPadding } from '@/components/AnimatedTabBar';
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { useApp, Campaign, EventRecord } from '@/context/AppContext';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
@@ -9,7 +10,7 @@ import { Bell, Heart, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucid
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatMoney } from '@/utils/format';
 import { shareWithCoverImage } from '@/utils/share';
-import { APP_JOIN_URL } from '@/utils/links';
+import { campaignShareMessage, eventShareMessage } from '@/utils/links';
 
 export default function CoordinatorExploreScreen() {
   const tabBarPadding = useTabBarPadding();
@@ -30,14 +31,14 @@ export default function CoordinatorExploreScreen() {
 
   const handleShareCampaign = (campaign: Campaign) => {
     shareWithCoverImage(
-      `Help support "${campaign.title}" on Kiranam! Every contribution makes a difference. Join here: ${APP_JOIN_URL}`,
+      campaignShareMessage(campaign.title),
       campaign.coverImageUrl
     );
   };
 
   const handleShareEvent = (event: EventRecord) => {
     shareWithCoverImage(
-      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      eventShareMessage(event.title),
       event.coverImageUrl
     );
   };
@@ -85,8 +86,11 @@ export default function CoordinatorExploreScreen() {
                 onPress={() => router.push({ pathname: '/campaign-detail', params: { id: item.id } })}
               >
                 <View style={styles.campaignImageArea}>
-                  <Heart size={22} color="#D8A8A8" strokeWidth={1.5} />
-                  <Text style={styles.campaignImageText}>campaign photo</Text>
+                  {item.coverImageUrl ? (
+                    <Image source={{ uri: item.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                  ) : (
+                    <Heart size={22} color="#D8A8A8" strokeWidth={1.5} />
+                  )}
                   <TouchableOpacity
                     style={styles.shareIconButton}
  accessibilityRole="button" accessibilityLabel="Share"
@@ -129,8 +133,11 @@ export default function CoordinatorExploreScreen() {
             >
               <Card style={styles.eventCard}>
                 <View style={styles.eventImagePlaceholder}>
-                  <ImageIcon size={22} color="#C7C3BD" strokeWidth={1.5} />
-                  <Text style={styles.campaignImageText}>event photo</Text>
+                  {item.coverImageUrl ? (
+                    <Image source={{ uri: item.coverImageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
+                  ) : (
+                    <ImageIcon size={22} color="#C7C3BD" strokeWidth={1.5} />
+                  )}
                   <TouchableOpacity
                     style={styles.shareIconButton}
  accessibilityRole="button" accessibilityLabel="Share"
@@ -246,17 +253,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 132,
     borderRadius: 18,
+    overflow: 'hidden',
     backgroundColor: '#FBEAEA',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     marginBottom: 12,
-  },
-  campaignImageText: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    color: '#B0ADA8',
-    textTransform: 'uppercase',
   },
   shareIconButton: {
     position: 'absolute',
@@ -315,6 +317,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 120,
     borderRadius: 18,
+    overflow: 'hidden',
     backgroundColor: '#F4F1EE',
     alignItems: 'center',
     justifyContent: 'center',

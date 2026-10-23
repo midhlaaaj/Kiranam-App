@@ -10,7 +10,7 @@ import { SegmentedToggle } from '@/components/SegmentedToggle';
 import { Bell, Calendar, MapPin, Image as ImageIcon, Share2 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { shareWithCoverImage } from '@/utils/share';
-import { APP_JOIN_URL } from '@/utils/links';
+import { eventShareMessage } from '@/utils/links';
 
 export default function EventsScreen() {
   const tabBarPadding = useTabBarPadding();
@@ -30,7 +30,7 @@ export default function EventsScreen() {
 
   const handleShare = (event: EventRecord) => {
     shareWithCoverImage(
-      `Join "${event.title}" — a Kiranam event. See details and RSVP: ${APP_JOIN_URL}`,
+      eventShareMessage(event.title),
       event.coverImageUrl
     );
   };
