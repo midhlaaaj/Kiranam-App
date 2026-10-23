@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext, useCallback, use
 import { AppState, Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -166,6 +167,9 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// Profile photos only ever show as a small circle.
+const AVATAR_MAX_SIDE = 512;
 
 export const useApp = () => {
   const context = useContext(AppContext);
@@ -903,11 +907,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateProfilePhoto = async (localUri: string) => {
     if (!session) return { error: 'Not signed in' };
     try {
-      const fileBytes = await new FileSystem.File(localUri).arrayBuffer();
-      const path = `${session.user.id}/avatar.jpg`;
+      // A phone photo is several MB but only ever shows as a small circle:
+      // shrink it to 512px and save as WebP (smaller than JPEG at the same
+      // quality). If that fails for any reason, upload the original JPEG.
+      let uploadUri = localUri;
+      let path = `${session.user.id}/avatar.jpg`;
+      let contentType = 'image/jpeg';
+      try {
+        const original = await ImageManipulator.manipulate(localUri).renderAsync();
+        const sized = original.width > AVATAR_MAX_SIDE
+          ? await ImageManipulator.manipulate(localUri).resize({ width: AVATAR_MAX_SIDE }).renderAsync()
+          : original;
+        const saved = await sized.saveAsync({ format: SaveFormat.WEBP, compress: 0.8 });
+        uploadUri = saved.uri;
+        path = `${session.user.id}/avatar.webp`;
+        contentType = 'image/webp';
+      } catch (e) {
+        console.warn('Avatar compression failed, uploading the original:', e);
+      }
+
+      const fileBytes = await new FileSystem.File(uploadUri).arrayBuffer();
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, fileBytes, { contentType: 'image/jpeg', upsert: true });
+        .upload(path, fileBytes, { contentType, upsert: true });
       if (uploadError) return { error: uploadError.message };
 
       const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
