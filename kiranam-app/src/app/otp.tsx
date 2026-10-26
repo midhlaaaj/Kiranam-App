@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/Button';
 import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { COUNTRIES, getCountryByIso2 } from '@/utils/countries';
-import { validatePhoneNumber } from '@/utils/validators';
+import { toE164, validatePhoneNumber } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { resolveEntryRoute } from '@/utils/coordinatorRouting';
 import { ArrowLeft, Pencil, Check, X, ChevronDown } from 'lucide-react-native';
@@ -132,7 +132,7 @@ export default function OtpScreen() {
       return;
     }
     animateLayout();
-    const phoneE164 = '+' + draftCountry.dialCode + draftPhone.replace(/\D/g, '');
+    const phoneE164 = toE164(draftCountry.dialCode, draftPhone, draftCountry.iso2 as any);
     setPhone(phoneE164);
     setIsEditingPhone(false);
     handleResend(phoneE164);

@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
-import { validatePhoneNumber } from '@/lib/phone';
+import { toE164, validatePhoneNumber } from '@/lib/phone';
+import { KK_FORMAT_ERROR, KK_NUMBER_RE } from '@/lib/kk';
 import { COUNTRIES } from '@/lib/countries';
 import type { CountryCode } from 'libphonenumber-js/min';
 
@@ -46,11 +47,11 @@ export async function registerCoordinator(
 
   let kkNumber: string | null = null;
   if (kkNumberInput) {
-    if (!/^KK\d+$/i.test(kkNumberInput)) return { error: 'KK number must look like KK1.' };
+    if (!KK_NUMBER_RE.test(kkNumberInput)) return { error: KK_FORMAT_ERROR };
     kkNumber = kkNumberInput.toUpperCase();
   }
 
-  const phoneE164 = `+${dialCode}${phoneDigits}`;
+  const phoneE164 = toE164(dialCode, phoneDigits, country!.iso2 as CountryCode);
   const supabaseAdmin = createAdminClient();
 
   const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -63,7 +64,6 @@ export async function registerCoordinator(
     const isDuplicate =
       createError?.code === 'phone_exists' ||
       createError?.code === 'user_already_exists' ||
-      createError?.status === 422 ||
       /already exists|already been registered|already registered/i.test(createError?.message || '');
 
     if (createError) console.error('registerCoordinator: createUser failed:', createError);
@@ -74,7 +74,7 @@ export async function registerCoordinator(
       const { data: existing } = await supabaseAdmin
         .from('profiles')
         .select('id, full_name, role')
-        .or(`phone.eq.${dialCode}${phoneDigits},phone.eq.${phoneE164}`)
+        .or(`phone.eq.${phoneE164.slice(1)},phone.eq.${phoneE164}`)
         .maybeSingle();
 
       if (existing && existing.role === 'contributor') {
@@ -87,7 +87,9 @@ export async function registerCoordinator(
       return { error: 'A coordinator with this phone number already exists.' };
     }
 
-    return { error: 'Could not register this coordinator. Please try again.' };
+    return {
+      error: `Could not register this coordinator${createError?.message ? ` (${createError.message})` : ''}. Please try again.`,
+    };
   }
 
   const coordinatorId = created.user.id;
@@ -119,7 +121,7 @@ export async function upgradeContributorToCoordinator(contributorId: string, kkN
   let kkNumber: string | null = null;
   if (kkNumberInput?.trim()) {
     kkNumber = kkNumberInput.trim().toUpperCase();
-    if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK1.');
+    if (!KK_NUMBER_RE.test(kkNumber)) throw new Error(KK_FORMAT_ERROR);
   }
 
   const supabase = await createClient();
@@ -215,7 +217,7 @@ export async function updateCoordinatorKkNumber(coordinatorId: string, kkNumberI
   const admin = await verifyAdmin();
 
   const kkNumber = kkNumberInput.trim().toUpperCase();
-  if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK1.');
+  if (!KK_NUMBER_RE.test(kkNumber)) throw new Error(KK_FORMAT_ERROR);
 
   const supabase = await createClient();
   const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', coordinatorId);

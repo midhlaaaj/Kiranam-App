@@ -29,3 +29,12 @@ export function formatPhone(raw: string | null | undefined): string {
   const parsed = parsePhoneNumberFromString(raw.startsWith('+') ? raw : `+${raw}`);
   return parsed?.isValid() ? parsed.formatInternational() : raw;
 }
+
+/** E.164 ("+971501234567") for a validated national number. Drops a domestic
+ * trunk prefix the user may have typed (UAE "050…", UK "07…"), which a plain
+ * dial-code + digits concatenation would keep and produce a wrong number. */
+export function toE164(dialCode: string, nationalDigits: string, iso2: CountryCode): string {
+  const digits = nationalDigits.replace(/\D/g, '');
+  const parsed = parsePhoneNumberFromString(digits, iso2);
+  return parsed?.isValid() ? parsed.number : `+${dialCode}${digits}`;
+}

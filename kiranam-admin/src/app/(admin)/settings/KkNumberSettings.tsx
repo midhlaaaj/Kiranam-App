@@ -45,7 +45,7 @@ export function KkNumberSettings({ autoAssignEnabled }: { autoAssignEnabled: boo
         KK numbers
       </h2>
       <p className="mt-1 text-sm text-kiranam-muted">
-        Every contributor gets a KK number (KK1, KK2, …). Check who still needs one before turning on auto-assign.
+        Every contributor gets a KK number (KK1, KK2, … for Indian numbers, KKG1, KKG2, … for non-Indian). Check who still needs one before turning on auto-assign.
       </p>
 
       <button type="button" onClick={handleCheck} disabled={checking} className={cn(buttonSecondary, 'mt-4')}>
@@ -58,8 +58,8 @@ export function KkNumberSettings({ autoAssignEnabled }: { autoAssignEnabled: boo
             Auto-assign to new contributors
           </p>
           <p id="kk-auto-desc" className="mt-1 text-sm text-kiranam-muted">
-            New contributors get the next number after the highest one in use, and the KK field is hidden from
-            Register contributor.
+            New contributors get the next number after the highest one in use in their series, and the KK field is
+            replaced by a KK / KKG choice in Register contributor.
           </p>
         </div>
         <button

@@ -9,6 +9,7 @@ import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplic
 import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
+import { defaultKkSeries, type KkSeries } from '@/lib/kk';
 import { PersonCombobox } from '@/components/PersonCombobox';
 
 const initialState: RegisterState = {};
@@ -60,12 +61,18 @@ export function RegisterContributorForm({
     getCoordinatorsForAssignment().then(setCoordinators).catch(() => {});
   }, []);
 
+  // Only used while auto-assign is on: which numbering series the new contributor
+  // draws from. Follows the phone's country (India → KK, otherwise KKG) until the
+  // admin picks one — some Indian contributors are filed under KKG.
+  const [kkSeriesChoice, setKkSeriesChoice] = useState<KkSeries | null>(null);
+
   // PersonCombobox tracks its own selection internally rather than through
   // the (uncontrolled) form, so formRef.current?.reset() below can't clear
   // it — remounting via this key can.
   const [comboboxResetKey, setComboboxResetKey] = useState(0);
 
   const country = useMemo(() => COUNTRIES.find((c) => c.dialCode === dialCode), [dialCode]);
+  const kkSeries = kkSeriesChoice ?? defaultKkSeries(country?.iso2);
   const phoneError = useMemo(
     () => (phoneTouched && country ? validatePhoneNumber(phone, country.iso2 as CountryCode) : null),
     [phoneTouched, country, phone]
@@ -109,6 +116,7 @@ export function RegisterContributorForm({
       setDialCode('91');
       setPhoneTouched(false);
       setComboboxResetKey((k) => k + 1);
+      setKkSeriesChoice(null);
       setDuplicate(null);
       onDone?.();
     }
@@ -229,6 +237,28 @@ export function RegisterContributorForm({
               />
             </div>
 
+            {autoAssignKkNumber && (
+              <fieldset className="flex flex-col gap-1.5">
+                <legend className={`${fieldLabelClass} mb-1.5 float-left w-full p-0`}>KK series</legend>
+                <input type="hidden" name="kk_series" value={kkSeries} />
+                <div className="flex gap-2" role="radiogroup" aria-label="KK series">
+                  {(['KK', 'KKG'] as const).map((series) => (
+                    <button
+                      key={series}
+                      type="button"
+                      role="radio"
+                      aria-checked={kkSeries === series}
+                      onClick={() => setKkSeriesChoice(series)}
+                      className={`${kkSeries === series ? buttonPrimary : buttonSecondary} flex-1`}
+                    >
+                      {series}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-kiranam-muted">KK for Indian numbers, KKG for non-Indian numbers.</p>
+              </fieldset>
+            )}
+
             {!autoAssignKkNumber && (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="kk_number" className={fieldLabelClass}>
@@ -237,7 +267,7 @@ export function RegisterContributorForm({
                 <input
                   id="kk_number"
                   name="kk_number"
-                  placeholder="e.g. KK1"
+                  placeholder="e.g. KK1 or KKG1"
                   required
                   className={inputClass}
                 />

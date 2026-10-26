@@ -1,7 +1,7 @@
 // Use the `mobile` build (not the default entry) — the default package.json
 // main resolves to an ES-module graph Metro can't bundle for React Native,
 // while `libphonenumber-js/mobile` ships CJS-friendly output built for it.
-import { isValidPhoneNumber } from 'libphonenumber-js/mobile';
+import { isValidPhoneNumber, parsePhoneNumberFromString } from 'libphonenumber-js/mobile';
 import type { CountryCode } from 'libphonenumber-js/mobile';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,6 +27,15 @@ export function validatePhoneNumber(nationalNumber: string, countryCode: Country
   if (countryCode === TEST_NUMBER.country && trimmed.replace(/\D/g, '') === TEST_NUMBER.digits) return null;
   if (!isValidPhoneNumber(trimmed, countryCode)) return 'Please enter a valid phone number.';
   return null;
+}
+
+/** E.164 ("+971501234567") for a validated national number. Drops a domestic
+ * trunk prefix the user may have typed (UAE "050…", UK "07…") that a plain
+ * dial-code + digits concatenation would keep. Keep in sync with kiranam-admin's lib/phone.ts. */
+export function toE164(dialCode: string, nationalNumber: string, countryCode: CountryCode): string {
+  const digits = nationalNumber.replace(/\D/g, '');
+  const parsed = parsePhoneNumberFromString(digits, countryCode);
+  return parsed?.isValid() ? parsed.number : `+${dialCode}${digits}`;
 }
 
 export function validateAmount(

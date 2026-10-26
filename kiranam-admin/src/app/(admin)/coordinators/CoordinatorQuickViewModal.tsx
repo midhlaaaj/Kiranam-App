@@ -104,7 +104,7 @@ export function CoordinatorQuickViewModal({
               id="qv_v_kk_number"
               value={kkNumber}
               onChange={(e) => setKkNumber(e.target.value)}
-              placeholder="e.g. KK1"
+              placeholder="e.g. KK1 or KKG1"
               className={inputClass}
             />
           </div>

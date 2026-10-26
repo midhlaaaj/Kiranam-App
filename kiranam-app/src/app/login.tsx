@@ -10,7 +10,7 @@ import { Input } from '@/components/Input';
 import { Toast } from '@/components/Toast';
 import { CountryCodePicker } from '@/components/CountryCodePicker';
 import { getCountryByIso2 } from '@/utils/countries';
-import { validatePhoneNumber } from '@/utils/validators';
+import { toE164, validatePhoneNumber } from '@/utils/validators';
 import { friendlyError } from '@/utils/errors';
 import { ArrowLeft, ChevronDown } from 'lucide-react-native';
 
@@ -41,7 +41,7 @@ export default function LoginScreen() {
 
   const handleContinue = async () => {
     if (!validatePhone()) return;
-    const phoneE164 = '+' + country.dialCode + phoneNumber.replace(/\D/g, '');
+    const phoneE164 = toE164(country.dialCode, phoneNumber, country.iso2 as any);
     setSubmitting(true);
     const { error: otpError } = await signInWithPhone(phoneE164);
     setSubmitting(false);

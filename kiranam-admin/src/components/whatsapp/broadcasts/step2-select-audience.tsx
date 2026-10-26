@@ -59,8 +59,13 @@ function splitCsvLine(line: string): string[] {
 
 /** Stored contact phones are digits-only with country code ("919846571425"). */
 function normalizePhone(raw: string): string | null {
-  const parsed = parsePhoneNumberFromString(raw, 'IN');
-  return parsed?.isValid() ? parsed.number.replace(/^\+/, '') : null;
+  // Bare local numbers are read as Indian; anything else must carry its country
+  // code, with or without a leading "+" (e.g. "971501234567").
+  const local = parsePhoneNumberFromString(raw, 'IN');
+  if (local?.isValid()) return local.number.replace(/^\+/, '');
+  const digits = raw.replace(/\D/g, '');
+  const international = digits ? parsePhoneNumberFromString(`+${digits}`) : undefined;
+  return international?.isValid() ? international.number.replace(/^\+/, '') : null;
 }
 
 function parseCsv(text: string, fileName: string): CsvResult | { error: 'parse' | 'missingPhone' } {

@@ -243,7 +243,7 @@ export function RegisterCoordinatorForm({
             <input
               id="v_kk_number"
               name="kk_number"
-              placeholder="e.g. KK1"
+              placeholder="e.g. KK1 or KKG1"
               className={inputClass}
             />
           </div>

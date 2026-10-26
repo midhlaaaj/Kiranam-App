@@ -8,7 +8,8 @@ import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { isIsoDay, isoDay } from '@/lib/format';
 import { getAutoAssignKkNumber } from '@/lib/kkSettings';
-import { validatePhoneNumber } from '@/lib/phone';
+import { KK_FORMAT_ERROR, KK_NUMBER_RE, type KkSeries } from '@/lib/kk';
+import { toE164, validatePhoneNumber } from '@/lib/phone';
 import { COUNTRIES } from '@/lib/countries';
 import type { CountryCode } from 'libphonenumber-js/min';
 
@@ -79,7 +80,7 @@ export async function assignKkNumber(contributorId: string, kkNumberInput: strin
   const admin = await verifyAdmin();
 
   const kkNumber = kkNumberInput.trim().toUpperCase();
-  if (!/^KK\d+$/i.test(kkNumber)) throw new Error('KK number must look like KK1.');
+  if (!KK_NUMBER_RE.test(kkNumber)) throw new Error(KK_FORMAT_ERROR);
 
   const supabase = await createClient();
   const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', contributorId);
@@ -103,6 +104,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const monthlyAmountRaw = String(formData.get('monthly_amount') || '').trim();
   const monthlyAmount = monthlyAmountRaw ? Number(monthlyAmountRaw) : null;
   const kkNumberInput = String(formData.get('kk_number') || '').trim();
+  const kkSeries: KkSeries = formData.get('kk_series') === 'KKG' ? 'KKG' : 'KK';
   const coordinatorId = String(formData.get('coordinatorId') || '').trim();
 
   if (!fullName) return { error: 'Full name is required.' };
@@ -118,16 +120,16 @@ export async function registerContributor(_prevState: RegisterState, formData: F
 
   if (monthlyAmount !== null && !(monthlyAmount > 0)) return { error: 'Monthly amount must be greater than zero.' };
 
-  const phoneE164 = `+${dialCode}${phoneDigits}`;
+  const phoneE164 = toE164(dialCode, phoneDigits, country!.iso2 as CountryCode);
   const supabaseAdmin = createAdminClient();
   const autoAssignKkNumber = await getAutoAssignKkNumber();
 
   let kkNumber: string;
   if (autoAssignKkNumber) {
-    kkNumber = await nextKkNumber(supabaseAdmin);
+    kkNumber = await nextKkNumber(supabaseAdmin, kkSeries);
   } else {
     if (!kkNumberInput) return { error: 'KK number is required.' };
-    if (!/^KK\d+$/i.test(kkNumberInput)) return { error: 'KK number must look like KK1.' };
+    if (!KK_NUMBER_RE.test(kkNumberInput)) return { error: KK_FORMAT_ERROR };
     kkNumber = kkNumberInput.toUpperCase();
   }
 
@@ -148,14 +150,13 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     const isDuplicate =
       createError?.code === 'phone_exists' ||
       createError?.code === 'user_already_exists' ||
-      createError?.status === 422 ||
       /already exists|already been registered|already registered/i.test(createError?.message || '');
 
     if (createError) console.error('registerContributor: createUser failed:', createError);
 
     const message = isDuplicate
       ? `A contributor with this phone number already exists.`
-      : 'Could not register this contributor. Please try again.';
+      : `Could not register this contributor${createError?.message ? ` (${createError.message})` : ''}. Please try again.`;
     return { error: message };
   }
 
@@ -218,23 +219,25 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   return { message: `${fullName} has been registered as a contributor. They can log in with this phone number.` };
 }
 
-// Highest KK number currently in use, +1. profiles.kk_number is a free-form
-// "KK" + digits string (not a DB sequence), so this reads the max numeric
-// suffix directly rather than relying on a counter — safe under this admin
-// panel's low write concurrency for contributor registration.
-async function nextKkNumber(supabaseAdmin: ReturnType<typeof createAdminClient>): Promise<string> {
+// Highest number currently in use within a series (KK or KKG), +1. Each series
+// counts on its own. profiles.kk_number is a free-form string (not a DB
+// sequence), so this reads the max numeric suffix directly rather than relying
+// on a counter — safe under this admin panel's low write concurrency for
+// contributor registration.
+async function nextKkNumber(supabaseAdmin: ReturnType<typeof createAdminClient>, series: KkSeries): Promise<string> {
   const { data } = await supabaseAdmin
     .from('profiles')
     .select('kk_number')
     .not('kk_number', 'is', null)
-    .ilike('kk_number', 'KK%');
+    .ilike('kk_number', `${series}%`);
 
+  const re = new RegExp(`^${series}(\\d+)$`, 'i');
   let max = 0;
   for (const row of data || []) {
-    const match = /^KK(\d+)$/i.exec(row.kk_number ?? '');
+    const match = re.exec(row.kk_number ?? '');
     if (match) max = Math.max(max, parseInt(match[1], 10));
   }
-  return `KK${max + 1}`;
+  return `${series}${max + 1}`;
 }
 
 export async function assignCoordinator(contributorId: string, formData: FormData) {

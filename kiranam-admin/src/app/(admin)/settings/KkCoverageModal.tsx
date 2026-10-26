@@ -89,6 +89,7 @@ function ContributorRow({
   const [digits, setDigits] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [series, setSeries] = useState<'KK' | 'KKG'>('KK');
   const inputRef = useRef<HTMLInputElement>(null);
   const errorId = useId();
   const name = contributor.full_name || 'Unnamed contributor';
@@ -99,7 +100,7 @@ function ContributorRow({
       inputRef.current?.focus();
       return;
     }
-    const kkNumber = `KK${Number(digits)}`;
+    const kkNumber = `${series}${Number(digits)}`;
     setError(null);
     startTransition(async () => {
       try {
@@ -131,13 +132,20 @@ function ContributorRow({
       >
         <div
           className={cn(
-            'flex h-9 w-24 items-center rounded-lg border bg-kiranam-surface text-sm transition focus-within:border-kiranam-primary focus-within:ring-3 focus-within:ring-kiranam-primary/15',
+            'flex h-9 w-28 items-center rounded-lg border bg-kiranam-surface text-sm transition focus-within:border-kiranam-primary focus-within:ring-3 focus-within:ring-kiranam-primary/15',
             error ? 'border-kiranam-danger' : 'border-kiranam-input-border'
           )}
         >
-          <span className="pl-2.5 font-semibold text-kiranam-muted" aria-hidden>
-            KK
-          </span>
+          <select
+            value={series}
+            onChange={(e) => setSeries(e.target.value as 'KK' | 'KKG')}
+            disabled={pending}
+            aria-label={`KK series for ${name}`}
+            className="cursor-pointer bg-transparent pl-2 font-semibold text-kiranam-muted outline-none"
+          >
+            <option value="KK">KK</option>
+            <option value="KKG">KKG</option>
+          </select>
           <input
             ref={inputRef}
             value={digits}

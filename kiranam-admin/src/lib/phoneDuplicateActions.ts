@@ -2,6 +2,9 @@
 
 import { verifyAdmin } from '@/lib/dal';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { toE164 } from '@/lib/phone';
+import { COUNTRIES } from '@/lib/countries';
+import type { CountryCode } from 'libphonenumber-js/min';
 
 export interface PhoneDuplicateMatch {
   id: string;
@@ -24,7 +27,8 @@ export async function checkPhoneDuplicate(dialCode: string, phoneDigits: string)
   // "918086623316"), but the rest of this codebase's own createUser() calls
   // pass it WITH one — matching both here is cheap insurance against either
   // format actually being on a row.
-  const plain = `${code}${digits}`;
+  const country = COUNTRIES.find((c) => c.dialCode === code);
+  const plain = country ? toE164(code, digits, country.iso2 as CountryCode).slice(1) : `${code}${digits}`;
   const supabaseAdmin = createAdminClient();
   const { data } = await supabaseAdmin
     .from('profiles')
