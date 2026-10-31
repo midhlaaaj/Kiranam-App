@@ -104,7 +104,11 @@ function ContributorRow({
     setError(null);
     startTransition(async () => {
       try {
-        await assignKkNumber(contributor.id, kkNumber);
+        const result = await assignKkNumber(contributor.id, kkNumber);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
         toast.success(`${kkNumber} assigned to ${name}.`);
         onAssigned();
       } catch (err) {

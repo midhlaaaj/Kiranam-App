@@ -76,15 +76,28 @@ export async function getContributorQuickView(contributorId: string) {
 // Backfills a KK number for a contributor who was registered (in this system
 // or offline, before it existed) without one — used by the "Check KK number
 // coverage" list on the Settings page.
-export async function assignKkNumber(contributorId: string, kkNumberInput: string) {
+export interface ActionResult {
+  error?: string;
+}
+
+// Returns the error instead of throwing: in production, Next.js replaces the
+// message of any error thrown from a server action with a generic one, so the
+// admin would never see why the save failed.
+export async function assignKkNumber(contributorId: string, kkNumberInput: string): Promise<ActionResult> {
   const admin = await verifyAdmin();
 
   const kkNumber = kkNumberInput.trim().toUpperCase();
-  if (!KK_NUMBER_RE.test(kkNumber)) throw new Error(KK_FORMAT_ERROR);
+  if (!KK_NUMBER_RE.test(kkNumber)) return { error: KK_FORMAT_ERROR };
 
   const supabase = await createClient();
   const { error } = await supabase.from('profiles').update({ kk_number: kkNumber }).eq('id', contributorId);
-  if (error) throw new Error(friendlyErrorMessage(error.message));
+  if (error) {
+    const raw = error.message.toLowerCase();
+    if (raw.includes('duplicate key') || raw.includes('already exists')) {
+      return { error: `${kkNumber} is already assigned to someone else. Please use a different number.` };
+    }
+    return { error: friendlyErrorMessage(error.message) };
+  }
 
   await logAction(admin.id, 'assign_kk_number', 'profiles', contributorId, {
     kkNumber,
@@ -93,6 +106,36 @@ export async function assignKkNumber(contributorId: string, kkNumberInput: strin
   revalidatePath('/contributors');
   revalidatePath(`/contributors/${contributorId}`);
   revalidatePath('/settings');
+  return {};
+}
+
+// Saves the quick-view modal's KK number + coordinator edits in one call and
+// reports a friendly error rather than throwing (see assignKkNumber).
+export async function saveContributorQuickView(
+  contributorId: string,
+  kkNumber: string,
+  coordinatorId: string | null,
+  currentCoordinatorId: string | null,
+): Promise<ActionResult> {
+  if (kkNumber) {
+    const result = await assignKkNumber(contributorId, kkNumber);
+    if (result.error) return result;
+  }
+
+  if (coordinatorId !== currentCoordinatorId) {
+    try {
+      if (coordinatorId) {
+        const fd = new FormData();
+        fd.set('coordinatorId', coordinatorId);
+        await assignCoordinator(contributorId, fd);
+      } else if (currentCoordinatorId) {
+        await unassignCoordinator(contributorId, currentCoordinatorId);
+      }
+    } catch (err) {
+      return { error: friendlyErrorMessage(err instanceof Error ? err.message : 'Could not change the coordinator.') };
+    }
+  }
+  return {};
 }
 
 export async function registerContributor(_prevState: RegisterState, formData: FormData): Promise<RegisterState> {

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Pencil } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { PersonCombobox } from '@/components/PersonCombobox';
-import { assignKkNumber, assignCoordinator, getContributorQuickView, getCoordinatorsForAssignment, unassignCoordinator } from './actions';
+import { getContributorQuickView, getCoordinatorsForAssignment, saveContributorQuickView } from './actions';
 import { buttonPrimary, buttonSecondary, inputClass } from '@/lib/ui';
 
 const fieldLabelClass = 'text-xs font-semibold text-kiranam-muted';
@@ -74,18 +74,15 @@ export function ContributorQuickViewModal({
     setSaving(true);
     try {
       const trimmedKk = kkNumber.trim().toUpperCase();
-      if (trimmedKk && trimmedKk !== (data.kk_number || '')) {
-        await assignKkNumber(data.id, trimmedKk);
-      }
-
-      if (selectedCoordinatorId !== (data.coordinator?.id ?? null)) {
-        if (selectedCoordinatorId) {
-          const fd = new FormData();
-          fd.set('coordinatorId', selectedCoordinatorId);
-          await assignCoordinator(data.id, fd);
-        } else if (data.coordinator) {
-          await unassignCoordinator(data.id, data.coordinator.id);
-        }
+      const result = await saveContributorQuickView(
+        data.id,
+        trimmedKk && trimmedKk !== (data.kk_number || '') ? trimmedKk : '',
+        selectedCoordinatorId,
+        data.coordinator?.id ?? null,
+      );
+      if (result.error) {
+        toast.error(result.error);
+        return;
       }
 
       toast.success('Contributor updated.');
@@ -93,7 +90,7 @@ export function ContributorQuickViewModal({
       setData(refreshed);
       setEditing(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save changes.');
+      toast.error('Could not save changes. Please try again.');
     } finally {
       setSaving(false);
     }
