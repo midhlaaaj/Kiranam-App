@@ -2,6 +2,7 @@ import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { decrypt } from '@/lib/whatsapp/whatsapp/encryption';
 import { META_API_BASE, sendTemplateMessage } from '@/lib/whatsapp/whatsapp/meta-api';
+import { recordOutboundTemplate } from '@/lib/whatsapp/whatsapp/record-outbound';
 import { isMessageTemplate } from '@/lib/whatsapp/whatsapp/template-row-guard';
 import { isValidE164, sanitizePhoneForMeta } from '@/lib/whatsapp/whatsapp/phone-utils';
 import type { SendTimeParams } from '@/lib/whatsapp/whatsapp/template-send-builder';
@@ -76,7 +77,7 @@ export async function getKiranamWhatsApp(): Promise<KiranamWhatsApp | null> {
     async send(phone, template, params) {
       const to = sanitizePhoneForMeta(phone);
       if (!isValidE164(to)) throw new Error(`Invalid phone number: ${phone}`);
-      await sendTemplateMessage({
+      const result = await sendTemplateMessage({
         phoneNumberId,
         accessToken,
         to,
@@ -84,6 +85,15 @@ export async function getKiranamWhatsApp(): Promise<KiranamWhatsApp | null> {
         language: template.language || 'en_US',
         template,
         messageParams: params,
+      });
+      // Show receipts, reminders and campaign notices in the inbox thread too.
+      await recordOutboundTemplate({
+        accountId,
+        phone: to,
+        templateName: template.name,
+        template,
+        messageParams: params,
+        waMessageId: result.messageId,
       });
     },
   };

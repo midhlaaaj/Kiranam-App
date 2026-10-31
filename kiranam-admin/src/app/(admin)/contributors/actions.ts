@@ -34,7 +34,7 @@ export async function getCoordinatorsForAssignment() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('profiles')
-    .select('id, full_name, phone')
+    .select('id, full_name, phone, kk_number')
     .eq('role', 'coordinator')
     .order('full_name', { ascending: true });
   return data || [];

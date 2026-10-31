@@ -92,9 +92,11 @@ export function WhatsAppConfig() {
   const [registrationProbe, setRegistrationProbe] =
     useState<RegistrationProbe | null>(null);
 
+  // Meta must call the live site, so on a local dev server show the real admin
+  // address instead of localhost. The route lives at /api/whatsapp/whatsapp/webhook.
   const webhookUrl =
     typeof window !== 'undefined'
-      ? `${window.location.origin}/api/whatsapp/webhook`
+      ? `${/^(localhost|127\.)/.test(window.location.hostname) ? 'https://admin.kiranam.online' : window.location.origin}/api/whatsapp/whatsapp/webhook`
       : '';
 
   // Skeleton on the FIRST load only; refetches after a save / reset refresh the

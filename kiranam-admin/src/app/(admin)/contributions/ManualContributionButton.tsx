@@ -14,6 +14,7 @@ interface ContributorOption {
   id: string;
   full_name: string | null;
   phone: string | null;
+  kk_number?: string | null;
   monthlyAmount: number | null;
   paidThisMonth: boolean;
 }
@@ -66,7 +67,7 @@ export function ManualContributionButton() {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     return contributors
-      .filter((c) => (c.full_name || '').toLowerCase().includes(q) || (c.phone || '').includes(q))
+      .filter((c) => (c.full_name || '').toLowerCase().includes(q) || (c.phone || '').includes(q) || (c.kk_number || '').toLowerCase().includes(q))
       .slice(0, 8);
   }, [contributors, query]);
 
@@ -122,7 +123,7 @@ export function ManualContributionButton() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search contributor by name or phone…"
+                placeholder="Search contributor by name, phone or KK number…"
                 className={inputClass}
                 autoFocus
               />
@@ -138,7 +139,10 @@ export function ManualContributionButton() {
                       }}
                       className="flex w-full cursor-pointer items-center justify-between px-3.5 py-2.5 text-left text-sm transition hover:bg-kiranam-surface-alt"
                     >
-                      <span className="font-medium text-kiranam-ink">{c.full_name || 'Unnamed'}</span>
+                      <span className="font-medium text-kiranam-ink">
+                        {c.full_name || 'Unnamed'}
+                        {c.kk_number && <span className="font-normal text-kiranam-muted"> | {c.kk_number}</span>}
+                      </span>
                       <span className="text-xs text-kiranam-muted">{c.phone}</span>
                     </button>
                   ))}

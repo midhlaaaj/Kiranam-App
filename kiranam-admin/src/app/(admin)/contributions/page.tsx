@@ -27,7 +27,7 @@ import {
   istRangeBounds,
   periodPresets,
 } from '@/lib/format';
-import { searchTerm } from '@/lib/search';
+import { searchTerm, personSearchFilter } from '@/lib/search';
 import {
   badgeClass,
   cardClass,
@@ -133,7 +133,7 @@ async function Toolbar({ filters }: { filters: Filters }) {
   return (
     <>
       <FilterBar>
-        <FilterSearch placeholder="Name, phone or transaction ref" label="Search contributions" />
+        <FilterSearch placeholder="Name, phone, KK number or transaction ref" label="Search contributions" />
         <FilterPeriod presets={periodPresets()} activeLabel={period} />
         <FilterSelect
           param="status"
@@ -176,7 +176,7 @@ async function ContributionsResults({ filters, page }: { filters: Filters; page:
     const { data: people } = await supabase
       .from('profiles')
       .select('id')
-      .or(`full_name.ilike.*${term}*,phone.ilike.*${term.replace(/\D/g, '') || term}*`)
+      .or(personSearchFilter(term))
       .limit(200);
     contributorIds = (people || []).map((p) => p.id as string);
   }

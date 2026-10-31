@@ -45,7 +45,7 @@ import {
   Tag as TagIcon,
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { searchTerm } from '@/lib/search';
+import { isKkSearch, searchTerm } from '@/lib/search';
 import { ContactForm } from '@/components/whatsapp/contacts/contact-form';
 import { RegisterContributorForm } from '@/app/(admin)/contributors/RegisterContributorForm';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/whatsapp/ui/dialog';
@@ -53,6 +53,7 @@ import { ContactDetailView } from '@/components/whatsapp/contacts/contact-detail
 import { ImportModal } from '@/components/whatsapp/contacts/import-modal';
 import { CustomFieldsManager } from '@/components/whatsapp/contacts/custom-fields-manager';
 import { useCan } from '@/hooks/whatsapp/use-can';
+import { useKkNumbers } from '@/hooks/whatsapp/use-kk-numbers';
 import { GatedButton } from '@/components/whatsapp/ui/gated-button';
 import { useTranslations } from 'next-intl';
 import { ContactRowsSkeleton } from '@/components/whatsapp/contacts/contacts-skeleton';
@@ -70,6 +71,7 @@ export default function ContactsPage() {
   const canEditSettings = useCan('edit-settings');
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
+  const kkNumbers = useKkNumbers(contacts.map((c) => c.id));
   const [loading, setLoading] = useState(true);
   // The last list request failed (shown instead of a misleading "no contacts").
   const [loadError, setLoadError] = useState(false);
@@ -182,7 +184,17 @@ export default function ContactsPage() {
 
       if (term) {
         const like = `*${term}*`;
-        query = query.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like}`);
+        const parts = [`name.ilike.${like}`, `phone.ilike.${like}`, `email.ilike.${like}`];
+        // Contacts have no KK column — find the matching profiles first and match their linked contacts.
+        if (isKkSearch(term)) {
+          const { data: kkProfiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .ilike('kk_number', `%${term.replace(/\s/g, '')}%`)
+            .limit(300);
+          if (kkProfiles?.length) parts.push(`kiranam_profile_id.in.(${kkProfiles.map((p) => p.id).join(',')})`);
+        }
+        query = query.or(parts.join(','));
       }
 
       const { data, count: exactCount, error } = await query;
@@ -357,13 +369,13 @@ export default function ContactsPage() {
     const rows = contacts.filter((c) => selected.has(c.id));
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const csv = [
-      ['Name', 'Phone', 'Email', 'Company', 'Tags', 'WhatsApp opt-out'].map(esc).join(','),
+      ['Name', 'Phone', 'Email', 'KK number', 'Tags', 'WhatsApp opt-out'].map(esc).join(','),
       ...rows.map((c) =>
         [
           c.name ?? '',
           c.phone,
           c.email ?? '',
-          c.company ?? '',
+          kkNumbers.get(c.id) ?? '',
           (c.tags ?? []).map((tg) => tg.name).join('; '),
           c.whatsapp_consent === false ? 'yes' : '',
         ]
@@ -645,7 +657,7 @@ export default function ContactsPage() {
               <TableHead className="text-muted-foreground">{t('tableColumns.name')}</TableHead>
               <TableHead className="text-muted-foreground">{t('tableColumns.phone')}</TableHead>
               <TableHead className="text-muted-foreground hidden md:table-cell">{t('tableColumns.email')}</TableHead>
-              <TableHead className="text-muted-foreground hidden lg:table-cell">{t('tableColumns.company')}</TableHead>
+              <TableHead className="text-muted-foreground hidden lg:table-cell">{t('tableColumns.kk')}</TableHead>
               <TableHead className="text-muted-foreground hidden md:table-cell">{t('tableColumns.tags')}</TableHead>
               <TableHead className="text-muted-foreground hidden lg:table-cell">{t('tableColumns.createdAt')}</TableHead>
               <TableHead className="text-muted-foreground w-12" />
@@ -729,7 +741,7 @@ export default function ContactsPage() {
                     {contact.email || <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden lg:table-cell text-sm">
-                    {contact.company || <span className="text-muted-foreground">-</span>}
+                    {kkNumbers.get(contact.id) || <span className="text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">

@@ -11,6 +11,7 @@ import { cn } from "@/lib/whatsapp/utils";
 import type { Conversation, ConversationStatus, Tag } from "@/types/whatsapp";
 import { Search, ChevronDown, X } from "lucide-react";
 import { useAuth } from "@/hooks/whatsapp/use-auth";
+import { useKkNumbers } from "@/hooks/whatsapp/use-kk-numbers";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/whatsapp/ui/input";
 import {
@@ -89,6 +90,7 @@ export function ConversationList({
   const [view, setView] = useState<InboxView>("all");
   const [status, setStatus] = useState<ConversationStatus | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
+  const kkNumbers = useKkNumbers(conversations.map((c) => c.contact?.id));
   // user_id → name, for the assignee chip on each row.
   const [agents, setAgents] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -239,7 +241,8 @@ export function ConversationList({
         const name = c.contact?.name?.toLowerCase() ?? "";
         const phone = c.contact?.phone?.toLowerCase() ?? "";
         const lastMsg = c.last_message_text?.toLowerCase() ?? "";
-        return name.includes(q) || phone.includes(q) || lastMsg.includes(q);
+        const kk = (c.contact?.id && kkNumbers.get(c.contact.id)?.toLowerCase()) || "";
+        return name.includes(q) || phone.includes(q) || lastMsg.includes(q) || kk.includes(q);
       });
     }
 
@@ -248,7 +251,7 @@ export function ConversationList({
     return [...result].sort(
       (a, b) => new Date(b.last_message_at ?? 0).getTime() - new Date(a.last_message_at ?? 0).getTime(),
     );
-  }, [conversations, view, status, unreadOnly, search, selectedTagIds, selectedCompany, user?.id]);
+  }, [conversations, view, status, unreadOnly, search, selectedTagIds, selectedCompany, user?.id, kkNumbers]);
 
   const toggleTag = useCallback((id: string) => {
     setSelectedTagIds((prev) =>
@@ -474,6 +477,7 @@ export function ConversationList({
                 isActive={conv.id === activeConversationId}
                 onSelect={handleSelect}
                 assigneeName={conv.assigned_agent_id ? agents.get(conv.assigned_agent_id) ?? null : null}
+                kkNumber={conv.contact?.id ? kkNumbers.get(conv.contact.id) : undefined}
                 isMine={!!conv.assigned_agent_id && conv.assigned_agent_id === user?.id}
                 t={t}
               />
@@ -490,14 +494,16 @@ interface ConversationItemProps {
   isActive: boolean;
   onSelect: (conversation: Conversation) => void;
   assigneeName: string | null;
+  kkNumber?: string;
   isMine: boolean;
   t: ReturnType<typeof useTranslations>;
 }
 
-function ConversationItem({ conversation, isActive, onSelect, assigneeName, isMine, t }: ConversationItemProps) {
+function ConversationItem({ conversation, isActive, onSelect, assigneeName, kkNumber, isMine, t }: ConversationItemProps) {
   const contact = conversation.contact;
-  const displayName = contact?.name || contact?.phone || t("unknown");
-  const initials = displayName.charAt(0).toUpperCase();
+  const baseName = contact?.name || contact?.phone || t("unknown");
+  const displayName = kkNumber ? `${baseName} | ${kkNumber}` : baseName;
+  const initials = baseName.charAt(0).toUpperCase();
   const unread = conversation.unread_count > 0;
 
   const handleClick = useCallback(() => {

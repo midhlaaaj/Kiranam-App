@@ -29,7 +29,7 @@ export async function getManualContributionOptions(): Promise<ManualContribution
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const [{ data: rawContributors }, { data: commitments }, { data: activeCampaigns }, { data: paidThisMonthRows }] = await Promise.all([
-    supabase.from('profiles').select('id, full_name, phone').eq('role', 'contributor').not('phone', 'is', null).order('full_name', { ascending: true }),
+    supabase.from('profiles').select('id, full_name, phone, kk_number').eq('role', 'contributor').not('phone', 'is', null).order('full_name', { ascending: true }),
     supabase.from('commitments').select('contributor_id, monthly_amount'),
     supabase.from('campaigns').select('id, title').eq('status', 'active').order('title', { ascending: true }),
     supabase.from('contributions').select('contributor_id').eq('status', 'success').gte('created_at', monthStart),

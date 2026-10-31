@@ -8,7 +8,7 @@ import { ContributorsTableClient } from './ContributorsTableClient';
 import { deriveContributorStatus, type ContributorStatus } from '@/lib/coordinatorStats';
 import { PillTabs } from '@/components/PillTabs';
 import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
-import { searchTerm } from '@/lib/search';
+import { searchTerm, personSearchFilter } from '@/lib/search';
 import { buttonSecondary } from '@/lib/ui';
 
 const STATUS_LABEL: Record<ContributorStatus, string> = {
@@ -45,7 +45,7 @@ export default async function ContributorsPage({
     />
   );
 
-  const searchBox = <FilterSearch placeholder="Search by name or phone" label="Search contributors" />;
+  const searchBox = <FilterSearch placeholder="Search by name, phone or KK number" label="Search contributors" />;
 
   return (
     <FilterRoot>
@@ -83,7 +83,7 @@ async function ContributorsTable({ q, status }: { q?: string; status?: string })
 
   const term = searchTerm(q);
   if (term) {
-    request = request.or(`full_name.ilike.*${term}*,phone.ilike.*${term.replace(/\D/g, '') || term}*`);
+    request = request.or(personSearchFilter(term));
   }
 
   const { data: rawContributors } = await request;

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, Search, X } from 'lucide-react';
 import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
+import { isKkSearch } from '@/lib/search';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { Input } from '@/components/whatsapp/ui/input';
 import { Button } from '@/components/whatsapp/ui/button';
@@ -57,7 +58,18 @@ export function ContactPicker({
     const timer = setTimeout(async () => {
       const q = sanitizeQuery(query);
       let req = createClient().from('contacts').select('id, name, phone, whatsapp_consent').order('name').limit(RESULT_LIMIT);
-      if (q) req = req.or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
+      if (q) {
+        const parts = [`name.ilike.%${q}%`, `phone.ilike.%${q}%`];
+        if (isKkSearch(q)) {
+          const { data: kkProfiles } = await createClient()
+            .from('profiles')
+            .select('id')
+            .ilike('kk_number', `%${q.replace(/\s/g, '')}%`)
+            .limit(300);
+          if (kkProfiles?.length) parts.push(`kiranam_profile_id.in.(${kkProfiles.map((p) => p.id).join(',')})`);
+        }
+        req = req.or(parts.join(','));
+      }
       const { data } = await req;
       if (cancelled) return;
       const rows = (data ?? []) as PickerContact[];

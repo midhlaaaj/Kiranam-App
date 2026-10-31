@@ -302,7 +302,7 @@ export function RegisterContributorForm({
                 key={comboboxResetKey}
                 people={coordinators}
                 name="coordinatorId"
-                placeholder="Search coordinators by name or phone…"
+                placeholder="Search coordinators by name, phone or KK number…"
                 emptyLabel="No coordinators match."
                 className="max-w-none"
               />

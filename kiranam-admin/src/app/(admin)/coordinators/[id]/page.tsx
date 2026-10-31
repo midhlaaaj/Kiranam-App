@@ -72,7 +72,7 @@ export default async function CoordinatorDetailPage({
   const [{ data: referral }, { data: assignments }, { data: allContributors }] = await Promise.all([
     supabase.from('referrals').select('referral_code').eq('coordinator_id', id).maybeSingle(),
     supabase.from('contributor_assignments').select('contributor_id').eq('coordinator_id', id),
-    supabase.from('profiles').select('id, full_name, phone').eq('role', 'contributor').not('phone', 'is', null).order('full_name'),
+    supabase.from('profiles').select('id, full_name, phone, kk_number').eq('role', 'contributor').not('phone', 'is', null).order('full_name'),
   ]);
 
   const assignedIds = new Set((assignments || []).map((a) => a.contributor_id));
@@ -171,7 +171,7 @@ export default async function CoordinatorDetailPage({
         <PersonCombobox
           people={unassignedContributors}
           name="contributorId"
-          placeholder="Search contributors by name or phone…"
+          placeholder="Search contributors by name, phone or KK number…"
           emptyLabel="No contributors match."
         />
         <button type="submit" className={buttonPrimary}>

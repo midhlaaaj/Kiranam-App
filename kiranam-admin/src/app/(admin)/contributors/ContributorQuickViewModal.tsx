@@ -132,7 +132,7 @@ export function ContributorQuickViewModal({
               initial={data.coordinator}
               onSelect={(p) => setSelectedCoordinatorId(p?.id ?? null)}
               className="max-w-none"
-              placeholder="Search coordinators by name or phone…"
+              placeholder="Search coordinators by name, phone or KK number…"
               emptyLabel="No coordinators match."
             />
           </div>

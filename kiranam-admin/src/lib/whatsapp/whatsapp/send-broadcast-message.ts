@@ -1,3 +1,4 @@
+import { recordOutboundTemplate } from '@/lib/whatsapp/whatsapp/record-outbound'
 import { sendTemplateMessage } from '@/lib/whatsapp/whatsapp/meta-api'
 import type { SendTimeParams } from '@/lib/whatsapp/whatsapp/template-send-builder'
 import type { MessageTemplate } from '@/types/whatsapp'
@@ -7,6 +8,16 @@ import {
   phoneVariants,
   isRecipientNotAllowedError,
 } from '@/lib/whatsapp/whatsapp/phone-utils'
+
+/** "₹{{2}}" in the template body + a value that already starts with "₹" would
+ * send "₹₹100" — drop the value's own sign wherever the body supplies one. */
+export function dropDuplicateRupeeSigns(bodyText: string | undefined, values: string[]): string[] {
+  if (!bodyText) return values
+  return values.map((value, i) => {
+    const placeholder = new RegExp(String.raw`₹\s*\{\{\s*${i + 1}\s*\}\}`)
+    return placeholder.test(bodyText) ? value.replace(/^\s*₹\s*/, '') : value
+  })
+}
 
 export type BroadcastSendResult =
   | { ok: true; messageId: string }
@@ -27,9 +38,17 @@ export async function sendBroadcastMessage(opts: {
   template: MessageTemplate | null
   params: string[]
   messageParams?: SendTimeParams
+  /** When set, a successful send is also saved to the recipient's inbox thread. */
+  inboxAccountId?: string
 }): Promise<BroadcastSendResult> {
   const sanitized = sanitizePhoneForMeta(opts.phone)
   if (!isValidE164(sanitized)) return { ok: false, error: 'Invalid phone number format' }
+
+  const bodyText = opts.template?.body_text
+  const params = dropDuplicateRupeeSigns(bodyText, opts.params)
+  const messageParams = opts.messageParams?.body
+    ? { ...opts.messageParams, body: dropDuplicateRupeeSigns(bodyText, opts.messageParams.body) }
+    : opts.messageParams
 
   let lastError: string | null = null
   for (const variant of phoneVariants(sanitized)) {
@@ -41,9 +60,20 @@ export async function sendBroadcastMessage(opts: {
         templateName: opts.templateName,
         language: opts.language,
         template: opts.template ?? undefined,
-        messageParams: opts.messageParams,
-        params: opts.params,
+        messageParams,
+        params,
       })
+      if (opts.inboxAccountId) {
+        await recordOutboundTemplate({
+          accountId: opts.inboxAccountId,
+          phone: variant,
+          templateName: opts.templateName,
+          template: opts.template,
+          params,
+          messageParams,
+          waMessageId: result.messageId,
+        })
+      }
       return { ok: true, messageId: result.messageId }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'

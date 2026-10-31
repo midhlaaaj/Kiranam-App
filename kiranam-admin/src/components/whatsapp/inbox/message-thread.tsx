@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/whatsapp/supabase/client";
 import { useAuth } from "@/hooks/whatsapp/use-auth";
 import { usePresence } from "@/hooks/whatsapp/use-presence";
+import { useKkNumbers } from "@/hooks/whatsapp/use-kk-numbers";
 import { PresenceDot } from "@/components/whatsapp/presence/presence-dot";
 import { presenceLabel } from "@/lib/whatsapp/presence";
 import { cn } from "@/lib/whatsapp/utils";
@@ -816,6 +817,7 @@ export function MessageThread({
     return map;
   }, [reactions]);
 
+  const kkNumbers = useKkNumbers([contact?.id]);
   const contactDisplayName = contact?.name || contact?.phone || "Customer";
 
   // Author label for a quoted message: "You" when we sent the parent,
@@ -948,6 +950,7 @@ export function MessageThread({
   }
 
   const displayName = contact.name || contact.phone;
+  const kkNumber = kkNumbers.get(contact.id);
   const messageGroups = groupMessagesByDate(messages);
   const currentStatus = STATUS_OPTIONS.find(
     (s) => s.value === conversation.status
@@ -988,7 +991,7 @@ export function MessageThread({
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-foreground">{displayName}</h2>
+            <h2 className="truncate text-sm font-semibold text-foreground">{kkNumber ? `${displayName} | ${kkNumber}` : displayName}</h2>
             <p className="truncate text-xs text-muted-foreground">{contact.phone}</p>
           </div>
           {/* 24-hour reply window — the key "can I reply freely?" signal,

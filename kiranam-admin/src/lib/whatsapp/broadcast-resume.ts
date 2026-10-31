@@ -135,6 +135,7 @@ export async function resumeQueuedBroadcasts(): Promise<ResumeResult[]> {
             phoneNumberId: config.phone_number_id,
             accessToken,
             phone: contact.phone,
+            inboxAccountId: accountId,
             templateName: broadcast.template_name,
             language: broadcast.template_language ?? 'en_US',
             template,

@@ -10,10 +10,12 @@ interface PersonOption {
   id: string;
   full_name: string | null;
   phone: string | null;
+  kk_number?: string | null;
 }
 
 const MAX_RESULTS = 8;
-const label = (p: PersonOption) => `${p.full_name || 'Unnamed'} — ${p.phone || ''}`;
+const label = (p: PersonOption) =>
+  `${p.full_name || 'Unnamed'}${p.kk_number ? ` | ${p.kk_number}` : ''} — ${p.phone || ''}`;
 
 /**
  * Search-and-pick field for people. The result list is rendered in a portal
@@ -24,7 +26,7 @@ const label = (p: PersonOption) => `${p.full_name || 'Unnamed'} — ${p.phone ||
 export function PersonCombobox({
   people,
   name,
-  placeholder = 'Search by name or phone…',
+  placeholder = 'Search by name, phone or KK number…',
   emptyLabel = 'No matches.',
   initial = null,
   onSelect,
@@ -58,7 +60,7 @@ export function PersonCombobox({
     // full list then, not a search for that label.
     const q = selected ? '' : query.trim().toLowerCase();
     const pool = q
-      ? people.filter((p) => p.full_name?.toLowerCase().includes(q) || p.phone?.toLowerCase().includes(q))
+      ? people.filter((p) => p.full_name?.toLowerCase().includes(q) || p.phone?.toLowerCase().includes(q) || p.kk_number?.toLowerCase().includes(q))
       : people;
     return { shown: pool.slice(0, MAX_RESULTS), total: pool.length };
   }, [people, query, selected]);
@@ -203,7 +205,10 @@ export function PersonCombobox({
                     }}
                     className={cn('flex cursor-pointer flex-col px-3.5 py-2 text-sm', i === active && 'bg-kiranam-surface-alt')}
                   >
-                    <span className="font-medium text-kiranam-ink">{p.full_name || 'Unnamed'}</span>
+                    <span className="font-medium text-kiranam-ink">
+                      {p.full_name || 'Unnamed'}
+                      {p.kk_number && <span className="font-normal text-kiranam-muted"> | {p.kk_number}</span>}
+                    </span>
                     <span className="text-xs tabular-nums text-kiranam-muted">{p.phone}</span>
                   </div>
                 ))}

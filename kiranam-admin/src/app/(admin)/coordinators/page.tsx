@@ -9,7 +9,7 @@ import { CoordinatorsTableClient } from './CoordinatorsTableClient';
 import { PillTabs } from '@/components/PillTabs';
 import { FilterResults, FilterRoot, FilterSearch } from '@/components/filters/FilterBar';
 import { tableCellClass, tableHeadRowClass, tableWrapClass } from '@/lib/ui';
-import { searchTerm } from '@/lib/search';
+import { searchTerm, personSearchFilter } from '@/lib/search';
 import { cn } from '@/lib/utils';
 
 async function getApprovedCoordinators(query: string) {
@@ -23,7 +23,7 @@ async function getApprovedCoordinators(query: string) {
 
   const term = searchTerm(query);
   if (term) {
-    request = request.or(`full_name.ilike.*${term}*,phone.ilike.*${term.replace(/\D/g, '') || term}*`);
+    request = request.or(personSearchFilter(term));
   }
 
   const { data: coordinators } = await request;
@@ -127,7 +127,7 @@ export default async function CoordinatorsPage({
     <FilterRoot>
       <CoordinatorsRegisterPanel
         filters={filterPills}
-        search={<FilterSearch placeholder="Search by name or phone" label="Search coordinators" />}
+        search={<FilterSearch placeholder="Search by name, phone or KK number" label="Search coordinators" />}
       />
 
       <FilterResults>

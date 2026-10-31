@@ -52,7 +52,7 @@ export default async function ContributorDetailPage({
       .eq('contributor_id', id)
       .maybeSingle(),
     supabase.from('campaigns').select('id, title').eq('status', 'active').order('title', { ascending: true }),
-    supabase.from('profiles').select('id, full_name, phone').eq('role', 'coordinator').order('full_name'),
+    supabase.from('profiles').select('id, full_name, phone, kk_number').eq('role', 'coordinator').order('full_name'),
   ]);
   if (!profile) notFound();
 
