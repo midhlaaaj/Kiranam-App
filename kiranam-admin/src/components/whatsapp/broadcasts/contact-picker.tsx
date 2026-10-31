@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Check, Search, X } from 'lucide-react';
 import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { isKkSearch } from '@/lib/search';
+import { useKkNumbers } from '@/hooks/whatsapp/use-kk-numbers';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { Input } from '@/components/whatsapp/ui/input';
 import { Button } from '@/components/whatsapp/ui/button';
@@ -105,6 +106,9 @@ export function ContactPicker({
   }, [selectedIds]);
 
   const selected = new Set(selectedIds);
+  const kkNumbers = useKkNumbers([...(results ?? []).map((c) => c.id), ...selectedIds]);
+  const withKk = (id: string, text: string) => (kkNumbers.get(id) ? `${text} | ${kkNumbers.get(id)}` : text);
+
   const selectable = (results ?? []).filter((c) => c.whatsapp_consent !== false);
   const toggle = (id: string) =>
     onChange(selected.has(id) ? selectedIds.filter((s) => s !== id) : [...selectedIds, id]);
@@ -177,7 +181,7 @@ export function ContactPicker({
                     >
                       {isOn && <Check className="h-3 w-3" />}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-foreground">{label(c, t('contactsNoName'))}</span>
+                    <span className="min-w-0 flex-1 truncate text-foreground">{withKk(c.id, label(c, t('contactsNoName')))}</span>
                     {blocked && <span className="text-xs text-muted-foreground">{t('contactsNoWhatsapp')}</span>}
                     <span className="tabular-nums text-muted-foreground">{c.phone ? `+${c.phone.replace(/^\+/, '')}` : ''}</span>
                   </button>
@@ -195,7 +199,7 @@ export function ContactPicker({
         <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto" role="list">
           {selectedIds.map((id) => {
             const c = known[id];
-            const name = c ? label(c, t('contactsNoName')) : '…';
+            const name = c ? withKk(id, label(c, t('contactsNoName'))) : '…';
             return (
               <span
                 key={id}
