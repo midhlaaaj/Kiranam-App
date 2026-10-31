@@ -1,0 +1,55 @@
+<!doctype html>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --red:#ED1F2B; --dark:#4A0508; }
+  * { box-sizing:border-box; margin:0; }
+  html,body { width:100vw; height:100vh; overflow:hidden; font-family:'Inter','Segoe UI',system-ui,sans-serif; }
+  .stage { position:relative; width:100%; height:100%; color:#fff;
+    background: radial-gradient(120% 70% at 50% 0%, #FF5A60 0%, #E02530 38%, #8E0F17 75%, var(--dark) 100%); }
+  .copy { position:absolute; left:0; right:0; top:5.5%; padding:0 7%; text-align:center; }
+  h1 { font-weight:900; font-size:calc(var(--w) * 0.085); line-height:1.08; letter-spacing:-0.02em; }
+  p.sub { margin-top:calc(var(--w) * 0.025); font-weight:500; font-size:calc(var(--w) * 0.037); line-height:1.35; opacity:.88; }
+  .phone { position:absolute; left:50%; top:27%; width:78%; transform:translateX(-50%);
+    background:#0b0b0c; border-radius:calc(var(--w) * 0.105); padding:calc(var(--w) * 0.014);
+    box-shadow:0 calc(var(--w)*0.04) calc(var(--w)*0.09) rgba(0,0,0,.45), inset 0 0 0 2px #2a2a2c; }
+  .phone img { display:block; width:100%; border-radius:calc(var(--w) * 0.092); }
+  .phone::after { content:''; position:absolute; top:calc(var(--w)*0.03); left:50%; transform:translateX(-50%);
+    width:26%; height:calc(var(--w)*0.034); background:#000; border-radius:99px; }
+  /* hero */
+  .hero { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 8%; }
+  .hero img { width:calc(var(--w) * 0.36); }
+  .hero h1 { margin-top:calc(var(--w) * 0.07); font-size:calc(var(--w) * 0.11); }
+  .hero .bar { width:calc(var(--w)*0.1); height:calc(var(--w)*0.008); background:#fff; opacity:.8; border-radius:9px; margin:calc(var(--w)*0.04) 0; }
+  .hero p.sub { font-size:calc(var(--w) * 0.045); }
+  .hero .pills { margin-top:calc(var(--w)*0.09); display:flex; gap:calc(var(--w)*0.02); flex-wrap:wrap; justify-content:center; }
+  .pill { padding:calc(var(--w)*0.015) calc(var(--w)*0.03); border-radius:99px; background:rgba(255,255,255,.16); font-weight:700; font-size:calc(var(--w)*0.026); white-space:nowrap; }
+  /* feature graphic */
+  .fg { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:4%; padding:0 6%; }
+  .fg img { height:46%; }
+  .fg h1 { font-size:calc(var(--w) * 0.062); text-align:left; }
+  .fg p.sub { font-size:calc(var(--w) * 0.026); text-align:left; }
+</style>
+<div class="stage" id="s"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const kind = q.get('k'); const W = +q.get('w');
+document.documentElement.style.setProperty('--w', W + 'px');
+const S = document.getElementById('s');
+const SHOTS = {
+  login: ['Sign in with just your phone number', 'A one-time code arrives on WhatsApp. Works with mobile numbers from India and abroad.', '../source/login.png'],
+  home: ['Your monthly giving, at a glance', 'Set an amount, change it any time and keep every contribution in one place.', '../source/home.png'],
+  campaigns: ['Back the causes you care about', 'Follow each campaign\u2019s progress and give in a few taps.', '../source/campaigns.png'],
+};
+if (kind === 'hero') {
+  S.innerHTML = `<div class="hero"><img src="../source/mark-white.svg"><h1>Karunya Kiranam</h1><div class="bar"></div>
+    <p class="sub">Empowering lives, inspiring smiles</p>
+    <div class="pills"><span class="pill">Monthly giving</span><span class="pill">Campaigns</span><span class="pill">Events</span><span class="pill">Receipts</span></div></div>`;
+} else if (kind === 'feature') {
+  S.innerHTML = `<div class="fg"><img src="../source/mark-white.svg"><div><h1>Karunya Kiranam</h1><p class="sub">Empowering lives,<br>inspiring smiles</p></div></div>`;
+} else {
+  const [h, s, img] = SHOTS[kind];
+  S.innerHTML = `<div class="copy"><h1>${h}</h1><p class="sub">${s}</p></div><div class="phone"><img src="${img}"></div>`;
+}
+document.fonts.ready.then(() => document.title = 'ready');
+</script>

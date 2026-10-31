@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root { --red:#ED1F2B; --dark:#2a0305; }
+  * { box-sizing:border-box; margin:0; }
+  html,body { width:100vw; height:100vh; overflow:hidden; font-family:'Inter','Segoe UI',system-ui,sans-serif; }
+  .stage { position:relative; width:100%; height:100%; color:#fff; overflow:hidden;
+    background:
+      radial-gradient(70% 38% at 50% 62%, rgba(237,31,43,.55) 0%, rgba(237,31,43,0) 70%),
+      radial-gradient(120% 60% at 50% -10%, #5a0a10 0%, #2a0305 55%, #150102 100%); }
+  .mark { position:absolute; right:-9%; top:-4%; width:56%; opacity:.055; }
+  .copy { position:absolute; left:0; right:0; top:calc(var(--w)*0.075); padding:0 calc(var(--w)*0.08); text-align:center; }
+  .eyebrow { display:inline-flex; align-items:center; gap:calc(var(--w)*0.018); font-weight:800; font-size:calc(var(--w)*0.026);
+    letter-spacing:.24em; color:#ff8a90; text-transform:uppercase; }
+  .eyebrow::before,.eyebrow::after { content:''; width:calc(var(--w)*0.06); height:2px; background:linear-gradient(90deg,transparent,#ff8a90); }
+  .eyebrow::after { transform:scaleX(-1); }
+  h1 { margin-top:calc(var(--w)*0.03); font-weight:900; font-size:calc(var(--w)*0.074); line-height:1.06; letter-spacing:-0.028em; }
+  p.sub { margin-top:calc(var(--w)*0.026); font-weight:500; font-size:calc(var(--w)*0.032); line-height:1.35; color:rgba(255,255,255,.72); }
+  .phone { position:absolute; left:50%; bottom:calc(var(--w)*0.04); width:calc(var(--w)*0.585); transform:translateX(-50%);
+    border-radius:calc(var(--w)*0.092); padding:calc(var(--w)*0.0075);
+    background:linear-gradient(145deg,#b9bcc3 0%,#4a4d53 22%,#17181a 50%,#55585e 78%,#a7aab1 100%);
+    box-shadow: 0 calc(var(--w)*0.05) calc(var(--w)*0.1) rgba(0,0,0,.6), 0 0 calc(var(--w)*0.12) rgba(237,31,43,.25); }
+  .bezel { background:#000; border-radius:calc(var(--w)*0.085); padding:calc(var(--w)*0.0085); position:relative; }
+  .bezel img { display:block; width:100%; border-radius:calc(var(--w)*0.077); }
+  .bezel::after { content:''; position:absolute; top:calc(var(--w)*0.0235); left:50%; transform:translateX(-50%);
+    width:calc(var(--w)*0.016); height:calc(var(--w)*0.016); background:radial-gradient(circle at 35% 35%,#2b3550,#05070d 70%); border-radius:50%;
+    box-shadow:0 0 0 calc(var(--w)*0.0032) #000; }
+  .phone::before { content:''; position:absolute; right:calc(var(--w)*-0.0045); top:22%; width:calc(var(--w)*0.0045); height:9%;
+    background:linear-gradient(90deg,#3a3c40,#8d9096); border-radius:0 4px 4px 0; }
+  .glare { position:absolute; inset:0; border-radius:calc(var(--w)*0.092); pointer-events:none;
+    background:linear-gradient(115deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 28%); }
+</style>
+<div class="stage" id="s"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const k = q.get('k'); const W = +q.get('w');
+document.documentElement.style.setProperty('--w', W + 'px');
+const SHOTS = {
+  splash:        ['Karunya Kiranam', 'Empowering lives,<br>inspiring smiles', 'The giving app of Health Care Foundation.'],
+  login:         ['Simple sign-in', 'Start with just your phone number', 'A one-time code on WhatsApp. Works with numbers from India and abroad.'],
+  home:          ['Monthly giving', 'Your giving, at a glance', 'Set a monthly amount and pay in one tap.'],
+  campaigns:     ['Campaigns', 'Back the causes you care about', 'Follow every campaign’s progress.'],
+  events:        ['Events', 'Be part of every gathering', 'Meetings and events, with dates and places.'],
+  contributions: ['Receipts', 'Every contribution, on record', 'A clear history of what you have given.'],
+};
+const [e, h, s] = SHOTS[k];
+document.getElementById('s').innerHTML =
+  `<img class="mark" src="../source/mark-white.svg">
+   <div class="copy"><div class="eyebrow">${e}</div><h1>${h}</h1><p class="sub">${s}</p></div>
+   <div class="phone"><div class="bezel"><img src="../source/clean-${k}.png"></div><div class="glare"></div></div>`;
+document.fonts.ready.then(() => document.title = 'ready');
+</script>

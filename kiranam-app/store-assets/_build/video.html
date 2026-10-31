@@ -1,0 +1,47 @@
+<!doctype html>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box; margin:0; }
+  html,body { width:1080px; height:1920px; overflow:hidden; background:#4A0508; font-family:'Inter','Segoe UI',sans-serif; color:#fff; }
+  .bg { position:absolute; inset:0; background: radial-gradient(120% 70% at 50% 0%, #FF5A60 0%, #E02530 38%, #8E0F17 75%, #4A0508 100%); }
+  .scene { position:absolute; inset:0; opacity:0; }
+  .center { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 90px; }
+  .center img { width:400px; }
+  .center h1 { font-size:120px; font-weight:900; letter-spacing:-.02em; margin-top:70px; line-height:1.05; }
+  .center p { font-size:46px; font-weight:500; opacity:.9; margin-top:36px; line-height:1.35; }
+  .copy { position:absolute; left:0; right:0; top:105px; padding:0 80px; text-align:center; }
+  .copy h2 { font-size:92px; font-weight:900; line-height:1.08; letter-spacing:-.02em; }
+  .copy p { font-size:40px; font-weight:500; opacity:.88; margin-top:28px; line-height:1.35; }
+  .phone { position:absolute; left:150px; top:520px; width:780px; background:#0b0b0c; border-radius:113px; padding:14px; box-shadow:0 50px 100px rgba(0,0,0,.5), inset 0 0 0 2px #2a2a2c; }
+  .phone img { display:block; width:100%; border-radius:99px; }
+  .phone::after { content:''; position:absolute; top:30px; left:50%; transform:translateX(-50%); width:204px; height:36px; background:#000; border-radius:99px; }
+</style>
+<div class="bg"></div>
+<div class="scene center" id="s1"><img src="../source/mark-white.svg"><h1>Karunya Kiranam</h1><p>Empowering lives, inspiring smiles</p></div>
+<div class="scene" id="s2"><div class="copy"><h2>Sign in with just your phone number</h2><p>A one-time code arrives on WhatsApp.<br>Works with numbers from India and abroad.</p></div><div class="phone"><img src="../source/login.png"></div></div>
+<div class="scene" id="s3"><div class="copy"><h2>Your monthly giving, at a glance</h2><p>Set an amount, change it any time and keep every contribution in one place.</p></div><div class="phone"><img src="../source/home.png"></div></div>
+<div class="scene" id="s4"><div class="copy"><h2>Back the causes you care about</h2><p>Follow each campaign’s progress and give in a few taps.</p></div><div class="phone"><img src="../source/campaigns.png"></div></div>
+<div class="scene center" id="s5"><img src="../source/mark-white.svg" style="width:300px"><h1 style="font-size:96px">Give monthly.<br>Track every contribution.</h1><p>Karunya Kiranam · Health Care Foundation<br>kiranam.online</p></div>
+<script>
+const T = [[0,4.2],[3.8,8.8],[8.4,13.4],[13.0,18.0],[17.6,22.4]];
+const ease = x => 1 - Math.pow(1 - x, 3);
+const el = [...document.querySelectorAll('.scene')];
+const t0 = performance.now();
+function frame() {
+  const t = (performance.now() - t0) / 1000;
+  el.forEach((s, i) => {
+    const [a, b] = T[i], inT = Math.min(Math.max((t - a) / 0.6, 0), 1), outT = Math.min(Math.max((t - (b - 0.5)) / 0.5, 0), 1);
+    const op = i === 0 ? 1 - outT : inT * (1 - outT);
+    s.style.opacity = t < a || t > b ? 0 : op;
+    const k = ease(Math.min(Math.max((t - a) / 1.0, 0), 1));
+    const ph = s.querySelector('.phone'), cp = s.querySelector('.copy');
+    if (ph) ph.style.transform = `translateY(${(1 - k) * 260}px)`;
+    if (cp) cp.style.transform = `translateY(${(1 - k) * -40}px)`;
+    if (!ph) { const im = s.querySelector('img'); im.style.transform = `scale(${0.85 + 0.15 * k})`; }
+  });
+  window.__t = t;
+  requestAnimationFrame(frame);
+}
+document.fonts.ready.then(() => { window.__go = true; requestAnimationFrame(frame); });
+</script>
