@@ -28,6 +28,85 @@ function dueLabel(date: string): string {
   });
 }
 
+/** Everyone's monthly due date is the 3rd. The first cycle this applies to is the 3 Dec 2026 due date,
+ * so the first reminders go out on 30 Nov. */
+const DUE_DAY = '03';
+const FIRST_DUE_DATE = '2026-12-03';
+/** Contributors with no monthly commitment on file are asked for the app's minimum. */
+const DEFAULT_MONTHLY_AMOUNT = 30;
+
+const PAGE = 1000;
+
+/** The previous month's due date, which is also the cutoff for "already paid this cycle". */
+function previousDueDate(dueDate: string): string {
+  const [y, m] = dueDate.split('-').map(Number);
+  const prev = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+  return `${prev}-${DUE_DAY}`;
+}
+
+/** Contributors still owing this cycle, with the amount to show them. Skips autopay, paused
+ * contributions, and anyone who already paid a monthly contribution since the previous due date. */
+async function contributorsOwing(
+  supabase: ReturnType<typeof createAdminClient>,
+  dueDate: string,
+): Promise<Map<string, number>> {
+  const ids: string[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('role', 'contributor')
+      .order('id')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`Could not load contributors: ${error.message}`);
+    ids.push(...(data ?? []).map((p) => p.id as string));
+    if (!data || data.length < PAGE) break;
+  }
+
+  const commitments = new Map<string, { amount: number; skip: boolean }>();
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('commitments')
+      .select('contributor_id, monthly_amount, autopay_enabled, contribution_paused')
+      .order('contributor_id')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`Could not load commitments: ${error.message}`);
+    for (const c of data ?? []) {
+      commitments.set(c.contributor_id as string, {
+        amount: Number(c.monthly_amount) || 0,
+        skip: Boolean(c.autopay_enabled || c.contribution_paused),
+      });
+    }
+    if (!data || data.length < PAGE) break;
+  }
+
+  // Paid this cycle = a successful monthly payment (in the app, autopay, or added by an admin)
+  // on or after the day after the previous due date, India time.
+  const paidSince = `${shiftDate(previousDueDate(dueDate), 1)}T00:00:00+05:30`;
+  const paid = new Set<string>();
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('contributions')
+      .select('contributor_id')
+      .eq('label', 'Monthly Contribution')
+      .eq('status', 'success')
+      .gte('created_at', paidSince)
+      .order('id')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`Could not load payments: ${error.message}`);
+    for (const p of data ?? []) paid.add(p.contributor_id as string);
+    if (!data || data.length < PAGE) break;
+  }
+
+  const owing = new Map<string, number>();
+  for (const id of ids) {
+    const c = commitments.get(id);
+    if (c?.skip || paid.has(id)) continue;
+    owing.set(id, c?.amount || DEFAULT_MONTHLY_AMOUNT);
+  }
+  return owing;
+}
+
 const SCHEDULE: { kind: ReminderKind; offsetDays: number; template: string }[] = [
   { kind: 'upcoming', offsetDays: 3, template: KIRANAM_TEMPLATES.reminderUpcoming },
   { kind: 'due_today', offsetDays: 0, template: KIRANAM_TEMPLATES.reminderDueToday },
@@ -65,31 +144,34 @@ export async function sendKiranamReminders(today = todayIST()): Promise<Reminder
 
   for (const step of SCHEDULE) {
     const dueDate = shiftDate(today, step.offsetDays);
-    const { data: due, error } = await supabase
-      .from('commitments')
-      .select('contributor_id, monthly_amount, profiles!inner(role)')
-      .eq('next_due_date', dueDate)
-      .eq('autopay_enabled', false)
-      .eq('contribution_paused', false)
-      .eq('profiles.role', 'contributor');
-    if (error) throw new Error(`Could not load ${step.kind} reminders: ${error.message}`);
-    if (!due || due.length === 0) {
+    // Only the 3rd of a month, and only from the first cycle onward.
+    if (!dueDate.endsWith(`-${DUE_DAY}`) || dueDate < FIRST_DUE_DATE) {
+      results.push({ kind: step.kind, dueDate, recipients: 0, push: 0, whatsapp: 0, email: 0, failed: 0 });
+      continue;
+    }
+
+    const amountById = await contributorsOwing(supabase, dueDate);
+    if (amountById.size === 0) {
       results.push({ kind: step.kind, dueDate, recipients: 0, push: 0, whatsapp: 0, email: 0, failed: 0 });
       continue;
     }
 
     // Claim first — only rows this run actually inserted come back.
-    const { data: claimed, error: claimError } = await supabase
-      .from('reminder_log')
-      .upsert(
-        due.map((c) => ({ profile_id: c.contributor_id, kind: step.kind, due_date: dueDate })),
-        { onConflict: 'profile_id,kind,due_date', ignoreDuplicates: true },
-      )
-      .select('profile_id');
-    if (claimError) throw new Error(`Could not record ${step.kind} reminders: ${claimError.message}`);
+    const claimedIds: string[] = [];
+    const owingIds = [...amountById.keys()];
+    for (let i = 0; i < owingIds.length; i += 500) {
+      const { data: claimed, error: claimError } = await supabase
+        .from('reminder_log')
+        .upsert(
+          owingIds.slice(i, i + 500).map((id) => ({ profile_id: id, kind: step.kind, due_date: dueDate })),
+          { onConflict: 'profile_id,kind,due_date', ignoreDuplicates: true },
+        )
+        .select('profile_id');
+      if (claimError) throw new Error(`Could not record ${step.kind} reminders: ${claimError.message}`);
+      claimedIds.push(...(claimed ?? []).map((c) => c.profile_id as string));
+    }
 
-    const amountById = new Map(due.map((c) => [c.contributor_id as string, Number(c.monthly_amount) || 0]));
-    const recipients = await getRecipients((claimed ?? []).map((c) => c.profile_id as string));
+    const recipients = await getRecipients(claimedIds);
     const label = dueLabel(dueDate);
 
     const push = await mapLimit(recipients, 20, async (r) => {
@@ -111,7 +193,7 @@ export async function sendKiranamReminders(today = todayIST()): Promise<Reminder
     else if (!template) whatsappSkipped = `template ${step.template} not approved`;
     else {
       whatsapp = await mapLimit(
-        recipients.filter((r) => r.phone),
+        recipients.filter((r) => r.phone && r.whatsappConsent),
         10,
         (r) => {
           const amount = amountById.get(r.id)!.toLocaleString('en-IN');

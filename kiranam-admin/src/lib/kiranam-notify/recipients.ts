@@ -12,6 +12,8 @@ export interface Recipient {
   /** Contributor paused contributions — they've opted out of WhatsApp
    * broadcasts (see 021_contribution_pause.sql). */
   paused: boolean;
+  /** Ticked "WhatsApp reminders" in the app (profiles.whatsapp_consent). Unset counts as yes. */
+  whatsappConsent: boolean;
 }
 
 const PAGE = 1000;
@@ -55,7 +57,7 @@ async function pausedIds(): Promise<Set<string>> {
 
 /** Profiles → Recipients, attaching each one's verified email (if any). */
 async function withVerifiedEmails(
-  profiles: { id: string; full_name: string | null; phone: string | null; email: string | null }[],
+  profiles: { id: string; full_name: string | null; phone: string | null; email: string | null; whatsapp_consent?: boolean | null }[],
   ids?: Set<string>,
 ): Promise<Recipient[]> {
   const [emails, paused] = await Promise.all([confirmedEmails(ids), pausedIds()]);
@@ -67,6 +69,7 @@ async function withVerifiedEmails(
       phone: p.phone,
       verifiedEmail: confirmed && p.email && confirmed === p.email.toLowerCase() ? confirmed : null,
       paused: paused.has(p.id),
+      whatsappConsent: p.whatsapp_consent !== false,
     };
   });
 }
@@ -74,11 +77,11 @@ async function withVerifiedEmails(
 /** Every contributor and coordinator. */
 export async function listCommunityRecipients(): Promise<Recipient[]> {
   const supabase = createAdminClient();
-  const profiles: { id: string; full_name: string | null; phone: string | null; email: string | null }[] = [];
+  const profiles: { id: string; full_name: string | null; phone: string | null; email: string | null; whatsapp_consent: boolean | null }[] = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, email')
+      .select('id, full_name, phone, email, whatsapp_consent')
       .in('role', ['contributor', 'coordinator'])
       // Email-only accounts (revoked admins) aren't community members.
       .not('phone', 'is', null)
@@ -95,12 +98,12 @@ export async function listCommunityRecipients(): Promise<Recipient[]> {
 export async function getRecipients(ids: string[]): Promise<Recipient[]> {
   if (ids.length === 0) return [];
   const supabase = createAdminClient();
-  const profiles: { id: string; full_name: string | null; phone: string | null; email: string | null }[] = [];
+  const profiles: { id: string; full_name: string | null; phone: string | null; email: string | null; whatsapp_consent: boolean | null }[] = [];
   // Chunked so a long id list doesn't overflow the request URL.
   for (let i = 0; i < ids.length; i += 200) {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name, phone, email')
+      .select('id, full_name, phone, email, whatsapp_consent')
       .in('id', ids.slice(i, i + 200));
     if (error) throw new Error(`Could not load recipients: ${error.message}`);
     profiles.push(...(data ?? []));
