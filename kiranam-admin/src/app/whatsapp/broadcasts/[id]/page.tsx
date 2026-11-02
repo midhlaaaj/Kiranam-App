@@ -185,9 +185,18 @@ export default function BroadcastDetailPage() {
       const supabase = createClient();
       const { data: bc, error: bcError } = await supabase.from('broadcasts').select('*').eq('id', broadcastId).single();
       if (bcError) throw bcError;
-      setBroadcast(bc);
       // Paged — a single select stops at 1000 recipients.
-      setRecipients(await fetchAllRecipients<BroadcastRecipient>(supabase, broadcastId));
+      const rows = await fetchAllRecipients<BroadcastRecipient>(supabase, broadcastId);
+      // A send or retry that was interrupted (tab closed, phone locked) never
+      // got to flip the broadcast out of "sending", which also greyed out
+      // Retry. Nobody is waiting to be sent, so it is finished: settle it.
+      if (bc.status === 'sending' && !rows.some((r) => r.status === 'pending')) {
+        const settled = rows.some((r) => r.status !== 'failed') ? 'sent' : 'failed';
+        await supabase.from('broadcasts').update({ status: settled }).eq('id', broadcastId);
+        bc.status = settled;
+      }
+      setBroadcast(bc);
+      setRecipients(rows);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('notFound'));

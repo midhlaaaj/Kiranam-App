@@ -23,6 +23,11 @@ const BY_CODE: Record<string, Omit<FailureReason, 'key'>> = {
     advice: 'Meta limits how many marketing messages one person gets. Try again in a day or two.',
     retryable: true,
   },
+  '130472': {
+    title: 'Held back by WhatsApp',
+    advice: 'This number is in a WhatsApp test group, so marketing messages can’t reach it right now. Try again in a few days.',
+    retryable: true,
+  },
   '131050': {
     title: 'Opted out of marketing',
     advice: 'This person stopped marketing messages from you in WhatsApp. Don’t resend.',
