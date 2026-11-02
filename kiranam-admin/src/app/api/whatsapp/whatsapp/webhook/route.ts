@@ -80,6 +80,7 @@ interface WhatsAppWebhookEntry {
         status: string
         timestamp: string
         recipient_id: string
+        errors?: MetaStatusError[]
       }>
     }
     field: string
@@ -349,11 +350,28 @@ function isValidStatusTransition(current: string, incoming: string): boolean {
   return ii > ci
 }
 
+/** The reason Meta attaches to a `failed` status callback. */
+interface MetaStatusError {
+  code?: number
+  title?: string
+  message?: string
+  error_data?: { details?: string }
+}
+
+/** Same "(#code) text" shape the send path stores, so failureReason() can group it. */
+function describeStatusError(errors: MetaStatusError[] | undefined): string {
+  const e = errors?.[0]
+  if (!e) return 'WhatsApp could not deliver this message (no reason was given).'
+  const text = e.error_data?.details || e.message || e.title || 'Delivery failed'
+  return e.code ? `(#${e.code}) ${text}` : text
+}
+
 async function handleStatusUpdate(status: {
   id: string
   status: string
   timestamp: string
   recipient_id: string
+  errors?: MetaStatusError[]
 }) {
   // 1) Mirror onto messages (legacy behavior) — Meta's status values
   //    already match the CHECK constraint on messages.status. No
@@ -397,6 +415,7 @@ async function handleStatusUpdate(status: {
     if (status.status === 'sent' && !('sent_at' in update)) update.sent_at = tsIso
     if (status.status === 'delivered') update.delivered_at = tsIso
     if (status.status === 'read') update.read_at = tsIso
+    if (status.status === 'failed') update.error_message = describeStatusError(status.errors)
 
     const { error: recUpdateErr } = await supabaseAdmin()
       .from('broadcast_recipients')
