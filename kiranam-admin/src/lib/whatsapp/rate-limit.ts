@@ -117,10 +117,12 @@ export const RATE_LIMITS = {
   /** Individual message send. 60/min per user = one per second
    *  sustained, comfortable for a live human typing. */
   send: { limit: 60, windowMs: 60_000 },
-  /** Broadcast dispatch. 5/min per user — even a 1 000-recipient
-   *  broadcast is one call; this caps the rate at which a single user
-   *  can launch campaigns, not the messages inside one. */
-  broadcast: { limit: 5, windowMs: 60_000 },
+  /** Broadcast dispatch. The dashboard sends a broadcast as many small
+   *  batch requests (10 people each, about one every 2-4 s), so this must
+   *  sit well above that pace — at 5/min a 1,500-person broadcast had
+   *  hundreds of batches rejected with "Rate limit exceeded". The pacing
+   *  against Meta lives in the sending hook, not here. */
+  broadcast: { limit: 50, windowMs: 60_000 },
   /** Reaction add/swap/remove. More permissive than send — users
    *  fidget with reactions and a single "swap" is actually two calls
    *  (remove + add) under the hood. */

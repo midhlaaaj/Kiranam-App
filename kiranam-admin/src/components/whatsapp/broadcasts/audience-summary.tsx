@@ -21,6 +21,11 @@ export function audienceKey(audience: AudienceConfig) {
   return JSON.stringify(audience);
 }
 
+// The same audience is counted on the audience step and again on the review
+// step; remember the answer briefly so the second one is instant.
+const COUNT_TTL_MS = 2 * 60_000;
+const countCache = new Map<string, { at: number; breakdown: AudienceBreakdown }>();
+
 export function AudienceSummary({
   audience,
   onCount,
@@ -43,7 +48,18 @@ export function AudienceSummary({
     // Debounced so typing in the custom-field value box doesn't refetch per key.
     const timer = setTimeout(async () => {
       try {
-        const { breakdown: b } = await resolveAudience(createClient(), accountId, JSON.parse(key));
+        const cacheKey = `${accountId}:${key}`;
+        const hit = countCache.get(cacheKey);
+        let b: AudienceBreakdown;
+        if (hit && Date.now() - hit.at < COUNT_TTL_MS) {
+          b = hit.breakdown;
+        } else {
+          // Counting only needs ids, phones and consent, not every contact column.
+          ({ breakdown: b } = await resolveAudience(createClient(), accountId, JSON.parse(key), {
+            columns: 'id,phone,whatsapp_consent',
+          }));
+          countCache.set(cacheKey, { at: Date.now(), breakdown: b });
+        }
         if (cancelled) return;
         setResult({ key, breakdown: b });
         onCount?.(b.willReceive, key);

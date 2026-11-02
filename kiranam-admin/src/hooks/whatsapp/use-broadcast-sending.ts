@@ -44,9 +44,9 @@ interface BroadcastPayload {
 
 interface UseBroadcastSendingReturn {
   createAndSendBroadcast: (payload: BroadcastPayload) => Promise<string>;
-  retryFailed: (broadcastId: string) => Promise<{ retried: number; failed: number }>;
+  retryFailed: (broadcastId: string, headerMediaUrl?: string) => Promise<{ retried: number; failed: number }>;
   /** Sends the people a capped broadcast left waiting, as far as today's allowance goes. */
-  sendRemaining: (broadcastId: string) => Promise<{ sent: number; failed: number; stillWaiting: number }>;
+  sendRemaining: (broadcastId: string, headerMediaUrl?: string) => Promise<{ sent: number; failed: number; stillWaiting: number }>;
   isProcessing: boolean;
   progress: number;
   /** Recipients processed so far / total — for "Sending 240 of 1,200". */
@@ -69,11 +69,84 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Waits this long (at most) when the server says "slow down", then tries the batch again. */
+const MAX_BATCH_ATTEMPTS = 5;
+const MAX_RETRY_WAIT_MS = 30_000;
+
+/**
+ * Posts one batch. A "too many requests" or temporary server/network error is
+ * waited out and retried instead of failing the whole batch, so a slow moment
+ * never turns into hundreds of failed recipients.
+ */
+async function postBatch(body: unknown): Promise<{ results?: BroadcastApiResult[] }> {
+  let lastError = 'Broadcast API request failed';
+  for (let attempt = 1; attempt <= MAX_BATCH_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch('/api/whatsapp/whatsapp/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return await res.json();
+
+      const data = await res.json().catch(() => ({}));
+      lastError = data.error || lastError;
+      const transient = res.status === 429 || res.status >= 502;
+      if (!transient || attempt === MAX_BATCH_ATTEMPTS) throw new Error(lastError);
+
+      const retryAfter = Number(res.headers.get('Retry-After'));
+      await sleep(Math.min(MAX_RETRY_WAIT_MS, (retryAfter > 0 ? retryAfter : attempt * 2) * 1000));
+    } catch (err) {
+      if (err instanceof TypeError && attempt < MAX_BATCH_ATTEMPTS) {
+        // fetch() itself failed (dropped connection, phone went to sleep).
+        lastError = 'Connection problem';
+        await sleep(attempt * 2000);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error(lastError);
+}
+
 interface BroadcastApiResult {
   phone: string;
   status: 'sent' | 'failed';
   whatsapp_message_id?: string;
   error?: string;
+}
+
+/** The header image a broadcast was sent with; older broadcasts fall back to the template's own. */
+function storedHeaderMediaUrl(
+  broadcast: { header_media_url?: string | null },
+  template: MessageTemplate | null,
+): string | undefined {
+  return broadcast.header_media_url || template?.header_media_url || undefined;
+}
+
+/**
+ * The header media to send with, or an error up front if the template needs
+ * one and none is known. Done before the broadcast flips to "sending" so a
+ * missing image can't leave it stuck there. A newly supplied file is saved on
+ * the broadcast so later retries reuse it.
+ */
+async function resolveHeaderMedia(
+  supabase: ReturnType<typeof createClient>,
+  broadcast: { id: string; header_media_url?: string | null },
+  template: MessageTemplate | null,
+  override?: string,
+): Promise<string | undefined> {
+  const needsMedia = template?.header_type === 'image' || template?.header_type === 'video' || template?.header_type === 'document';
+  const supplied = override?.trim();
+  if (supplied) {
+    await supabase.from('broadcasts').update({ header_media_url: supplied }).eq('id', broadcast.id);
+    return supplied;
+  }
+  const stored = storedHeaderMediaUrl(broadcast, template);
+  if (needsMedia && !stored) {
+    throw new Error('This message has a header image, but none was saved with it. Upload the image and try again.');
+  }
+  return stored;
 }
 
 type RecipientWithContact = { id: string; contact: Contact | null };
@@ -109,6 +182,9 @@ async function sendToRecipients(
   const isMediaHeader = opts.headerType === 'image' || opts.headerType === 'video' || opts.headerType === 'document';
   const headerMediaUrl = opts.headerMediaUrl?.trim();
   const messageParams = isMediaHeader && headerMediaUrl ? { headerMediaUrl } : undefined;
+  if (isMediaHeader && !headerMediaUrl) {
+    throw new Error('This message has a header image, but no image is saved for it. Open the template and add one, then try again.');
+  }
 
   let failedCount = 0;
   for (let i = 0; i < recipients.length; i += SEND_BATCH_SIZE) {
@@ -131,17 +207,11 @@ async function sendToRecipients(
 
     if (apiRecipients.length > 0) {
       try {
-        const res = await fetch('/api/whatsapp/whatsapp/broadcast', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recipients: apiRecipients,
-            template_name: opts.templateName,
-            template_language: opts.templateLanguage,
-          }),
+        const data = await postBatch({
+          recipients: apiRecipients,
+          template_name: opts.templateName,
+          template_language: opts.templateLanguage,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Broadcast API request failed');
 
         const resultsByPhone = new Map<string, BroadcastApiResult>();
         for (const r of (data.results ?? []) as BroadcastApiResult[]) resultsByPhone.set(r.phone, r);
@@ -318,6 +388,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           template_name: payload.template.name,
           template_language: payload.template.language ?? 'en_US',
           template_variables: payload.variables,
+          header_media_url: payload.headerMediaUrl?.trim() || null,
           audience_filter: {
             type: payload.audience.type,
             tagIds: payload.audience.tagIds,
@@ -431,7 +502,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
    * original template + variable mapping. Nobody who already received it
    * gets it twice.
    */
-  async function retryFailed(broadcastId: string): Promise<{ retried: number; failed: number }> {
+  async function retryFailed(broadcastId: string, headerMediaUrl?: string): Promise<{ retried: number; failed: number }> {
     setIsProcessing(true);
     setSentSoFar(0);
     setTotalToSend(0);
@@ -450,6 +521,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         (r) => r.status === 'failed',
       );
       if (failed.length === 0) return { retried: 0, failed: 0 };
+      const headerUrl = await resolveHeaderMedia(supabase, broadcast, template as MessageTemplate | null, headerMediaUrl);
       setTotalToSend(failed.length);
 
       await supabase.from('broadcasts').update({ status: 'sending' }).eq('id', broadcastId);
@@ -457,6 +529,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         templateName: broadcast.template_name,
         templateLanguage: broadcast.template_language ?? 'en_US',
         headerType: (template as MessageTemplate | null)?.header_type,
+        headerMediaUrl: headerUrl,
         variables: (broadcast.template_variables ?? {}) as Record<string, VariableMapping>,
         onProgress: setSentSoFar,
       });
@@ -475,7 +548,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     }
   }
 
-  async function sendRemaining(broadcastId: string): Promise<{ sent: number; failed: number; stillWaiting: number }> {
+  async function sendRemaining(broadcastId: string, headerMediaUrl?: string): Promise<{ sent: number; failed: number; stillWaiting: number }> {
     if (!accountId) throw new Error('Your profile is not linked to an account.');
     setIsProcessing(true);
     setSentSoFar(0);
@@ -495,6 +568,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         (r) => r.status === 'pending',
       );
       if (pending.length === 0) return { sent: 0, failed: 0, stillWaiting: 0 };
+      const headerUrl = await resolveHeaderMedia(supabase, broadcast, template as MessageTemplate | null, headerMediaUrl);
 
       const limits = await getSendLimits(supabase, accountId);
       const alreadyMessaged = limits ? await recentlyMessagedContactIds(supabase, accountId) : new Set<string>();
@@ -514,6 +588,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         templateName: broadcast.template_name,
         templateLanguage: broadcast.template_language ?? 'en_US',
         headerType: (template as MessageTemplate | null)?.header_type,
+        headerMediaUrl: headerUrl,
         variables: (broadcast.template_variables ?? {}) as Record<string, VariableMapping>,
         onProgress: setSentSoFar,
       });

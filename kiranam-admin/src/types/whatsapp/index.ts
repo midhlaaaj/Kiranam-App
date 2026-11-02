@@ -396,6 +396,8 @@ export interface Broadcast {
   template_name: string;
   template_language: string;
   template_variables?: Record<string, unknown>;
+  /** Image/video/document used for the template header, kept so a retry re-sends the same one. */
+  header_media_url?: string | null;
   audience_filter?: Record<string, unknown>;
   scheduled_at?: string;
   status: BroadcastStatus;

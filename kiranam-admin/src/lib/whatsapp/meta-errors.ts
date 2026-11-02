@@ -60,6 +60,12 @@ export function failureReason(message: string | null | undefined): FailureReason
   const raw = message ?? '';
   const code = raw.match(/#?(1[3]\d{4})/)?.[1];
   if (code && BY_CODE[code]) return { key: code, ...BY_CODE[code] };
+  if (/rate limit exceeded/i.test(raw)) {
+    return { key: 'app-rate-limit', title: 'Sent too fast', advice: 'Messages went out faster than allowed. Retrying works.', retryable: true };
+  }
+  if (/header requires a media/i.test(raw)) {
+    return { key: 'missing-header-image', title: 'Header image was missing', advice: 'The image wasn’t attached when this was sent. Retrying now re-attaches it.', retryable: true };
+  }
   if (/no phone/i.test(raw)) {
     return { key: 'no-phone', title: 'No phone number', advice: 'Add a number to the contact first.', retryable: false };
   }

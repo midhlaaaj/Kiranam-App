@@ -40,6 +40,7 @@ import { fetchAllRecipients } from '@/lib/whatsapp/broadcast-audience';
 import { failureReason } from '@/lib/whatsapp/meta-errors';
 import { templateDisplayName } from '@/lib/whatsapp/template-display';
 import { useBroadcastSending } from '@/hooks/whatsapp/use-broadcast-sending';
+import { HeaderImageUpload } from '@/components/whatsapp/broadcasts/header-image-upload';
 import { toast } from 'sonner';
 import {
   getBroadcastStatus,
@@ -177,6 +178,7 @@ export default function BroadcastDetailPage() {
 
   const { retryFailed, sendRemaining, isProcessing: retrying, sentSoFar, totalToSend } = useBroadcastSending();
   const [confirmRetry, setConfirmRetry] = useState(false);
+  const [retryHeaderUrl, setRetryHeaderUrl] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -228,7 +230,7 @@ export default function BroadcastDetailPage() {
 
   async function handleSendRemaining() {
     try {
-      const { sent, failed, stillWaiting } = await sendRemaining(broadcastId);
+      const { sent, failed, stillWaiting } = await sendRemaining(broadcastId, retryHeaderUrl || undefined);
       if (stillWaiting > 0) toast.info(`Sent to ${sent.toLocaleString('en-IN')} more. ${stillWaiting.toLocaleString('en-IN')} still waiting for allowance.`);
       else if (failed > 0) toast.warning(`Sent to ${(sent).toLocaleString('en-IN')}. ${failed} failed.`);
       else toast.success(`Sent to the remaining ${sent.toLocaleString('en-IN')}.`);
@@ -241,9 +243,11 @@ export default function BroadcastDetailPage() {
   async function handleRetry() {
     setConfirmRetry(false);
     try {
-      const { retried, failed } = await retryFailed(broadcastId);
-      if (failed === 0) toast.success(`Re-sent to all ${retried}.`);
-      else toast.warning(`Re-sent to ${retried - failed} of ${retried}. ${failed} still failed.`);
+      const { retried, failed } = await retryFailed(broadcastId, retryHeaderUrl || undefined);
+      if (retried === 0) toast.info('Nobody to retry.');
+      else if (failed === 0) toast.success(`Re-sent to all ${retried.toLocaleString('en-IN')}.`);
+      else if (failed === retried) toast.error(`None of the ${retried.toLocaleString('en-IN')} could be re-sent. See the reasons below.`);
+      else toast.warning(`Re-sent to ${(retried - failed).toLocaleString('en-IN')} of ${retried.toLocaleString('en-IN')}. ${failed.toLocaleString('en-IN')} still failed.`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Retry failed.');
     }
@@ -489,7 +493,7 @@ export default function BroadcastDetailPage() {
               </h2>
               <p className="mt-0.5 text-sm text-muted-foreground">Grouped by reason. Retrying only re-sends to these people.</p>
             </div>
-            <Button variant="outline" onClick={() => setConfirmRetry(true)} disabled={retrying || broadcast.status === 'sending'}>
+            <Button variant="outline" onClick={() => setConfirmRetry(true)} disabled={retrying || broadcast.status === 'sending' || (failureGroups.some((g) => g.reason.key === 'missing-header-image') && !broadcast.header_media_url && !retryHeaderUrl)}>
               {retrying ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
               {retrying
                 ? totalToSend
@@ -498,6 +502,18 @@ export default function BroadcastDetailPage() {
                 : `Retry failed (${failedTotal.toLocaleString('en-IN')})`}
             </Button>
           </div>
+          {failureGroups.some((g) => g.reason.key === 'missing-header-image') && !broadcast.header_media_url && (
+            <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-sm font-medium text-foreground">Add the header image to re-send</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                This message has an image at the top, but it wasn’t saved with the broadcast. Upload the same image and it will be attached when you retry.
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <HeaderImageUpload onUploaded={setRetryHeaderUrl} label={retryHeaderUrl ? 'Replace image' : 'Upload image'} disabled={retrying} />
+                {retryHeaderUrl && <span className="text-sm text-success">Image ready</span>}
+              </div>
+            </div>
+          )}
           <ul className="mt-3 divide-y divide-border">
             {failureGroups.map(({ reason, count }) => (
               <li key={reason.key} className="flex items-start justify-between gap-4 py-2.5 text-sm">

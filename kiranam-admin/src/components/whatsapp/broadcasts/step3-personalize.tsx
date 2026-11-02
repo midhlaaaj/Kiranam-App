@@ -16,6 +16,7 @@ import { ArrowLeft, ArrowRight, Eye, ImageIcon } from 'lucide-react';
 import { Skeleton } from '@/components/whatsapp/ui/skeleton';
 import { TemplatePreview } from '@/components/whatsapp/template-preview';
 import { PreviewImage } from '@/components/ImageLightbox';
+import { HeaderImageUpload } from './header-image-upload';
 import { useTranslations } from 'next-intl';
 import {
   CONTACT_FIELD_KEYS,
@@ -262,6 +263,12 @@ export function Step3Personalize({
               {mediaHeaderType}
             </span>
           </div>
+          {mediaHeaderType === 'image' && (
+            <div className="mb-3">
+              <HeaderImageUpload onUploaded={onHeaderMediaUrlChange} label={headerMediaUrl.trim() ? 'Replace image' : 'Upload image'} />
+              <p className="mt-1.5 text-xs text-muted-foreground">JPG or PNG, up to 5 MB. Or paste a link below.</p>
+            </div>
+          )}
           <label htmlFor="header-media-url" className="mb-1.5 block text-xs font-medium text-muted-foreground">
             {t('personalize.imageUrl')}
           </label>
