@@ -56,6 +56,11 @@ import type {
   TemplateSampleValues,
 } from '@/types/whatsapp';
 import { templateStatusConfig } from '@/lib/whatsapp/template-status';
+
+const FOOTER_NONE = '__none__';
+const FOOTER_CUSTOM = '__custom__';
+/** Footers offered in the dropdown; anything else is typed in via "Type your own…". */
+const FOOTER_PRESETS = ['Karunya Kiranam · An initiative of Health Care Foundation'];
 import {
   extractVariableIndices,
   TEMPLATE_LIMITS,
@@ -226,6 +231,11 @@ export function TemplateManager() {
   // chat-media bucket and stores the public URL in header_media_url; the
   // submit route turns that into a Meta Resumable-Upload handle.
   const [uploadingHeader, setUploadingHeader] = useState(false);
+  // "Type your own…" chosen in the footer dropdown. Reset whenever the editor opens or closes.
+  const [footerCustom, setFooterCustom] = useState(false);
+  useEffect(() => {
+    setFooterCustom(false);
+  }, [dialogOpen]);
   const headerFileRef = useRef<HTMLInputElement>(null);
 
   // Body variable indices — `[1, 2, 3]` for "{{1}} {{2}} {{3}}". We
@@ -1148,16 +1158,52 @@ export function TemplateManager() {
                 <Label htmlFor="template-footer" className="text-foreground">{t('footer')}</Label>
                 <CharCount value={form.footer_text} max={TEMPLATE_LIMITS.footerMaxLength} />
               </div>
-              <Input
-                id="template-footer"
-                placeholder={t('footerPlaceholder')}
-                value={form.footer_text}
-                onChange={(e) =>
-                  setForm({ ...form, footer_text: e.target.value })
+              <Select
+                value={
+                  footerCustom || (form.footer_text && !FOOTER_PRESETS.includes(form.footer_text))
+                    ? FOOTER_CUSTOM
+                    : form.footer_text || FOOTER_NONE
                 }
-                maxLength={TEMPLATE_LIMITS.footerMaxLength}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-              />
+                onValueChange={(v) => {
+                  if (v === FOOTER_CUSTOM) {
+                    setFooterCustom(true);
+                  } else {
+                    setFooterCustom(false);
+                    setForm({ ...form, footer_text: !v || v === FOOTER_NONE ? '' : v });
+                  }
+                }}
+              >
+                <SelectTrigger
+                  id="template-footer"
+                  className="w-full bg-muted border-border text-foreground"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border-border">
+                  <SelectItem value={FOOTER_NONE} className="text-foreground focus:bg-accent">
+                    No footer
+                  </SelectItem>
+                  {FOOTER_PRESETS.map((p) => (
+                    <SelectItem key={p} value={p} className="text-foreground focus:bg-accent">
+                      {p}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={FOOTER_CUSTOM} className="text-foreground focus:bg-accent">
+                    Type your own…
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {(footerCustom || (form.footer_text && !FOOTER_PRESETS.includes(form.footer_text))) && (
+                <Input
+                  placeholder={t('footerPlaceholder')}
+                  value={form.footer_text}
+                  onChange={(e) =>
+                    setForm({ ...form, footer_text: e.target.value })
+                  }
+                  maxLength={TEMPLATE_LIMITS.footerMaxLength}
+                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                />
+              )}
             </div>
 
             <div className="space-y-2">
