@@ -4,12 +4,14 @@ import { Skeleton, SkeletonRegion } from '@/components/whatsapp/ui/skeleton';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, FileText, Search } from 'lucide-react';
+import { ArrowRight, Eye, FileText, Search } from 'lucide-react';
 import { createClient } from '@/lib/whatsapp/supabase/client';
 import { MessageTemplate } from '@/types/whatsapp';
 import { Button } from '@/components/whatsapp/ui/button';
 import { Input } from '@/components/whatsapp/ui/input';
 import { cn } from '@/lib/whatsapp/utils';
+import { TemplatePreview } from '@/components/whatsapp/template-preview';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/whatsapp/ui/dialog';
 import { languageName } from '@/lib/whatsapp/language-names';
 import { TEMPLATE_CATEGORY_INFO, templateDisplayName } from '@/lib/whatsapp/template-display';
 
@@ -26,6 +28,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   const [pendingCount, setPendingCount] = useState(0);
   const [error, setError] = useState(false);
   const [query, setQuery] = useState('');
+  const [viewing, setViewing] = useState<MessageTemplate | null>(null);
 
   const load = useCallback(async () => {
     setError(false);
@@ -124,29 +127,43 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                 const selected = selectedTemplate?.id === template.id;
                 const category = TEMPLATE_CATEGORY_INFO[template.category];
                 return (
-                  <button
+                  <div
                     key={template.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => onSelect(template)}
                     className={cn(
-                      'flex flex-col gap-2 rounded-xl border bg-card p-4 text-left transition',
+                      'flex flex-col rounded-xl border bg-card transition',
                       selected ? 'border-foreground ring-1 ring-foreground' : 'border-border hover:border-foreground/40'
                     )}
                   >
-                    <span className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-semibold text-foreground">{templateDisplayName(template.name)}</span>
-                      <span
-                        className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-                        title={category?.hint}
-                      >
-                        {category?.label ?? template.category}
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => onSelect(template)}
+                      className="flex flex-col gap-2 rounded-t-xl p-4 pb-2 text-left"
+                    >
+                      <span className="flex items-start justify-between gap-2">
+                        <span className="text-sm font-semibold text-foreground">{templateDisplayName(template.name)}</span>
+                        <span
+                          className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                          title={category?.hint}
+                        >
+                          {category?.label ?? template.category}
+                        </span>
                       </span>
-                    </span>
-                    <span className="line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">{template.body_text}</span>
-                    <span className="text-xs text-muted-foreground">{languageName(template.language)}</span>
-                  </button>
+                      <span className="line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">{template.body_text}</span>
+                    </button>
+                    <div className="flex items-center justify-between px-4 pb-3">
+                      <span className="text-xs text-muted-foreground">{languageName(template.language)}</span>
+                      <button
+                        type="button"
+                        onClick={() => setViewing(template)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-foreground underline-offset-2 hover:underline"
+                      >
+                        <Eye className="h-3.5 w-3.5" aria-hidden />
+                        View message
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -159,6 +176,27 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
           )}
         </>
       )}
+
+      <Dialog open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>
+        <DialogContent className="bg-popover border-border sm:max-w-md max-h-[92dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">{viewing ? templateDisplayName(viewing.name) : ''}</DialogTitle>
+            <DialogDescription>
+              {viewing ? `${viewing.category} · ${languageName(viewing.language)}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {viewing && (
+            <TemplatePreview
+              headerType={viewing.header_type}
+              headerText={viewing.header_content}
+              headerMediaUrl={viewing.header_media_url}
+              body={viewing.body_text}
+              footer={viewing.footer_text}
+              buttons={viewing.buttons}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="flex items-center justify-between border-t border-border pt-4">
         <Button variant="outline" onClick={onBack}>
