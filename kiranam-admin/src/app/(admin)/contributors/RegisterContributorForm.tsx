@@ -9,6 +9,7 @@ import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplic
 import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
+import { checkKkAvailability } from '@/lib/kkAvailabilityActions';
 import { defaultKkSeries, type KkSeries } from '@/lib/kk';
 import { PersonCombobox } from '@/components/PersonCombobox';
 
@@ -46,6 +47,8 @@ export function RegisterContributorForm({
   const [dialCode, setDialCode] = useState('91');
   const [phone, setPhone] = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
+  // Set when the typed KK number is already taken (checked as the field is left).
+  const [kkWarning, setKkWarning] = useState<string | null>(null);
 
   // Fetched on mount instead of being passed down from the Contributors page
   // (a Server Component) — that page no longer awaits this DB round-trip
@@ -115,6 +118,7 @@ export function RegisterContributorForm({
       setPhone('');
       setDialCode('91');
       setPhoneTouched(false);
+      setKkWarning(null);
       setComboboxResetKey((k) => k + 1);
       setKkSeriesChoice(null);
       setDuplicate(null);
@@ -129,7 +133,7 @@ export function RegisterContributorForm({
       action={formAction}
       onSubmit={(e) => {
         setPhoneTouched(true);
-        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate) e.preventDefault();
+        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate || kkWarning) e.preventDefault();
       }}
       className={bare ? undefined : `${cardClass} p-5`}
     >
@@ -269,8 +273,26 @@ export function RegisterContributorForm({
                   name="kk_number"
                   placeholder="e.g. KK1 or KKG1"
                   required
+                  onChange={() => setKkWarning(null)}
+                  onBlur={async (e) => {
+                    const value = e.target.value;
+                    if (!value.trim()) return;
+                    try {
+                      const { inUse, message } = await checkKkAvailability(value);
+                      setKkWarning(inUse ? (message ?? 'This KK number is already in use. Use something else.') : null);
+                    } catch {
+                      // Non-blocking — registration re-checks on submit.
+                    }
+                  }}
+                  aria-invalid={!!kkWarning}
+                  aria-describedby={kkWarning ? 'kk-warning' : undefined}
                   className={inputClass}
                 />
+                {kkWarning && (
+                  <p id="kk-warning" className="text-xs text-kiranam-danger" role="alert">
+                    {kkWarning}
+                  </p>
+                )}
               </div>
             )}
 

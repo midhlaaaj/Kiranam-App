@@ -8,6 +8,7 @@ import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { toE164, validatePhoneNumber } from '@/lib/phone';
 import { KK_FORMAT_ERROR, KK_NUMBER_RE } from '@/lib/kk';
+import { findKkNumberOwner, kkInUseMessage } from '@/lib/kkSettings';
 import { COUNTRIES } from '@/lib/countries';
 import type { CountryCode } from 'libphonenumber-js/min';
 
@@ -49,6 +50,11 @@ export async function registerCoordinator(
   if (kkNumberInput) {
     if (!KK_NUMBER_RE.test(kkNumberInput)) return { error: KK_FORMAT_ERROR };
     kkNumber = kkNumberInput.toUpperCase();
+
+    // Checked before the login account is created so a taken number can't
+    // leave a nameless account behind.
+    const kkOwner = await findKkNumberOwner(kkNumber);
+    if (kkOwner) return { error: kkInUseMessage(kkNumber, kkOwner.full_name) };
   }
 
   const phoneE164 = toE164(dialCode, phoneDigits, country!.iso2 as CountryCode);
@@ -100,8 +106,12 @@ export async function registerCoordinator(
     .update({ full_name: fullName, role: 'coordinator', whatsapp_consent: true, ...(kkNumber ? { kk_number: kkNumber } : {}) })
     .eq('id', coordinatorId);
   if (profileError) {
+    // Undo the half-made account so nothing nameless is left behind.
+    const { error: undoError } = await supabaseAdmin.auth.admin.deleteUser(coordinatorId);
+    if (undoError) console.error('registerCoordinator: could not undo the new account:', undoError);
+
     const message = /duplicate key|unique/i.test(profileError.message)
-      ? `Coordinator was created, but ${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
+      ? kkInUseMessage(kkNumber ?? '')
       : friendlyErrorMessage(profileError.message);
     return { error: message };
   }

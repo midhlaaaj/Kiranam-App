@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { isIsoDay, isoDay } from '@/lib/format';
-import { getAutoAssignKkNumber } from '@/lib/kkSettings';
+import { findKkNumberOwner, getAutoAssignKkNumber, kkInUseMessage, nextKkNumber } from '@/lib/kkSettings';
 import { KK_FORMAT_ERROR, KK_NUMBER_RE, type KkSeries } from '@/lib/kk';
 import { toE164, validatePhoneNumber } from '@/lib/phone';
 import { COUNTRIES } from '@/lib/countries';
@@ -169,12 +169,18 @@ export async function registerContributor(_prevState: RegisterState, formData: F
 
   let kkNumber: string;
   if (autoAssignKkNumber) {
-    kkNumber = await nextKkNumber(supabaseAdmin, kkSeries);
+    kkNumber = await nextKkNumber(kkSeries);
   } else {
     if (!kkNumberInput) return { error: 'KK number is required.' };
     if (!KK_NUMBER_RE.test(kkNumberInput)) return { error: KK_FORMAT_ERROR };
     kkNumber = kkNumberInput.toUpperCase();
   }
+
+  // Checked before the login account is created: creating it first and then
+  // failing on a taken KK number left behind an account with only a phone
+  // number and no name.
+  const kkOwner = await findKkNumberOwner(kkNumber);
+  if (kkOwner) return { error: kkInUseMessage(kkNumber, kkOwner.full_name) };
 
   // Phone is the auth identity, matching kiranam-app's phone-OTP login — no
   // password is set (phone accounts authenticate via OTP, not a password),
@@ -218,9 +224,14 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     .update({ full_name: fullName, kk_number: kkNumber, whatsapp_consent: true })
     .eq('id', contributorId);
   if (profileError) {
+    // Undo the half-made account so nothing nameless is left behind; the
+    // profile and contact rows go with it (both cascade from the auth user).
+    const { error: undoError } = await supabaseAdmin.auth.admin.deleteUser(contributorId);
+    if (undoError) console.error('registerContributor: could not undo the new account:', undoError);
+
     const message = /duplicate key|unique/i.test(profileError.message)
-      ? `Contributor was created, but ${kkNumber} is already assigned to someone else. Please edit their KK number manually.`
-      : 'Contributor was created, but saving their name failed. Please edit it manually.';
+      ? kkInUseMessage(kkNumber)
+      : 'Could not save this contributor. Please try again.';
     return { error: message };
   }
 
@@ -260,27 +271,6 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   });
   revalidatePath('/contributors');
   return { message: `${fullName} has been registered as a contributor. They can log in with this phone number.` };
-}
-
-// Highest number currently in use within a series (KK or KKG), +1. Each series
-// counts on its own. profiles.kk_number is a free-form string (not a DB
-// sequence), so this reads the max numeric suffix directly rather than relying
-// on a counter — safe under this admin panel's low write concurrency for
-// contributor registration.
-async function nextKkNumber(supabaseAdmin: ReturnType<typeof createAdminClient>, series: KkSeries): Promise<string> {
-  const { data } = await supabaseAdmin
-    .from('profiles')
-    .select('kk_number')
-    .not('kk_number', 'is', null)
-    .ilike('kk_number', `${series}%`);
-
-  const re = new RegExp(`^${series}(\\d+)$`, 'i');
-  let max = 0;
-  for (const row of data || []) {
-    const match = re.exec(row.kk_number ?? '');
-    if (match) max = Math.max(max, parseInt(match[1], 10));
-  }
-  return `${series}${max + 1}`;
 }
 
 export async function assignCoordinator(contributorId: string, formData: FormData) {

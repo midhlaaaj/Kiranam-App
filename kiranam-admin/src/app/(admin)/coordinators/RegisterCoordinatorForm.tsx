@@ -9,6 +9,7 @@ import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplic
 import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
 import { validatePhoneNumber } from '@/lib/phone';
+import { checkKkAvailability } from '@/lib/kkAvailabilityActions';
 import { ConfirmSubmitButton } from '@/components/ConfirmSubmitButton';
 
 const initialState: RegisterCoordinatorState = {};
@@ -43,6 +44,8 @@ export function RegisterCoordinatorForm({
   const [dialCode, setDialCode] = useState('91');
   const [phone, setPhone] = useState('');
   const [phoneTouched, setPhoneTouched] = useState(false);
+  // Set when the typed KK number is already taken (checked as the field is left).
+  const [kkWarning, setKkWarning] = useState<string | null>(null);
 
   const country = useMemo(() => COUNTRIES.find((c) => c.dialCode === dialCode), [dialCode]);
   const phoneError = useMemo(
@@ -94,6 +97,7 @@ export function RegisterCoordinatorForm({
       setPhone('');
       setDialCode('91');
       setPhoneTouched(false);
+      setKkWarning(null);
       setDuplicate(null);
       onDone?.();
     }
@@ -105,6 +109,7 @@ export function RegisterCoordinatorForm({
     setPhone('');
     setDialCode('91');
     setPhoneTouched(false);
+    setKkWarning(null);
     setDuplicate(null);
     onDone?.();
   }
@@ -115,7 +120,7 @@ export function RegisterCoordinatorForm({
       action={formAction}
       onSubmit={(e) => {
         setPhoneTouched(true);
-        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate) e.preventDefault();
+        if (!country || validatePhoneNumber(phone, country.iso2 as CountryCode) || duplicate || kkWarning) e.preventDefault();
       }}
       className={bare ? undefined : `${cardClass} p-5`}
     >
@@ -244,8 +249,26 @@ export function RegisterCoordinatorForm({
               id="v_kk_number"
               name="kk_number"
               placeholder="e.g. KK1 or KKG1"
+              onChange={() => setKkWarning(null)}
+              onBlur={async (e) => {
+                const value = e.target.value;
+                if (!value.trim()) return;
+                try {
+                  const { inUse, message } = await checkKkAvailability(value);
+                  setKkWarning(inUse ? (message ?? 'This KK number is already in use. Use something else.') : null);
+                } catch {
+                  // Non-blocking — registration re-checks on submit.
+                }
+              }}
+              aria-invalid={!!kkWarning}
+              aria-describedby={kkWarning ? 'kk-warning' : undefined}
               className={inputClass}
             />
+            {kkWarning && (
+              <p id="kk-warning" className="text-xs text-kiranam-danger" role="alert">
+                {kkWarning}
+              </p>
+            )}
           </div>
         )}
       </div>
