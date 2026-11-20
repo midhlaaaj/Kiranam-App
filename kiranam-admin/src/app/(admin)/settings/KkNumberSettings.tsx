@@ -3,7 +3,13 @@
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { checkKkNumberCoverage, type KkCoverageState } from './actions';
-import { disableAutoAssign, enableAutoAssign, previewAutoAssign, type AutoAssignPreview } from './autoAssignActions';
+import {
+  assignKkBatch,
+  disableAutoAssign,
+  finishEnableAutoAssign,
+  previewAutoAssign,
+  type AutoAssignPreview,
+} from './autoAssignActions';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { buttonPrimary, buttonSecondary, cardClass } from '@/lib/ui';
 import { cn } from '@/lib/utils';
@@ -64,68 +70,107 @@ export function KkNumberSettings({ autoAssign }: { autoAssign: Record<KkSeries, 
   );
 }
 
-/** One series' auto-assign switch. Turning it on first shows who would be
- * numbered and from which number (editable), and only then writes anything. */
+/** One series' auto-assign switch. Turning it on (or pressing "Number everyone
+ * missing…") first shows how many people are missing a number and which number
+ * comes next, and only then writes anything — in small batches, with a progress
+ * bar that fills as people are numbered. */
 function SeriesAutoAssign({ series, initiallyOn }: { series: KkSeries; initiallyOn: boolean }) {
   const copy = SERIES_COPY[series];
   const [enabled, setEnabled] = useState(initiallyOn);
-  const [busy, startBusy] = useTransition();
+  const [checking, startChecking] = useTransition();
   const [preview, setPreview] = useState<Required<Pick<AutoAssignPreview, 'count' | 'start'>> | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [startInput, setStartInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const busy = checking || !!progress;
 
-  function handleToggle() {
-    if (enabled) {
-      startBusy(async () => {
-        const result = await disableAutoAssign(series);
-        if (result.error) {
-          toast.error(result.error);
-        } else {
-          setEnabled(false);
-          toast.success(`Auto-assign for ${series} turned off.`);
-        }
-      });
-      return;
-    }
-    startBusy(async () => {
+  function openPreview() {
+    startChecking(async () => {
       const result = await previewAutoAssign(series);
       if (result.error || result.count === undefined || result.start === undefined) {
         toast.error(result.error ?? 'Could not check who needs a number.');
         return;
       }
       setError(null);
+      setProgress(null);
       setStartInput(String(result.start));
       setPreview({ count: result.count, start: result.start });
     });
   }
 
-  function handleConfirm() {
+  function handleToggle() {
+    if (!enabled) {
+      openPreview();
+      return;
+    }
+    startChecking(async () => {
+      const result = await disableAutoAssign(series);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        setEnabled(false);
+        toast.success(`Auto-assign for ${series} turned off.`);
+      }
+    });
+  }
+
+  async function handleConfirm() {
+    if (!preview) return;
     const start = Number(startInput);
     if (!Number.isInteger(start) || start < 1) {
       setError('Enter a whole number, 1 or higher.');
       return;
     }
     setError(null);
-    startBusy(async () => {
-      const result = await enableAutoAssign(series, start);
-      if (result.error) {
-        setError(result.error);
-        return;
+    const total = preview.count;
+    setProgress({ done: 0, total });
+    let next = start;
+    let done = 0;
+    let first: string | undefined;
+    let last: string | undefined;
+    try {
+      // Numbered in small batches so the bar reflects real progress.
+      while (done < total) {
+        const result = await assignKkBatch(series, next, 25);
+        if (result.error) {
+          setError(`${result.error} ${done} of ${total} were numbered; run it again to carry on.`);
+          setProgress(null);
+          return;
+        }
+        if (!result.assigned) break;
+        done += result.assigned;
+        next = result.next ?? next;
+        first ??= result.first;
+        last = result.last ?? last;
+        setProgress({ done: Math.min(done, total), total });
+        if (!result.remaining) break;
       }
-      setEnabled(true);
+      if (!enabled) {
+        const fin = await finishEnableAutoAssign(series, { assigned: done, first, last });
+        if (fin.error) {
+          setError(fin.error);
+          setProgress(null);
+          return;
+        }
+        setEnabled(true);
+      }
       setPreview(null);
+      setProgress(null);
       toast.success(
-        result.assigned
-          ? `Auto-assign for ${series} is on. ${result.assigned} contributors numbered (${result.first}${
-              result.last !== result.first ? ` to ${result.last}` : ''
-            }).`
+        done
+          ? `${done} numbered (${first}${last !== first ? ` to ${last}` : ''}).${enabled ? '' : ` Auto-assign for ${series} is on.`}`
           : `Auto-assign for ${series} is on.`
       );
-    });
+    } catch {
+      setError('Something went wrong. Run it again to carry on.');
+      setProgress(null);
+    }
   }
 
   const labelId = `${series}-auto-label`;
   const descId = `${series}-auto-desc`;
+  const startNum = Number(startInput);
+  const validStart = Number.isInteger(startNum) && startNum >= 1;
 
   return (
     <section className={cn(cardClass, 'p-5')} aria-labelledby={`${series}-heading`}>
@@ -169,26 +214,31 @@ function SeriesAutoAssign({ series, initiallyOn }: { series: KkSeries; initially
         </button>
       </div>
 
+      {enabled && (
+        <button type="button" onClick={openPreview} disabled={busy} className={cn(buttonSecondary, 'mt-4')}>
+          {checking ? 'Checking…' : `Number everyone missing a ${series} number`}
+        </button>
+      )}
+
       <Modal
         open={!!preview}
         onClose={() => (busy ? undefined : setPreview(null))}
-        title={`Turn on auto-assign for ${series}?`}
+        title={enabled ? `Assign missing ${series} numbers?` : `Turn on auto-assign for ${series}?`}
         description={copy.who[0].toUpperCase() + copy.who.slice(1)}
       >
         {preview && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-kiranam-ink">
               {preview.count === 0
-                ? `Everyone with ${copy.who} already has a number. New contributors will get one automatically.`
-                : `${preview.count} contributor${preview.count === 1 ? '' : 's'} with ${copy.who} ${
-                    preview.count === 1 ? 'has' : 'have'
-                  } no KK or KKG number. They will be numbered in order of sign-up, oldest first.`}
+                ? `Everyone with ${copy.who} already has a number.${enabled ? '' : ' New contributors will get one automatically.'}`
+                : `${preview.count} user${preview.count === 1 ? ' is' : 's are'} missing a ${series} number. ${
+                    preview.count === 1 ? 'This user' : 'All of them'
+                  } will be numbered in order of sign-up, oldest first${
+                    validStart
+                      ? `, from ${series}${startNum} to about ${series}${startNum + preview.count - 1}. After that, the next number given automatically will be about ${series}${startNum + preview.count}`
+                      : ''
+                  }.`}
             </p>
-            {preview.count > 0 && (
-              <p className="text-xs text-kiranam-muted">
-                Accounts with no name are skipped. Numbers already in use are skipped too.
-              </p>
-            )}
             <div className="flex flex-col gap-1.5">
               <label htmlFor={`${series}-start`} className="text-xs font-semibold text-kiranam-muted">
                 Start from
@@ -214,6 +264,25 @@ function SeriesAutoAssign({ series, initiallyOn }: { series: KkSeries; initially
                 {preview.start}, the next after the highest {series} number in use.
               </p>
             </div>
+            {progress && (
+              <div className="flex flex-col gap-1.5" role="status" aria-live="polite">
+                <div
+                  className="h-2 w-full overflow-hidden rounded-full bg-kiranam-border"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={progress.total}
+                  aria-valuenow={progress.done}
+                >
+                  <div
+                    className="h-full rounded-full bg-kiranam-primary transition-[width] duration-300"
+                    style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }}
+                  />
+                </div>
+                <p className="text-xs tabular-nums text-kiranam-muted">
+                  {progress.done} of {progress.total} numbered
+                </p>
+              </div>
+            )}
             {error && (
               <p className="text-sm text-kiranam-danger" role="alert">
                 {error}
@@ -224,7 +293,13 @@ function SeriesAutoAssign({ series, initiallyOn }: { series: KkSeries; initially
                 Cancel
               </button>
               <button type="button" onClick={handleConfirm} disabled={busy} className={buttonPrimary}>
-                {busy ? 'Numbering…' : preview.count > 0 ? `Turn on and number ${preview.count}` : 'Turn on'}
+                {progress
+                  ? 'Numbering…'
+                  : preview.count > 0
+                    ? enabled
+                      ? `Number ${preview.count}`
+                      : `Turn on and number ${preview.count}`
+                    : 'Turn on'}
               </button>
             </div>
           </div>
