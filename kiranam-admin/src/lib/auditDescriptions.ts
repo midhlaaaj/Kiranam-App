@@ -43,6 +43,8 @@ const ACTION_AREA: Record<string, AuditArea> = {
   revoke_admin: 'access',
   restore_admin: 'access',
   set_auto_assign_kk_number: 'access',
+  enable_auto_assign_kk: 'access',
+  disable_auto_assign_kk: 'access',
 };
 
 export function actionsInArea(area: string): string[] {
@@ -187,6 +189,13 @@ export function describeLogEntry(entry: LogEntryInput, names?: ResolvedNames): L
       return ['Restored admin access for ', person(id, d.label, 'an admin')];
     case 'set_auto_assign_kk_number':
       return [`Turned ${d.enabled ? 'on' : 'off'} automatic KK numbers for new contributors`];
+    case 'enable_auto_assign_kk':
+      return [
+        `Turned on automatic ${d.series} numbers and numbered ${d.assigned ?? 0} contributors`,
+        ...(d.first ? [` (${d.first}${d.last && d.last !== d.first ? ` to ${d.last}` : ''})`] : []),
+      ];
+    case 'disable_auto_assign_kk':
+      return [`Turned off automatic ${d.series} numbers for new contributors`];
     default:
       return [humanizeAction(entry.action)];
   }

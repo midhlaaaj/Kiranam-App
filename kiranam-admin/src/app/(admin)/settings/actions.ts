@@ -136,22 +136,6 @@ export async function revokeInvite(inviteId: string) {
   revalidatePath('/settings/admin-users');
 }
 
-export async function setAutoAssignKkNumber(enabled: boolean) {
-  const admin = await verifyAdmin();
-  // app_settings has no client-facing RLS policies (service-role only, see
-  // 020_razorpay_recurring_autopay.sql) — same reason registerContributor
-  // reads it via the admin client rather than the session client.
-  const supabaseAdmin = createAdminClient();
-  const { error } = await supabaseAdmin
-    .from('app_settings')
-    .upsert({ key: 'auto_assign_kk_number', value: String(enabled), updated_at: new Date().toISOString() });
-  if (error) throw new Error(friendlyErrorMessage(error.message));
-
-  await logAction(admin.id, 'set_auto_assign_kk_number', 'app_settings', 'app_settings', { enabled });
-  revalidatePath('/settings');
-  revalidatePath('/contributors');
-}
-
 export interface MissingKkContributor {
   id: string;
   full_name: string | null;

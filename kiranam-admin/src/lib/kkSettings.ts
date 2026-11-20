@@ -1,18 +1,30 @@
 import 'server-only';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { currentKkHighWater } from '@/lib/kk';
+import { currentKkHighWater, type KkSeries } from '@/lib/kk';
 
 // app_settings has no client-facing RLS policies (service-role only, see
 // 020_razorpay_recurring_autopay.sql), so reading it always goes through the
 // admin client rather than the caller's session client.
-export async function getAutoAssignKkNumber(): Promise<boolean> {
+// KK (Indian numbers) and KKG (non-Indian numbers) each have their own switch.
+// The KK switch keeps the original key from before KKG existed.
+export const AUTO_ASSIGN_KEY: Record<KkSeries, string> = {
+  KK: 'auto_assign_kk_number',
+  KKG: 'auto_assign_kkg_number',
+};
+
+export async function getAutoAssign(series: KkSeries): Promise<boolean> {
   const supabaseAdmin = createAdminClient();
   const { data } = await supabaseAdmin
     .from('app_settings')
     .select('value')
-    .eq('key', 'auto_assign_kk_number')
+    .eq('key', AUTO_ASSIGN_KEY[series])
     .maybeSingle();
   return data?.value === 'true';
+}
+
+export async function getAutoAssignSettings(): Promise<Record<KkSeries, boolean>> {
+  const [KK, KKG] = await Promise.all([getAutoAssign('KK'), getAutoAssign('KKG')]);
+  return { KK, KKG };
 }
 
 /** The profile already holding this KK / KKG number (case-insensitive — the
@@ -33,14 +45,13 @@ export function kkInUseMessage(kkNumber: string, ownerName?: string | null): str
   return `${kkNumber} is already in use${ownerName ? ` by ${ownerName}` : ''}. Use something else.`;
 }
 
-// Next number for a series (KK or KKG). Each series counts on its own.
-// profiles.kk_number is a free-form string (not a DB sequence), so this reads
-// the numeric suffixes directly. It pages through every row — the API returns
-// at most 1000 per request, and with more KK numbers than that a single read
-// would miss some and hand out a number that is already taken — then continues
-// from the real run of numbers, ignoring stray outliers (see currentKkHighWater),
-// and skips ahead past anything that is somehow still taken.
-export async function nextKkNumber(series: 'KK' | 'KKG'): Promise<string> {
+// Highest number in use in a series (KK or KKG); each series counts on its
+// own. profiles.kk_number is a free-form string (not a DB sequence), so this
+// reads the numeric suffixes directly. It pages through every row — the API
+// returns at most 1000 per request, and with more KK numbers than that a single
+// read would miss some — and continues from the real run of numbers, ignoring
+// stray outliers (see currentKkHighWater).
+async function kkHighWater(series: KkSeries): Promise<number> {
   const supabaseAdmin = createAdminClient();
   const re = new RegExp(String.raw`^${series}(\d+)$`, 'i');
   const PAGE = 1000;
@@ -59,8 +70,17 @@ export async function nextKkNumber(series: 'KK' | 'KKG'): Promise<string> {
     }
     if (!data || data.length < PAGE) break;
   }
+  return currentKkHighWater(numbers);
+}
 
-  let next = currentKkHighWater(numbers) + 1;
+/** The number auto-assign would start from for a series. */
+export async function suggestedKkStart(series: KkSeries): Promise<number> {
+  return (await kkHighWater(series)) + 1;
+}
+
+// Next number for a series; skips ahead past anything that is somehow taken.
+export async function nextKkNumber(series: KkSeries): Promise<string> {
+  let next = await suggestedKkStart(series);
   for (let attempts = 0; attempts < 100 && (await findKkNumberOwner(`${series}${next}`)); attempts++) next++;
   return `${series}${next}`;
 }

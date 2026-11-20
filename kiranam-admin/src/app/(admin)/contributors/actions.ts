@@ -7,8 +7,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { isIsoDay, isoDay } from '@/lib/format';
-import { findKkNumberOwner, getAutoAssignKkNumber, kkInUseMessage, nextKkNumber } from '@/lib/kkSettings';
-import { KK_FORMAT_ERROR, KK_NUMBER_RE, type KkSeries } from '@/lib/kk';
+import { findKkNumberOwner, getAutoAssign, getAutoAssignSettings, kkInUseMessage, nextKkNumber } from '@/lib/kkSettings';
+import { KK_FORMAT_ERROR, KK_NUMBER_RE, defaultKkSeries, type KkSeries } from '@/lib/kk';
 import { toE164, validatePhoneNumber } from '@/lib/phone';
 import { COUNTRIES } from '@/lib/countries';
 import type { CountryCode } from 'libphonenumber-js/min';
@@ -21,13 +21,13 @@ export interface RegisterState {
 // Fetched client-side by RegisterContributorForm on mount rather than
 // awaited in the Contributors page itself, so the page's title/toolbar can
 // render immediately instead of waiting on this DB round-trip.
-export async function getAutoAssignKkNumberSetting(): Promise<boolean> {
+export async function getAutoAssignKkSettings(): Promise<Record<KkSeries, boolean>> {
   await verifyAdmin();
-  return getAutoAssignKkNumber();
+  return getAutoAssignSettings();
 }
 
 // Fetched client-side by RegisterContributorForm on mount, same reasoning as
-// getAutoAssignKkNumberSetting above — lets the coordinator-assignment combobox
+// getAutoAssignKkSettings above — lets the coordinator-assignment combobox
 // populate without the Contributors page itself waiting on this query.
 export async function getCoordinatorsForAssignment() {
   await verifyAdmin();
@@ -147,7 +147,6 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const monthlyAmountRaw = String(formData.get('monthly_amount') || '').trim();
   const monthlyAmount = monthlyAmountRaw ? Number(monthlyAmountRaw) : null;
   const kkNumberInput = String(formData.get('kk_number') || '').trim();
-  const kkSeries: KkSeries = formData.get('kk_series') === 'KKG' ? 'KKG' : 'KK';
   const coordinatorId = String(formData.get('coordinatorId') || '').trim();
 
   if (!fullName) return { error: 'Full name is required.' };
@@ -165,7 +164,9 @@ export async function registerContributor(_prevState: RegisterState, formData: F
 
   const phoneE164 = toE164(dialCode, phoneDigits, country!.iso2 as CountryCode);
   const supabaseAdmin = createAdminClient();
-  const autoAssignKkNumber = await getAutoAssignKkNumber();
+  // KK for Indian numbers, KKG for everyone else — each series has its own auto-assign switch.
+  const kkSeries: KkSeries = defaultKkSeries(country!.iso2);
+  const autoAssignKkNumber = await getAutoAssign(kkSeries);
 
   let kkNumber: string;
   if (autoAssignKkNumber) {

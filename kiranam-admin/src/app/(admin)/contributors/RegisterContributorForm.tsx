@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ChevronDown } from 'lucide-react';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { getAutoAssignKkNumberSetting, getCoordinatorsForAssignment, registerContributor, type RegisterState } from './actions';
+import { getAutoAssignKkSettings, getCoordinatorsForAssignment, registerContributor, type RegisterState } from './actions';
 import { checkPhoneDuplicate, type PhoneDuplicateMatch } from '@/lib/phoneDuplicateActions';
 import { buttonPrimary, buttonSecondary, cardClass, inputClass } from '@/lib/ui';
 import { COUNTRIES } from '@/lib/countries';
@@ -54,9 +54,9 @@ export function RegisterContributorForm({
   // (a Server Component) — that page no longer awaits this DB round-trip
   // itself so its title/toolbar can render immediately. The modal starts
   // closed, so this resolves well before anyone actually sees the form.
-  const [autoAssignKkNumber, setAutoAssignKkNumber] = useState(false);
+  const [autoAssign, setAutoAssign] = useState<Record<KkSeries, boolean>>({ KK: false, KKG: false });
   useEffect(() => {
-    getAutoAssignKkNumberSetting().then(setAutoAssignKkNumber).catch(() => {});
+    getAutoAssignKkSettings().then(setAutoAssign).catch(() => {});
   }, []);
 
   const [coordinators, setCoordinators] = useState<{ id: string; full_name: string | null; phone: string | null }[]>([]);
@@ -64,18 +64,16 @@ export function RegisterContributorForm({
     getCoordinatorsForAssignment().then(setCoordinators).catch(() => {});
   }, []);
 
-  // Only used while auto-assign is on: which numbering series the new contributor
-  // draws from. Follows the phone's country (India → KK, otherwise KKG) until the
-  // admin picks one — some Indian contributors are filed under KKG.
-  const [kkSeriesChoice, setKkSeriesChoice] = useState<KkSeries | null>(null);
-
   // PersonCombobox tracks its own selection internally rather than through
   // the (uncontrolled) form, so formRef.current?.reset() below can't clear
   // it — remounting via this key can.
   const [comboboxResetKey, setComboboxResetKey] = useState(0);
 
   const country = useMemo(() => COUNTRIES.find((c) => c.dialCode === dialCode), [dialCode]);
-  const kkSeries = kkSeriesChoice ?? defaultKkSeries(country?.iso2);
+  // The phone's country decides the series (India → KK, otherwise KKG); that series' own
+  // auto-assign switch decides whether the KK field is needed.
+  const kkSeries = defaultKkSeries(country?.iso2);
+  const autoAssignKkNumber = autoAssign[kkSeries];
   const phoneError = useMemo(
     () => (phoneTouched && country ? validatePhoneNumber(phone, country.iso2 as CountryCode) : null),
     [phoneTouched, country, phone]
@@ -120,7 +118,6 @@ export function RegisterContributorForm({
       setPhoneTouched(false);
       setKkWarning(null);
       setComboboxResetKey((k) => k + 1);
-      setKkSeriesChoice(null);
       setDuplicate(null);
       onDone?.();
     }
@@ -242,25 +239,9 @@ export function RegisterContributorForm({
             </div>
 
             {autoAssignKkNumber && (
-              <fieldset className="flex flex-col gap-1.5">
-                <legend className={`${fieldLabelClass} mb-1.5 float-left w-full p-0`}>KK series</legend>
-                <input type="hidden" name="kk_series" value={kkSeries} />
-                <div className="flex gap-2" role="radiogroup" aria-label="KK series">
-                  {(['KK', 'KKG'] as const).map((series) => (
-                    <button
-                      key={series}
-                      type="button"
-                      role="radio"
-                      aria-checked={kkSeries === series}
-                      onClick={() => setKkSeriesChoice(series)}
-                      className={`${kkSeries === series ? buttonPrimary : buttonSecondary} flex-1`}
-                    >
-                      {series}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-kiranam-muted">KK for Indian numbers, KKG for non-Indian numbers.</p>
-              </fieldset>
+              <p className="text-xs text-kiranam-muted sm:col-span-2">
+                A {kkSeries} number will be assigned automatically.
+              </p>
             )}
 
             {!autoAssignKkNumber && (
