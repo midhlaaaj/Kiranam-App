@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { logAction, lookupLabel } from '@/lib/audit';
 import { friendlyErrorMessage } from '@/lib/errors';
 import { isIsoDay, isoDay } from '@/lib/format';
-import { findKkNumberOwner, getAutoAssign, getAutoAssignSettings, kkInUseMessage, nextKkNumber } from '@/lib/kkSettings';
+import { findKkNumberOwner, getAutoAssign, getAutoAssignSettings, kkInUseMessage } from '@/lib/kkSettings';
 import { KK_FORMAT_ERROR, KK_NUMBER_RE, defaultKkSeries, type KkSeries } from '@/lib/kk';
 import { toE164, validatePhoneNumber } from '@/lib/phone';
 import { COUNTRIES } from '@/lib/countries';
@@ -168,10 +168,13 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   const kkSeries: KkSeries = defaultKkSeries(country!.iso2);
   const autoAssignKkNumber = await getAutoAssign(kkSeries);
 
-  let kkNumber: string;
-  if (autoAssignKkNumber) {
-    kkNumber = await nextKkNumber(kkSeries);
-  } else {
+  // With auto-assign on, the database hands out the number itself the moment the
+  // profile is created (trigger in migration 045), the same way it does for app
+  // sign-ups. The panel never picks one, so it can't clash with someone signing
+  // up in the app at the same moment: whoever's profile is created first simply
+  // gets the lower number and the other gets the next.
+  let kkNumber: string | null = null;
+  if (!autoAssignKkNumber) {
     if (!kkNumberInput) return { error: 'KK number is required.' };
     if (!KK_NUMBER_RE.test(kkNumberInput)) return { error: KK_FORMAT_ERROR };
     kkNumber = kkNumberInput.toUpperCase();
@@ -180,8 +183,10 @@ export async function registerContributor(_prevState: RegisterState, formData: F
   // Checked before the login account is created: creating it first and then
   // failing on a taken KK number left behind an account with only a phone
   // number and no name.
-  const kkOwner = await findKkNumberOwner(kkNumber);
-  if (kkOwner) return { error: kkInUseMessage(kkNumber, kkOwner.full_name) };
+  if (kkNumber) {
+    const kkOwner = await findKkNumberOwner(kkNumber);
+    if (kkOwner) return { error: kkInUseMessage(kkNumber, kkOwner.full_name) };
+  }
 
   // Phone is the auth identity, matching kiranam-app's phone-OTP login — no
   // password is set (phone accounts authenticate via OTP, not a password),
@@ -222,7 +227,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     // Registered by an admin who holds the person's consent for WhatsApp messages
     // (login codes, receipts, reminders) — recorded here so they aren't shown as
     // "no WhatsApp consent" and can be included in broadcasts.
-    .update({ full_name: fullName, kk_number: kkNumber, whatsapp_consent: true })
+    .update({ full_name: fullName, ...(kkNumber ? { kk_number: kkNumber } : {}), whatsapp_consent: true })
     .eq('id', contributorId);
   if (profileError) {
     // Undo the half-made account so nothing nameless is left behind; the
@@ -231,7 +236,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     if (undoError) console.error('registerContributor: could not undo the new account:', undoError);
 
     const message = /duplicate key|unique/i.test(profileError.message)
-      ? kkInUseMessage(kkNumber)
+      ? kkInUseMessage(kkNumber ?? 'That KK number')
       : 'Could not save this contributor. Please try again.';
     return { error: message };
   }
@@ -263,6 +268,12 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     }
   }
 
+  // The number the database gave them when auto-assign is on.
+  if (!kkNumber) {
+    const { data: assigned } = await supabaseAdmin.from('profiles').select('kk_number').eq('id', contributorId).maybeSingle();
+    kkNumber = assigned?.kk_number ?? null;
+  }
+
   await logAction(admin.id, 'register_contributor', 'profiles', contributorId, {
     fullName,
     label: fullName,
@@ -271,7 +282,7 @@ export async function registerContributor(_prevState: RegisterState, formData: F
     coordinatorId: coordinatorId || null,
   });
   revalidatePath('/contributors');
-  return { message: `${fullName} has been registered as a contributor. They can log in with this phone number.` };
+  return { message: `${fullName} has been registered as a contributor${kkNumber ? ` (${kkNumber})` : ''}. They can log in with this phone number.` };
 }
 
 export async function assignCoordinator(contributorId: string, formData: FormData) {
